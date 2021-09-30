@@ -1,0 +1,99 @@
+- 那么的维基 | laMDWiki
+- 基 | Ki
+- 管理员 | Administrator
+- 微博 | Weibo
+-   修改 | Edit
+- 只复制 | Copy only
+- 引用 | Ref
+- 标记 | Mark
+- 关闭 | Close
+- 恢复 | Restore
+- 删除 | Delete
+- 修改帖子： | Editing Post:
+- 取消 | Cancel
+- 链接 | Refs
+- 目录 | TOC
+- 最近 | Recent
+- 热门 | Hot
+- 媒体 | Media
+- 未找到该引用。 | Could not find this reference.
+- 标记 | Mark
+- 置顶帖子 | Pinned Post
+- 回复给主题帖： | Reply to thread:
+- 个回复 | Replies
+- 继续补充该话题： | Continue the thread:
+- 有什么想说的 | What are you thinking
+- 发送 | Send
+- 图片 | Images
+- 清空 | Clear
+- 个引用： | References:
+- 没有帖子链接到这里。 | No posts links to here.
+- 话题 | Thread
+- 详细 | Details
+- 点击图片以插入： | Click the thumbnail to insert:
+- 全部 | All
+- 垃圾桶 | Trash Bin
+- 图片 | Image
+- 选择、粘贴或者拖动到页面以上传图片。 | Choose, Paste or drag and drop to upload images.
+- 就绪 | Ready
+- 上传列表中的文件 | Upload listed files
+- 上传完成。 | Upload completed.
+- 刷新页面 | Refresh Page
+- 正在上传... | Uploading...
+- 已上传为 | Uploaded as
+- 出现错误。| An error has occured.
+- 画廊 | Gallery
+- 相册 | Album
+- 删除相册 | Delete Album
+- 该操作不删除图片。 | This operation does not delete photos.
+- 改名 | Rename
+- 添加 | Add
+- 相册名字： | Album Name:
+- 确认 | Confirm
+- 选择了 | Selected
+- 个图片。 | images.
+- 清除 | Clear
+- 添加到 | Add to
+- 执行 | Execute
+- 或者 | Or
+- 从相册移除 | remove from album
+- 全部图片 | All Pictures
+- 未找到目录 | No table of contents found
+- 设置 | Settings
+- 选项 | Options
+- 值 | Value
+- 网站标题 | Website Title
+- 短标题 | Short Title
+- 显示名称 | Display Name
+- 导航栏 | Navigation
+- 脚注 | Footer
+- 置顶文 | Pinned Post
+- 附加操作 | Additional Ops
+- 进入 | Enter
+- 登出 | Log out
+- 帐号 | ID
+- 新密码 | New Password
+- 再次输入 | Re-enter
+- 旧密码 | Old Passowrd
+- 请登录 | Please Login
+- 保存设置 | Save Settings
+- 登录 | Log In
+- 返回一般设置 | Back to general settings
+- 自动重定向 | Auto redirect
+- P为帖子跳转，按域名后的字符串匹配跳到目标文章；S为站点跳转，可以重定向来源域名，例子： | P for passage redirect, matching string after host url to jump to a specific passage, S is for site redirect, can relocate your source domain. Examples:
+- 保存重定向设置 | Save redirect settings
+- 当心！下列操作将立即执行： | Caution! Following operations will run immediately:
+- 重新写入默认CSS | Re-write default CSS
+- 上传到这里 | Upload here
+- 继续补充该话题： | Continue the thread:
+- 引用文章 | Ref
+- 引用并发送新话题： | Refer and start a new thread:
+- 切换为回复 | Switch to reply
+- 已复制 | Copied
+- 稍等 | Wait
+- 正在查询…… | Querying...
+- 该图片出现在 | This image appeared in
+- 个帖子中 | posts
+- 该图片未被引用 | This images is not referenced
+
+
