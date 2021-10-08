@@ -256,6 +256,7 @@ header li::before{content:' - '}
 header h1,header h2,header h3,header h4,header h5,header p{display:inline;font-size:1rem;}
 .main{position:relative;word-spacing:-1em;}
 .main div{word-spacing:initial;}
+pre{overflow:auto;}
 ul{display:block;}
 li{display:block;}
 table{width:100%;border-collapse:collapse;border-bottom:2px solid %black%;border-top:2px solid %black%;}
