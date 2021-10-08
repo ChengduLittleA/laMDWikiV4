@@ -348,7 +348,7 @@ line-height:0;vertical-align:middle;overflow:hidden;}
 .p_thumb{display:flex;flex-grow:1;height:8rem;margin-right:0.25rem;margin-bottom:0.25rem;
 box-shadow:0px 0px 10px rgb(0, 0, 0);overflow:hidden;position:relative;}
 .p_thumb img{object-fit:cover;max-height:100%;min-width:100%;}
-.p_thumb .post_menu_button{text-shadow: 0px 0px 10px rgb(0, 0, 0);}
+.ref_count,.p_thumb .post_menu_button{text-shadow: 0px 0px 10px rgb(0, 0, 0);}
 .p_thumb:hover .post_menu_button{display:block;}
 .p_thumb_selected{color:%black% !important;}
 .p_thumb_selected{display:block;}
@@ -1261,6 +1261,7 @@ header{padding-top:0.3em;}
                                     $generate_thumb = false, $is_top = false){
         $is_deleted = (isset($post['mark_delete'])&&$post['mark_delete']);
         $mark_value = isset($post['mark_value'])?$this->Markers[$post['mark_value']]:-1;
+        $ref_count = isset($post['refs'])?sizeof($post['refs']):0;
         ?>
         <li class='post<?=isset($extra_class_string)?' '.$extra_class_string:''?><?=$side?" post_box":""?>'
             data-post-id='<?=$post['id']?>' <?=$is_deleted?"data-mark-delete='true'":""?>>
@@ -1282,9 +1283,12 @@ header{padding-top:0.3em;}
             <?=$side?"</a>":""?>
             <?php if(!$side && $show_link){ ?>
                 <a href='?post=<?=$post['id']?>'>
-                <div class='post_access <?=$mark_value<0?"invert_a":""?> hover_dark'>
-                    <?=isset($post['mark_value'])?$this->Markers[$post['mark_value']]:"→"?>
+                <div class='post_access <?=($mark_value<0 || $ref_count)?"invert_a":""?> hover_dark'>
+                    <?=isset($post['mark_value'])?$this->Markers[$post['mark_value']]:($ref_count?"":"→")?>
                 </div>
+                <?php if($ref_count){ ?>
+                    <div class='post_access ref_count'><?=$ref_count?></div>
+                <?php } ?>
                 </a>
             <?php }
                 if($show_thread_link && isset($post['tid']) && $post['tid']['first']['id']!=$post['id']){ ?>
