@@ -1345,13 +1345,13 @@ header{padding-top:0.3em;}
                     }
                     $i = 0;
                     foreach(array_reverse($this->Posts) as &$p){
-                        if($i < $this->PostsPerPage * $this->CurrentOffset) {$i++; continue;}
                         if(in_array($p['id'],[$this->SpecialPinned,$this->SpecialFooter,$this->SpecialFooter2,$this->SpecialNavigation]))
                             continue;
                         if(isset($p['tid'])){
                             if(isset($p['tid']['displayed'])) continue;
                             $p['tid']['displayed'] = True;
                         }
+                        if($i < $this->PostsPerPage * $this->CurrentOffset) {$i++; continue;}
                         $this->MakeSinglePost($p, true, false, NULL, false, true, false, false, false, false);
                         $i++;
                         if($i >= $this->PostsPerPage * (1+$this->CurrentOffset)) {break;}
