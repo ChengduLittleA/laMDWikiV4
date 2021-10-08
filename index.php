@@ -87,7 +87,7 @@ class LA{
         if(isset($this->Redirect) && isset($this->Redirect[0])) foreach($this->Redirect as $r){
             if($r['for']=='S'){
                 if(preg_match('/'.$r['format'].'/ui', $_SERVER['HTTP_HOST'])){
-                    header('Location:http://'.$r['domain'].'/index.php?post='.$r['target']); exit;
+                    header('Location:https://'.$r['domain'].'/index.php?post='.$r['target']); exit;
                 }
             }
         }
