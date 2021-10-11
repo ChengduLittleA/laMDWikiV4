@@ -1739,8 +1739,8 @@ header{padding-top:0.3em;}
                                     method="post" style='display:none;' id='gallery_edit_form'></form>
                                 <a style='float:left;'><?=$this->T('相册名字：')?></a>
                                 <a href='javascript:HidePopMenu();'>×</a>
-                                <input type='input' form='gallery_edit_form' name='gallery_edit_new_name' id='gallery_edit_new_name'>
-                                <input type='input' form='gallery_edit_form' name='gallery_edit_old_name'
+                                <input type='text' form='gallery_edit_form' name='gallery_edit_new_name' id='gallery_edit_new_name'>
+                                <input type='text' form='gallery_edit_form' name='gallery_edit_old_name'
                                     id='gallery_edit_old_name' style='display:none'>
                                 <input class='button' type='submit' form='gallery_edit_form'
                                     name='gallery_edit_confirm' id='gallery_edit_confirm' value='<?=$this->T('确认')?>'></a>
@@ -1750,7 +1750,7 @@ header{padding-top:0.3em;}
                     <div class='smaller'>
                         <form action="<?=$_SERVER['REQUEST_URI']?>"
                             method="post" style='display:none;' id='gallery_move_form'></form>
-                        <input type='input' form='gallery_move_form' name='gallery_move_ops'
+                        <input type='text' form='gallery_move_form' name='gallery_move_ops'
                             id='gallery_move_ops' style='display:none'>
                         <p><?=$this->T('选择了')?> <span id='gallery_selected_count'>0</span> <?=$this->T('个图片。')?>
                             <a href='javascript:ClearSelectedImages()'><?=$this->T('清除')?></a></p>
@@ -1885,33 +1885,33 @@ header{padding-top:0.3em;}
                     <colgroup><col style='min-width:5em;'><col style='width:100%;min-width:5em;'></colgroup>
                     <thead><tr><td><?=$this->T('选项')?></td><td><?=$this->T('值')?></td></tr></thead>
                     <tr><td><?=$this->T('网站标题')?></td>
-                        <td><input type="input" form="settings_form" id='settings_title' name='settings_title'
+                        <td><input type="text" form="settings_form" id='settings_title' name='settings_title'
                             value='<?=$this->Title?>'/></td></tr>
                     <tr><td><?=$this->T('短标题')?></td>
-                        <td><input type="input" form="settings_form" id='settings_short_title' name='settings_short_title'
+                        <td><input type="text" form="settings_form" id='settings_short_title' name='settings_short_title'
                             value='<?=$this->ShortTitle?>'/></td></tr>
                     <tr><td><?=$this->T('显示名称')?></td>
-                        <td><input type="input" form="settings_form" id='settings_display_name' name='settings_display_name'
+                        <td><input type="text" form="settings_form" id='settings_display_name' name='settings_display_name'
                         value='<?=$this->DisplayName?>'/></td></tr>
                     <tr><td><?=$this->T('导航栏')?>
                         <?=isset($this->SpecialNavigation)?"<a href='?post=".$this->SpecialNavigation."'>→</a>":""?></td>
-                        <td><input type="input" form="settings_form" id='settings_special_navigation' name='settings_special_navigation'
+                        <td><input type="text" form="settings_form" id='settings_special_navigation' name='settings_special_navigation'
                         value='<?=$this->SpecialNavigation?>'/></td></tr>
                     <tr><td><?=$this->T('脚注')?> 1<?=isset($this->SpecialFooter)?"<a href='?post=".$this->SpecialFooter."'>→</a>":""?></td>
-                        <td><input type="input" form="settings_form" id='settings_special_footer' name='settings_special_footer'
+                        <td><input type="text" form="settings_form" id='settings_special_footer' name='settings_special_footer'
                         value='<?=$this->SpecialFooter?>'/></td></tr>
                     <tr><td><?=$this->T('脚注')?> 2<?=isset($this->SpecialFooter2)?"<a href='?post=".$this->SpecialFooter2."'>→</a>":""?></td>
-                        <td><input type="input" form="settings_form" id='settings_special_footer2' name='settings_special_footer2'
+                        <td><input type="text" form="settings_form" id='settings_special_footer2' name='settings_special_footer2'
                         value='<?=$this->SpecialFooter2?>'/></td></tr>
                     <tr><td><?=$this->T('置顶文')?><?=isset($this->SpecialPinned)?"<a href='?post=".$this->SpecialPinned."'>→</a>":""?></td>
-                        <td><input type="input" form="settings_form" id='settings_special_pinned' name='settings_special_pinned'
+                        <td><input type="text" form="settings_form" id='settings_special_pinned' name='settings_special_pinned'
                         value='<?=$this->SpecialPinned?>'/></td></tr>
                     <tr><td><?=$this->T('附加操作')?></td><td><a class='gray' href='index.php?extras=true'><?=$this->T('进入')?></a></td></tr>
                     <tr><td class='smaller gray'>&nbsp;</td></tr>
                     <tr><td class='smaller gray'><?=$this->T('管理员')?></td><td class='smaller'>
                         <a href='index.php?logout=true'><?=$this->T('登出')?></a></td></tr>
                     <tr><td><?=$this->T('帐号')?></td>
-                        <td><input type="input" form="settings_form" id='settings_id' name='settings_id'
+                        <td><input type="text" form="settings_form" id='settings_id' name='settings_id'
                             value='<?=$this->Admin?>'/></td></tr>
                     <tr><td><?=$this->T('新密码')?></td>
                         <td><input type="password" form="settings_form"
@@ -1926,7 +1926,7 @@ header{padding-top:0.3em;}
                     <colgroup><col style='min-width:3em;'><col style='width:100%;min-width:5em;'></colgroup>
                     <tr><td class='smaller gray'><?=$this->T('请登录')?></td></tr>
                     <tr><td><?=$this->T('帐号')?></td>
-                        <td><input type="input" form="login_form" id='login_id' name='login_id' /></td></tr>
+                        <td><input type="text" form="login_form" id='login_id' name='login_id' /></td></tr>
                     <tr><td><?=$this->T('密码')?></td>
                         <td><input type="password" form="login_form" id='login_password' name='login_password' /></td></tr>
                 <?php } ?>
@@ -1974,7 +1974,7 @@ header{padding-top:0.3em;}
     function MakeFooter(){?>
         <div class='small_footer'>
             <hr />
-            <b><a href='index.php'><?=$this->T($this->Title)?></a></b>
+            <b><?=$this->T($this->Title)?></b>
             <span ondblclick='javascript:window.location.href="index.php?settings=true"'>©<?=$this->T($this->DisplayName)?></span>
             <?php if($this->LoggedIn){ ?>
                 <a href='index.php?settings=true'><?=$this->T('设置')?></a>
