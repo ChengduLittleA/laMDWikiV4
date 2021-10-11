@@ -235,6 +235,7 @@ class LA{
         $this->style="
 html{font-size:18px;font-family:'Noto Serif CJK SC','Times New Roman','SimSun',Georgia,serif;}
 body{background-color:%white%;color:%black%;}
+sup,sub{line-height:0;}
 *{box-sizing:border-box;padding:0;margin:0;}
 .page,.page_gallery{padding:1em;padding-top:0;}
 .hidden_on_desktop, .hidden_on_wide{display:none;}
@@ -271,8 +272,8 @@ position:sticky;top:2.5em;overflow:auto;padding-right:0.2em;}
 .center{display:inline-block;vertical-align:top;width:50%;padding-left:0.3em;overflow:auto;}
 .center .post:hover{background-color:%graybkg%;}
 .right{display:inline-block;vertical-align:top;width:25%;position:sticky;top:2.5em;padding-left:0.5em;height:calc(100vh - 2.6em);overflow:auto;}
-textarea,input[type=input],input[type=password]{width:100%;display:block;font-family:inherit;max-height:60vh;}
-select,textarea,input[type=input],input[type=password]{background:none;border:none;border-bottom:1px solid %black%;color:%black%;}
+textarea,input[type=text],input[type=password]{width:100%;display:block;font-family:inherit;max-height:60vh;}
+select,textarea,input[type=text],input[type=password]{background:none;border:none;border-bottom:1px solid %black%;color:%black%;}
 .button{background:none;border:none;font-family:inherit;color:%black%;font-size:inherit;font-weight:bold;}
 .focused_post{font-size:1.5em;}
 .post{position:relative;scroll-margin:2.5em;border-radius:0.3em;padding:0.3rem;padding-left:0rem;}
@@ -307,6 +308,7 @@ font-weight:bold;border-right:2px solid transparent;padding-top:0.3rem;}
 .post_ref_images{overflow:hidden;}
 .post_ref_images img{max-height:4em !important;max-width:4em !important;}
 .post_reply{border-left:2px solid %gray%;padding-left:0.3rem;}
+.post_reply:hover{background-color:%lightopbkg%;}
 .post_reply:hover{border-left:2px solid %black%;padding-left:0.3rem;}
 .page_selector{padding-top:2rem;text-align:center;}
 .focused_post .post_ref{font-size:1rem;}
@@ -1019,6 +1021,7 @@ header{padding-top:0.3em;}
     
     function PostProcessHTML($html,&$added_images=null){
         $html = preg_replace("/(<a[^>]*href=[\'\"])([0-9]{14})([\'\"][^>]*>)(.*?<\/a>)/u","$1?post=$2$3$4",$html);
+        $html = preg_replace("/(<a[^>]*href=[\'\"])((.*?:\/\/).*?)([\'\"][^>]*>)(.*?)(<\/a>)/u","$1?$2$4$5<sup>↗</sup>$6",$html);
         $images = [];
         $images_noclick = [];
         $html = preg_replace_callback("/(<img[^>]*src=[\'\"])(images\/([0-9]{14,}\.(jpg|png|jpeg|gif)))([\'\"][^>]*)>/u",
