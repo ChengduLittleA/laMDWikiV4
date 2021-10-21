@@ -254,7 +254,7 @@ header a:hover,.button:hover{color:%gray% !important;}
 .invert_a:hover,.invert_a a:hover{color:%black% !important;}
 .gray{color:%gray%;}
 hr{border:1px solid %gray%;}
-p{margin:0;margin-bottom:0.5em;}
+p{margin:0;margin-bottom:0.5em}
 p:last-child{margin-bottom:0;}
 header ul{display:inline-block;}
 header li{display:inline-block;}
@@ -273,10 +273,10 @@ td:last-child{padding-right:0;}
 tbody tr:hover{box-shadow:inset 0 -2px 0 0px %black%;}
 thead{border-bottom:1px solid %black%;} 
 .left{display:inline-block;vertical-align:top;width:25%;height:calc(100vh - 5.2em);
-position:sticky;top:2.5em;overflow:auto;padding-right:0.2em;padding-bottom:5rem;}
-.center{display:inline-block;vertical-align:top;width:50%;padding-left:0.3em;overflow:auto;padding-bottom:5rem;}
+position:sticky;top:2.5em;overflow:auto;padding-right:0.2em;padding-bottom:70vh;}
+.center{display:inline-block;vertical-align:top;width:50%;padding-left:0.3em;overflow:auto;padding-bottom:70vh;}
 .center .post:hover{background-color:%graybkg%;}
-.right{display:inline-block;vertical-align:top;width:25%;position:sticky;top:2.5em;padding-left:0.5em;height:calc(100vh - 2.6em);overflow:auto;padding-bottom:5rem;}
+.right{display:inline-block;vertical-align:top;width:25%;position:sticky;top:2.5em;padding-left:0.5em;height:calc(100vh - 2.6em);overflow:auto;padding-bottom:70vh;}
 textarea,input[type=text],input[type=password]{width:100%;display:block;font-family:inherit;max-height:60vh;}
 select,textarea,input[type=text],input[type=password]{background:none;border:none;border-bottom:1px solid %black%;color:%black%;}
 .button{background:none;border:none;font-family:inherit;color:%black%;font-size:inherit;font-weight:bold;}
@@ -303,27 +303,24 @@ box-shadow:0px 0px 10px rgb(0, 0, 0);}
 .post_access{width:1.4rem;top:0;position:absolute;height:100%;text-align:center;
 font-weight:bold;border-right:2px solid transparent;padding-top:0.3rem;}
 .post_access:hover{background-color:%lightopbkg%;border-top-left-radius:0.3em;border-bottom-left-radius:0.3em;
-border-right:2px solid %black%;}
-.opt_compact .post_access{padding-top:0.2rem;}
+border-right:2px solid %black% !important;}
+.opt_compact .post_access,.ref_compact .post_access{padding-top:0.2rem;border-right:2px solid %gray%;}
 .post_box{border:1px solid %gray%;border-radius:0.3em;padding:0.3em;}
 .post_box:hover,.post_menu_button:hover{background-color:%lightopbkg%}
 #big_image_info .post_box:hover{background-color:%graybkg%;}
 .post_preview{font-size:0.9rem;overflow:hidden;}
-.post .post_ref{font-size:0.9rem;margin:0.3em;}
-.post_ref .post_ref_inner{margin-left:1.2em;}
-.post_ref .post_ref_inner::before{content:'→';color:%gray%;margin-left:-1em;}
+.post .post_ref{margin:0;padding-left:1.6rem;}
 .post_ref_main{display:inline-block;vertical-align:top;}
 .post_preview .post_ref_main{max-height:6rem;overflow:hidden;}
 .post_ref_images{overflow:hidden;}
 .post_ref_images img{max-height:4em !important;max-width:4em !important;}
 .page_selector{padding-top:2rem;text-align:center;}
-.focused_post .post_ref{font-size:1rem;}
 .smaller{font-size:0.85em;}
 .block{display:block;}
+.opt_compact,.ref_compact{margin-top:0;}
 .opt_compact{margin-left:1.9em;}
 .post_box_top{padding-bottom:0.3em;padding-top:0.3em;}
 .post_box_fixed_bottom{position:sticky;bottom:0em;background-color:%white%;z-index:5;}
-.focused_post .opt_compact{font-size:0.6em !important;padding-left:0;}
 .spacer{height:0.5em;}
 .pop_right,.pop_right_big{position:fixed;top:0;right:0;bottom:0;width:30%;z-index:100;background-color:%graybkg%;display:none;
 transition-timing-function:ease-out;padding:1rem;overflow:auto;}
@@ -341,8 +338,7 @@ transition-timing-function:ease-out;padding:1rem;overflow:auto;}
 .toc_entry_5{font-size:0.8em;padding-left:2rem;}
 h1,h2,h3,h4,h5{scroll-margin:1.5em;}
 {display:inline}
-.left ul h1,.left ul h2,.left ul h3,.left ul h4,.left ul h5,.left ul p,
-.post_ref_inner p,.post_ref_inner h1,.post_ref_inner h2,.post_ref_inner h3,.post_ref_inner h4,.post_ref_inner h5
+.left ul h1,.left ul h2,.left ul h3,.left ul h4,.left ul h5,.left ul p
 {font-size:1em;display:inline-block;}
 .deleted_post{color:%gray%;text-decoration:line-through;}
 #file_list{margin-top:0.5em;}
@@ -1257,10 +1253,10 @@ header{padding-top:0.3em;}
         $ht = preg_replace_callback('/<p>[\s]*<a[^>]*href=[\'\"]\?post=([0-9]{14})[\'\"]>(.*)<\/a>[\s]*<\/p>/u',
             function($m){
                 $rp = &$this->GetPost($m[1]);
-                $s="<a href='?post=".$m[1]."' class='clean_a'><div class='post_ref post_box'>".
-                    "<div class='smaller gray'>".$m[2]."</div><div class='post_ref_inner'>".
+                $s="<div class='smaller block post ref_compact gray'>".
+                    "<div class='post_ref'><div class='smaller'>".$m[2]."</div>".
                     ($rp!==NULL?$this->GenerateSinglePost($rp,true,false,false,true):$this->T("未找到该引用。")).
-                    "</div></div></a>";
+                    "</div><a href='?post=".$m[1]."' class='post_access invert_a'>→</a></div>";
                 return $s;
             },
             $ht
@@ -1323,7 +1319,7 @@ header{padding-top:0.3em;}
                 </a>
             <?php }
                 if($show_thread_link && isset($post['tid']) && $post['tid']['first']['id']!=$post['id']){ ?>
-                    <div class='invert_a smaller block opt_compact post'>
+                    <div class='gray smaller block opt_compact post'>
                         <div class='post_width'><div class='smaller'><?=$this->T('回复给主题帖：')?></div>
                             <?=$this->GenerateSinglePost($post['tid']['first'], true, false, false, true);?>
                         </div>
@@ -2253,7 +2249,7 @@ header{padding-top:0.3em;}
             }
             var posts = document.querySelectorAll('.center .post');
             [].forEach.call(posts, function(p){
-                p.querySelector('._menu_hook').addEventListener("click", function() {
+                if(s=p.querySelector('._menu_hook')) s.addEventListener("click", function() {
                     ShowPostMenu(this.parentNode.parentNode);
                 });
             });
