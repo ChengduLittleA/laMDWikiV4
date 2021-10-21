@@ -288,8 +288,9 @@ select,textarea,input[type=text],input[type=password]{background:none;border:non
 .gallery_left .selected{list-style:'→';}
 .gallery_left ul{font-size:1.4em;}
 .focused_post{font-size:1.2em;margin-top:0.1em;margin-bottom:0.1em;padding:0.5rem;background-color:%focusedbkg%;}
-.post_width{position:relative;left:1.4rem;width:calc(100% - 1.6rem);padding-left:0.2rem;}
+.post_width{position:relative;left:1.4rem;width:calc(100% - 1.6rem);padding-left:0.2em;}
 .post_width_big{position:relative;left:0;width:100%;}
+.post .post{padding:0;padding-top:0.3rem;}
 .post_menu_button{position:absolute;display:none;right:-0.2rem;width:1.5rem;
 text-align:center;border-radius:0.3em;user-select:none;cursor:pointer;}
 .pointer{cursor:pointer;}
@@ -299,10 +300,11 @@ padding:0.3em;right:0.3rem;text-align:right;border-radius:0.3em;font-size:1rem;
 box-shadow:0px 0px 10px rgb(0, 0, 0);}
 .pop_menu hr{border:2px solid rgba(0,0,0,0.1);}
 .toc{left:60%;width:40%;top:0;position:absolute;}
-.post_access{width:1.4em;top:0;position:absolute;height:100%;text-align:center;
+.post_access{width:1.4rem;top:0;position:absolute;height:100%;text-align:center;
 font-weight:bold;border-right:2px solid transparent;padding-top:0.3rem;}
-.post_access:hover{background-color:rgba(0,0,0,0.05);border-top-left-radius:0.3em;border-bottom-left-radius:0.3em;}
-.post_access:hover{border-right:2px solid %black%;}
+.post_access:hover{background-color:%lightopbkg%;border-top-left-radius:0.3em;border-bottom-left-radius:0.3em;
+border-right:2px solid %black%;}
+.opt_compact .post_access{padding-top:0.2rem;}
 .post_box{border:1px solid %gray%;border-radius:0.3em;padding:0.3em;}
 .post_box:hover,.post_menu_button:hover{background-color:%lightopbkg%}
 #big_image_info .post_box:hover{background-color:%graybkg%;}
@@ -310,13 +312,10 @@ font-weight:bold;border-right:2px solid transparent;padding-top:0.3rem;}
 .post .post_ref{font-size:0.9rem;margin:0.3em;}
 .post_ref .post_ref_inner{margin-left:1.2em;}
 .post_ref .post_ref_inner::before{content:'→';color:%gray%;margin-left:-1em;}
-.post_ref_main{max-height:6.5rem;display:inline-block;vertical-align:top;overflow:hidden;}
+.post_ref_main{display:inline-block;vertical-align:top;}
 .post_preview .post_ref_main{max-height:6rem;overflow:hidden;}
 .post_ref_images{overflow:hidden;}
 .post_ref_images img{max-height:4em !important;max-width:4em !important;}
-.post_reply{border-left:2px solid %gray%;padding-left:0.3rem;}
-.post_reply:hover{background-color:%lightopbkg%;}
-.post_reply:hover{border-left:2px solid %black%;padding-left:0.3rem;}
 .page_selector{padding-top:2rem;text-align:center;}
 .focused_post .post_ref{font-size:1rem;}
 .smaller{font-size:0.85em;}
@@ -1324,11 +1323,14 @@ header{padding-top:0.3em;}
                 </a>
             <?php }
                 if($show_thread_link && isset($post['tid']) && $post['tid']['first']['id']!=$post['id']){ ?>
-                    <a href='?post=<?=$post['tid']['first']['id']?>' class='invert_a smaller block opt_compact'>
-                    <div class='post_reply'><div class='smaller'><?=$this->T('回复给主题帖：')?></div>
-                        <?=$this->GenerateSinglePost($post['tid']['first'], true, false, false, true);?>
+                    <div class='invert_a smaller block opt_compact post'>
+                        <div class='post_width'><div class='smaller'><?=$this->T('回复给主题帖：')?></div>
+                            <?=$this->GenerateSinglePost($post['tid']['first'], true, false, false, true);?>
+                        </div>
+                        <a href='?post=<?=$post['tid']['first']['id']?>'>
+                            <div class='post_access invert_a hover_dark'><?=isset($post['tid']['first']['mark_value'])?
+                                    $this->Markers[$post['tid']['first']['mark_value']]:"→"?></div></a>
                     </div>
-                    </a>
                 <?php }
                 if($show_reply_count && isset($post['tid'])){ ?>
                     <a class='smaller block invert_a' href='?post=<?=$post['tid']['last']['id']?>'><?=$post['tid']['count']?>
