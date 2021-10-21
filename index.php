@@ -23,8 +23,11 @@ class LA{
     protected $SpecialFooter;
     protected $SpecialFooter2;
     protected $SpecialPinned;
+    protected $DefaultGallery;
     protected $Redirect;
     protected $Translations;
+    
+    protected $CustomTranslationContent;
     
     protected $CurrentOffset;
     protected $PostsPerPage;
@@ -136,6 +139,7 @@ class LA{
         fwrite($conf,'- SpecialFooter = '.$this->SpecialFooter.PHP_EOL);
         fwrite($conf,'- SpecialFooter2 = '.$this->SpecialFooter2.PHP_EOL);
         fwrite($conf,'- SpecialPinned = '.$this->SpecialPinned.PHP_EOL);
+        fwrite($conf,'- DefaultGallery = '.$this->DefaultGallery.PHP_EOL);
         fflush($conf);fclose($conf);
         $conf = fopen('la_redirect.md','w');
         fwrite($conf,$this->DisplayRedirectConfig());fflush($conf);fclose($conf);
@@ -168,6 +172,7 @@ class LA{
         if(preg_match('/-\s*SpecialFooter\s*=\s*(\S+)\s*$/um', $c, $m)) $this->SpecialFooter = $m[1];
         if(preg_match('/-\s*SpecialFooter2\s*=\s*(\S+)\s*$/um', $c, $m)) $this->SpecialFooter2 = $m[1];
         if(preg_match('/-\s*SpecialPinned\s*=\s*(\S+)\s*$/um', $c, $m)) $this->SpecialPinned = $m[1];
+        if(preg_match('/-\s*DefaultGallery\s*=\s*(\S+)\s*$/um', $c, $m)) $this->DefaultGallery = $m[1];
         if(file_exists('la_redirect.md')){
             $c = file_get_contents('la_redirect.md');
             $this->BuildRedirectConfig($c);
@@ -181,8 +186,8 @@ class LA{
             }
         }
         if(file_exists("custom_translations.md")){
-            $c = file_get_contents('custom_translations.md');
-            if(preg_match_all('/-\s+(\S.*)\s*\|\s*(\S.*)$/um',$c, $ma, PREG_SET_ORDER)) foreach($ma as $m){
+            $this->CustomTranslationContent = file_get_contents('custom_translations.md');
+            if(preg_match_all('/-\s+(\S.*)\s*\|\s*(\S.*)$/um',$this->CustomTranslationContent, $ma, PREG_SET_ORDER)) foreach($ma as $m){
                 $entry = []; $entry['zh'] = trim($m[1]); $entry['en'] = trim($m[2]);
                 $this->Translations[] = $entry;
             }
@@ -268,27 +273,29 @@ td:last-child{padding-right:0;}
 tbody tr:hover{box-shadow:inset 0 -2px 0 0px %black%;}
 thead{border-bottom:1px solid %black%;} 
 .left{display:inline-block;vertical-align:top;width:25%;height:calc(100vh - 5.2em);
-position:sticky;top:2.5em;overflow:auto;padding-right:0.2em;}
-.center{display:inline-block;vertical-align:top;width:50%;padding-left:0.3em;overflow:auto;}
+position:sticky;top:2.5em;overflow:auto;padding-right:0.2em;padding-bottom:5rem;}
+.center{display:inline-block;vertical-align:top;width:50%;padding-left:0.3em;overflow:auto;padding-bottom:5rem;}
 .center .post:hover{background-color:%graybkg%;}
-.right{display:inline-block;vertical-align:top;width:25%;position:sticky;top:2.5em;padding-left:0.5em;height:calc(100vh - 2.6em);overflow:auto;}
+.right{display:inline-block;vertical-align:top;width:25%;position:sticky;top:2.5em;padding-left:0.5em;height:calc(100vh - 2.6em);overflow:auto;padding-bottom:5rem;}
 textarea,input[type=text],input[type=password]{width:100%;display:block;font-family:inherit;max-height:60vh;}
 select,textarea,input[type=text],input[type=password]{background:none;border:none;border-bottom:1px solid %black%;color:%black%;}
 .button{background:none;border:none;font-family:inherit;color:%black%;font-size:inherit;font-weight:bold;}
-.focused_post{font-size:1.5em;}
-.post{position:relative;scroll-margin:2.5em;border-radius:0.3em;padding:0.3rem;padding-left:0rem;}
+.post{position:relative;scroll-margin:2.5em;border-radius:0.3em;padding:0.5rem;padding-left:0rem;padding-top:0.3rem;padding-bottom:0.3rem;}
 .post{margin-top:0.2em;margin-bottom:0.2em;}
 .post_width li,.post_width_big li,.footer_additional li,.footer_additional li{display:list-item;margin-left:1em;list-style:disc;}
 .post_width li li,.post_width_big li li,.footer_additional li li,.footer_additional li li{list-style:circle;}
-.focused_post{margin-top:0.1em;margin-bottom:0.1em;padding-left:0.3rem;}
+.gallery_left li{display:list-item;margin-left:1em;list-style:none;}
+.gallery_left .selected{list-style:'→';}
+.gallery_left ul{font-size:1.4em;}
+.focused_post{font-size:1.2em;margin-top:0.1em;margin-bottom:0.1em;padding:0.5rem;background-color:%focusedbkg%;}
 .post_width{position:relative;left:1.4rem;width:calc(100% - 1.6rem);padding-left:0.2rem;}
 .post_width_big{position:relative;left:0;width:100%;}
-.post_menu_button{position:absolute;display:none;right:0;width:1.5rem;
+.post_menu_button{position:absolute;display:none;right:-0.2rem;width:1.5rem;
 text-align:center;border-radius:0.3em;user-select:none;cursor:pointer;}
 .pointer{cursor:pointer;}
 .post:hover .post_menu_button{display:block;}
-.pop_menu{position:absolute;top:0;z-index:95;background-color:%lighterbkg%;
-padding:0.3em;right:0;text-align:right;border-radius:0.3em;font-size:1rem;
+.pop_menu{position:absolute;top:0.3rem;z-index:95;background-color:%lighterbkg%;
+padding:0.3em;right:0.3rem;text-align:right;border-radius:0.3em;font-size:1rem;
 box-shadow:0px 0px 10px rgb(0, 0, 0);}
 .pop_menu hr{border:2px solid rgba(0,0,0,0.1);}
 .toc{left:60%;width:40%;top:0;position:absolute;}
@@ -312,7 +319,7 @@ font-weight:bold;border-right:2px solid transparent;padding-top:0.3rem;}
 .post_reply:hover{border-left:2px solid %black%;padding-left:0.3rem;}
 .page_selector{padding-top:2rem;text-align:center;}
 .focused_post .post_ref{font-size:1rem;}
-.smaller{font-size:0.9em;}
+.smaller{font-size:0.85em;}
 .block{display:block;}
 .opt_compact{margin-left:1.9em;}
 .post_box_top{padding-bottom:0.3em;padding-top:0.3em;}
@@ -325,7 +332,7 @@ transition-timing-function:ease-out;padding:1rem;overflow:auto;}
 @keyframes pop_slide_out{0%{right:0%;}100%{right:-30%;}}
 @keyframes pop_slide_in_big{0%{right:-30%;}100%{right:0%;}}
 @keyframes pop_slide_out_big{0%{right:0%;}100%{right:-30%;}}
-.backdrop{position:fixed;top:0;right:0;bottom:0;left:0;background-color:rgba(0,0,0,0.2);transition-timing-function:ease-out;z-index:90;}
+.backdrop{position:fixed;top:0;right:0;bottom:0;left:0;background-color:rgba(0,0,0,0.5);transition-timing-function:ease-out;z-index:90;}
 @keyframes backdrop_fade_in{0%{opacity:0%;}100%{opacity:100%;}}
 @keyframes backdrop_fade_out{0%{opacity:100%;}100%{opacity:0%;}}
 .toc_entry_1{font-size:1.1em;}
@@ -347,8 +354,8 @@ h1,h2,h3,h4,h5{scroll-margin:1.5em;}
 .side_thumb li{margin:0.2em;display:inline-block;}
 .file_thumb{width:4em;height:4em;display:inline-block;box-shadow:0px 0px 10px rgb(0, 0, 0);
 line-height:0;vertical-align:middle;overflow:hidden;}
-.p_row{display:flex;flex-wrap:wrap;}
-.p_thumb{display:flex;flex-grow:1;height:8rem;margin-right:0.25rem;margin-bottom:0.25rem;
+.p_row{display:flex;flex-wrap:wrap;margin-left:0.25rem;margin-top:0.25rem;}
+.p_thumb{display:flex;flex-grow:1;height:6rem;margin-right:0.25rem;margin-bottom:0.25rem;
 box-shadow:0px 0px 10px rgb(0, 0, 0);overflow:hidden;position:relative;}
 .p_thumb img{object-fit:cover;max-height:100%;min-width:100%;}
 .ref_count,.p_thumb .post_menu_button{text-shadow: 0px 0px 10px rgb(0, 0, 0);}
@@ -363,17 +370,19 @@ background:linear-gradient(to right, rgba(0,0,0,0), rgb(1, 1, 1));transition:bac
 .big_side_box:hover{background-size: 100% 100%;}
 .big_side_box a,.big_side_box hr,#dropping_background{color:%black%;}
 .big_side_box a:hover{color:%gray%;}
-#dropping_background{background-color:rgba(0,0,0,0.5);position:fixed;top:0;right:0;bottom:0;left:0;z-index:100;text-align:center;
-box-shadow:0px 0px 500px rgba(0,0,0,0.7) inset;}
+#dropping_background{background-color:rgba(0,0,0,0.4);position:fixed;top:0;right:0;bottom:0;left:0;z-index:100;text-align:center;
+box-shadow:0px 0px 500px black inset;display:flex;align-items:center;}
 img{cursor:pointer;max-height:100%;max-width:100%;}
 .post img{box-shadow:0px 0px 10px rgb(0, 0, 0);max-height:min(70vh, 20rem);;max-width:min(100%, 20rem);}
+.b ul{font-size:1.4em;}
 no_pop{cursor:unset;}
 p{min-height:0.8em;}
 .bold{font-weight:bold;}
 .footer_additional{display:inline-block;width:50%;vertical-align:text-top;white-space:normal;}
-.small_footer{position:sticky;bottom:0em;background-color:%white%;padding-bottom:1em;margin-top:5rem;}
+.small_footer{position:sticky;bottom:0em;background-color:%white%;padding-bottom:1em;}
 .top_post_hint{margin-left:1.5em;font-weight:bold;}
 .white{color:%white%;}
+.full_box{border:1px solid %black%;padding:0.3rem;overflow:auto;}
 
 @media screen and (max-width:1000px){
 .left{width:35%;}
@@ -409,18 +418,19 @@ header li::before{content:''}
 @keyframes pop_slide_out{0%{bottom:0%;}100%{bottom:-30%;}}
 @keyframes pop_slide_in_big{0%{bottom:-70%;}100%{bottom:0%;}}
 @keyframes pop_slide_out_big{0%{bottom:0%;}100%{bottom:-70%;}}
-.big_image_box{position:fixed;top:0;bottom:5rem;left:0;right:0;width:100%;}
-.side_box_mobile_inner{background:linear-gradient(to bottom, rgba(0,0,0,0), rgba(1,1,1,0.9) 30%);
-transition:none;background-size:100% 100%;padding:1rem;}
+.big_image_box{position:fixed;top:0;bottom:7.5rem;left:0;right:0;width:100%;}
+.side_box_mobile_inner{background:linear-gradient(to bottom, rgba(0,0,0,0), rgba(1,1,1,0.9) 20%);
+transition:none;background-size:100% 100%;padding:0.5rem;padding-bottom: 5em;}
 .side_box_mobile_inner:hover{background-size:100% 100%;}
 .big_side_box{position:fixed;top:0;bottom:0;right:0;left:0;width:100%;
-height:unset;padding:0;padding-top:calc(100vh - 6rem);background:none;}
-.p_thumb{height:6rem;}
-.post .p_thumb img{max-height:6rem;}
+height:unset;padding:0;padding-top:calc(100vh - 7.5rem);background:none;}
+.p_thumb{height:3rem;}
+.post .p_thumb img{max-height:3rem;}
 .page,.page_gallery{padding:0.3em;padding-top:0;}
 header{padding-top:0.3em;}
 .small_footer{padding-bottom:0.3em;}
 .footer_additional{display:block;width:100%;}
+.album_hint{display:block;font-size:1rem;}
 }
 ";
         $this->style=preg_replace('/%white%/','#231a0d',$this->style);
@@ -429,6 +439,7 @@ header{padding-top:0.3em;}
         $this->style=preg_replace('/%graybkg%/','#39270e',$this->style);
         $this->style=preg_replace('/%lightopbkg%/','#daae8010',$this->style);
         $this->style=preg_replace('/%lighterbkg%/','#675340',$this->style);
+        $this->style=preg_replace('/%focusedbkg%/','#482f0c',$this->style);
         $f = fopen('styles/main.css','w');
         fwrite($f,$this->style);
         fclose($f);
@@ -446,8 +457,8 @@ header{padding-top:0.3em;}
         if(!file_exists($path)){ $f = fopen($path,'w'); fflush($f); fclose($f); }
         $c = file_get_contents($path);
         if(preg_match_all('/GALLERY\s+(\S+)(.*)$/mu', $c, $ma, PREG_SET_ORDER)) foreach($ma as $m){
-            $g['name']=$m[1];//$g['count']=0;
-            //if(preg_match('COUNT\s+([0-9]+)\s*;/u', $m[2], $arg)){ $g['count']=$arg[1]; }
+            $g=[]; $g['name']=$m[1];//$g['count']=0;
+            if(preg_match('/FEATURED([^;]*?);/u', $m[2], $arg)){ $g['featured']=true; }
             $this->Galleries[] = $g;
         }
         if(preg_match_all('/^-\s*([^;]+)\s*?;\s*?(.*)$/mu', $c, $ma, PREG_SET_ORDER)) foreach($ma as $m){
@@ -490,7 +501,7 @@ header{padding-top:0.3em;}
         }
         function cmpf($a, $b){
             if ($a['name'] == $b['name']) return 0;
-            return ($a['name'] > $b['name']) ? 1 : -1;
+            return (($a['name'] > $b['name']) ? 1 : -1);
         }
         function cmpaf($a, $b){
             if ($a['name'] == $b['name']) return 0;
@@ -505,18 +516,15 @@ header{padding-top:0.3em;}
         $f = fopen($path,'w');
         if(isset($this->Galleries[0]))foreach($this->Galleries as &$g){
             if(isset($g['deleted'])) continue;
-            fwrite($f,'GALLERY '.$g['name'].' ;');
+            fwrite($f,'GALLERY '.$g['name']);
+            if(isset($g['featured']) && $g['featured']!=false) { fwrite($f,' FEATURED;'); }
             fwrite($f, PHP_EOL);
         }
         if(isset($this->Images[0]))foreach($this->Images as &$im){
             if(isset($im['deleted'])) continue;
             fwrite($f, "- ".$im['name'].'; ');
-            if(isset($im['refs']) && isset($im['refs'][0])){
-                fwrite($f, 'REFS '.implode(" ",$im['refs'])."; ");
-            }
-            if(isset($im['galleries']) && isset($im['galleries'][0])){
-                fwrite($f, 'GAL '.implode(" ",$im['galleries'])."; ");
-            }
+            if(isset($im['refs']) && isset($im['refs'][0])){ fwrite($f, 'REFS '.implode(" ",$im['refs'])."; "); }
+            if(isset($im['galleries']) && isset($im['galleries'][0])){ fwrite($f, 'GAL '.implode(" ",$im['galleries'])."; "); }
             fwrite($f, PHP_EOL);
         }
         fflush($f);
@@ -605,12 +613,12 @@ header{padding-top:0.3em;}
     }
     
     function &GetGallery($name){
-        foreach($this->Galleries as &$g){
+        if(isset($this->Galleries[0])) foreach($this->Galleries as &$g){
             if($g['name'] == $name) return $g;
         }
         return $this->NULL_GALLERY;
     }
-    function EditGallery($name, $new_name=null, $delete=false, $do_rw=true){
+    function EditGallery($name, $new_name=null, $delete=false, $do_rw=true, $set_featured=null){
         if($do_rw) $this->ReadImages();
         $gallery = &$this->GetGallery($name);
         if(!isset($gallery)){
@@ -629,6 +637,7 @@ header{padding-top:0.3em;}
             }
             //if(isset($count)) $gallery['count'] = $count;
             if(isset($delete) && $delete) $gallery['deleted'] = true;
+            if(isset($set_featured)) $gallery['featured'] = $set_featured;
         }
         if($do_rw) { $this->WriteImages(); $this->ClearData(); }
     }
@@ -884,6 +893,10 @@ header{padding-top:0.3em;}
     }
     
     function ProcessRequest(&$message=NULL, &$redirect=NULL){
+        if(isset($_GET['gallery']) && $_GET['gallery']=='default'){
+            $redirect = "index.php?gallery=".(isset($this->DefaultGallery)&&$this->DefaultGallery!=''?$this->DefaultGallery:"main");
+            return 0;
+        }
         if(isset($_GET['set_language'])){
             setcookie('la_language',$_GET['set_language']); $_COOKIE['la_language'] = $_GET['set_language'];
             $redirect='index.php';return 0;
@@ -899,7 +912,7 @@ header{padding-top:0.3em;}
             else if ($_GET['part'] == 'recent') $this->ExtraScripts.="ShowCenterSide();";
         }
         if(isset($_GET['post'])){
-            $this->ExtraScripts.="ScrollToPost('".$_GET['post']."');";
+            $this->ExtraScripts.="window.addEventListener('load', (event) => {ScrollToPost('".$_GET['post']."');});";
         }
         if(isset($_GET['image_info'])){
             $m=$_GET['image_info'];
@@ -926,6 +939,7 @@ header{padding-top:0.3em;}
                 if(isset($_POST['settings_special_footer'])) $this->SpecialFooter=$_POST['settings_special_footer'];
                 if(isset($_POST['settings_special_footer2'])) $this->SpecialFooter2=$_POST['settings_special_footer2'];
                 if(isset($_POST['settings_special_pinned'])) $this->SpecialPinned=$_POST['settings_special_pinned'];
+                if(isset($_POST['settings_default_gallery'])) $this->DefaultGallery=$_POST['settings_default_gallery'];
                 if(isset($_POST['settings_old_password'])&&password_verify($_POST['settings_old_password'], $this->Password)){
                     if(isset($_POST['settings_id'])) $this->Admin=$_POST['settings_id'];
                     if(isset($_POST['settings_new_password']) && isset($_POST['settings_new_password_redo']) && 
@@ -942,7 +956,13 @@ header{padding-top:0.3em;}
                     $this->BuildRedirectConfig($_POST['settings_redirect']);
                 }
                 $this->WriteConfig();
-                return 0;
+                $redirect = 'index.php?extras=true'; return 0;
+            }
+            if(isset($_POST['settings_save_translation'])){
+                if(isset($_POST['settings_translation'])){
+                    $f = fopen("custom_translations.md", "w"); fwrite($f,$_POST['settings_translation']); fflush($f); fclose($f);
+                }
+                $redirect = 'index.php?extras=true'; return 0;
             }
             if(isset($_GET['post'])){
                 if(isset($_GET['post_original'])){
@@ -976,20 +996,20 @@ header{padding-top:0.3em;}
                 $old_name = isset($_POST['gallery_edit_old_name'])?$_POST['gallery_edit_old_name']:"";
                 $new_name = $_POST['gallery_edit_new_name'];
                 if($old_name!=''){
-                    $this->EditGallery($old_name, $new_name, false, true);
+                    $this->EditGallery($old_name, $new_name, false, true, null);
                     $redirect='?gallery='.$new_name;
                 }else{
-                    $this->EditGallery(null, $new_name, false, true);
+                    $this->EditGallery(null, $new_name, false, true, null);
                     if(isset($_GET['gallery'])) $redirect='?gallery='.$_GET['gallery']; else $redirect='index.php';
                 }
                 return 0;
             }
             if(isset($_GET['gallery_edit_delete'])&&$_GET['gallery_edit_delete']!=null){
-                $this->EditGallery($_GET['gallery_edit_delete'], null, true, true);
+                $this->EditGallery($_GET['gallery_edit_delete'], null, true, true, null);
                 if(isset($_GET['gallery'])) $redirect='?gallery=main'; else $redirect='index.php';
                 return 0;
             }
-            if(isset($_POST['gallery_move_ops'])&&isset($_POST['gallery_move_ops'])!=null){
+            if(isset($_POST['gallery_move_ops'])&&isset($_POST['gallery_move_ops'])){
                 if(preg_match('/^(REM|ADD)\s+(\S+)\s+(.*)$/u', $_POST['gallery_move_ops'], $ma)){
                     $this->ReadImages();
                     if(preg_match_all('/(\S+)/u', $ma[3], $files, PREG_SET_ORDER)) foreach($files as $name){
@@ -998,6 +1018,11 @@ header{padding-top:0.3em;}
                     $this->WriteImages();
                     $this->ClearData();
                 }
+                if(isset($_GET['gallery'])) $redirect='?gallery='.$_GET['gallery']; else $redirect='index.php';
+                return 0;
+            }
+            if(isset($_GET['gallery_set_featured'])&&isset($_GET['value'])){
+                $this->EditGallery($_GET['gallery_set_featured'], null, false, true, $_GET['value']!='false');
                 if(isset($_GET['gallery'])) $redirect='?gallery='.$_GET['gallery']; else $redirect='index.php';
                 return 0;
             }
@@ -1021,7 +1046,7 @@ header{padding-top:0.3em;}
     
     function PostProcessHTML($html,&$added_images=null){
         $html = preg_replace("/(<a[^>]*href=[\'\"])([0-9]{14})([\'\"][^>]*>)(.*?<\/a>)/u","$1?post=$2$3$4",$html);
-        $html = preg_replace("/(<a[^>]*href=[\'\"])((.*?:\/\/).*?)([\'\"][^>]*>)(.*?)(<\/a>)/u","$1?$2$4$5<sup>↗</sup>$6",$html);
+        $html = preg_replace("/(<a[^>]*href=[\'\"])((.*?:\/\/).*?)([\'\"][^>]*>)(.*?)(<\/a>)/u","$1$2$4$5<sup>↗</sup>$6",$html);
         $images = [];
         $images_noclick = [];
         $html = preg_replace_callback("/(<img[^>]*src=[\'\"])(images\/([0-9]{14,}\.(jpg|png|jpeg|gif)))([\'\"][^>]*)>/u",
@@ -1065,7 +1090,7 @@ header{padding-top:0.3em;}
         else $this->PageType = "main";
     }
     
-    function MakeHeader(){?>
+    function MakeHeader(&$p){?>
         <!DOCTYPE html><html lang='zh-Hans-CN'>
         <head>
         <meta charset='utf-8'>
@@ -1092,7 +1117,7 @@ header{padding-top:0.3em;}
                 document.getElementById('div_left').classList.add('hidden_on_mobile');
                 window.scroll(0, scroll_c); in_center=1;
             }
-            function ShowBackdrop(alpha=0.2){
+            function ShowBackdrop(alpha=0.5){
                 b = document.getElementById('backdrop');
                 b.style="background-color:rgba(0,0,0,"+alpha+");";
                 b.style.animation='backdrop_fade_in 0.3s forwards';
@@ -1114,7 +1139,7 @@ header{padding-top:0.3em;}
                 if(big) {p.classList.add('pop_right_big');p.style.animation='pop_slide_in_big 0.3s forwards';}
                 else {p.classList.add('pop_right');p.style.animation='pop_slide_in 0.3s forwards';}
                 p.style.display='block';
-                ShowBackdrop(0.2);
+                ShowBackdrop(0.5);
             }
             function HideRightSide(){
                 p = document.getElementById('pop_right');
@@ -1134,10 +1159,10 @@ header{padding-top:0.3em;}
             }
         </script>
         <header>
-            <?php $this->MakeNavButtons(); ?>
+            <?php $this->MakeNavButtons($p); ?>
             <hr />
         </header>
-        <div id='post_menu' style='display:none;' class='pop_menu smaller invert_a'>
+        <div id='post_menu' style='display:none;' class='pop_menu invert_a'>
             <ul>
             <li><span id='_time_hook' class='smaller gray'>时间</span>&nbsp;&nbsp;<a href='javascript:HidePopMenu();'>×</a></li>
             <li>
@@ -1191,14 +1216,17 @@ header{padding-top:0.3em;}
         return $html;
     }
     
-    function MakeNavButtons(){?>
+    function MakeNavButtons(&$p){?>
         <b><a href='index.php' class='hidden_on_mobile'><?=$this->T($this->Title)?></a></b>
         <b><a class='hidden_on_desktop'
-            href='javascript:toggle_mobile_show(document.getElementById("mobile_nav"))'><?=$this->T($this->ShortTitle)?></a></b>
+            href='javascript:toggle_mobile_show(document.getElementById("mobile_nav"))'><?=$this->T($this->ShortTitle)?>...</a></b>
         <?php if($this->PageType=='post'){ ?>
             <div style='display:inline;'><a id='button_back'>←</a></div>
             <div style='float:right;'>
-                <span class='hidden_on_desktop'><a id='button_ref' href='javascript:ToggleLeftSide();'><?=$this->T('链接')?></a></span>
+                <?php if(isset($p) && isset($p['refs']) && isset($p['refs'][0])){ ?>
+                    <span class='hidden_on_desktop'><a id='button_ref' href='javascript:ToggleLeftSide();'>
+                        <?=$this->T('链接')?>(<?=sizeof($p['refs'])?>)</a></span>
+                <?php } ?>
                 <span class='hidden_on_wide'>
                     <a id='button_toc'
                         href='javascript:ShowRightSide(true,document.querySelector("#div_right"));'><?=$this->T('目录')?></a></div></span>
@@ -1216,7 +1244,7 @@ header{padding-top:0.3em;}
             <?php $this->SpecialNavigation;if(isset($this->SpecialNavigation) && ($p = &$this->GetPost($this->SpecialNavigation))!=NULL){
                 echo $this->TranslatePostParts($this->GenerateSinglePost($p, false, false, false, false));
             } ?>
-            <li><a href='<?=$this->PageType!='gallery'?"?gallery=main":"#"?>'><?=$this->T('媒体')?></a></li>
+            <li><a href='?gallery=default'><?=$this->T('媒体')?></a></li>
             <?php if($this->LanguageAppendix=='zh'){ ?>
                 <li class='invert_a smaller'><a href='<?='index.php?&set_language=en'?>'><b>汉语</b>/English</a></li>
             <?php }else { ?>
@@ -1450,7 +1478,9 @@ header{padding-top:0.3em;}
             <h3><?=$this->T('点击图片以插入：')?></h3>
             <select id="side_gallery_select" onchange="RefreshSideGallery()">
                 <option value="main"><?=$this->T('全部')?></option>
-                <option value="trash"><?=$this->T('垃圾桶')?></option>
+                <?php if($this->LoggedIn){ ?>
+                    <option value="trash"><?=$this->T('垃圾桶')?></option>
+                <?php }?>
                 <?php if(isset($this->Galleries[0])) foreach($this->Galleries as $g){ ?>
                     <option value="<?=$g['name']?>"><?=$g['name']?></option>
                 <?php } ?>
@@ -1691,7 +1721,7 @@ header{padding-top:0.3em;}
             }
             function dragOverHandler(ev) {
                 bkg=document.querySelector('#dropping_background');
-                bkg.style.display="block";
+                bkg.style.display="";
                 console.log('File(s) in drop zone');
                 ev.preventDefault();
             }
@@ -1707,13 +1737,23 @@ header{padding-top:0.3em;}
         document.title+=" | <?=$this->T('画廊')?>";
         </script>
         <div class='center' id='div_center' style='position:relative;'>
-            <h2><?=(isset($name) && $this->GetGallery($name)!=NULL)?("<span class='gray'>".$this->T('相册').":</span>".$name):
-                                                                ($_GET['gallery']=='trash'?$this->T('垃圾桶'):$this->T('画廊'))?></h2>
+            <h2><?=(isset($name) && ($gal=$this->GetGallery($name))!=NULL)?
+                                    ("<span class='gray album_hint'>".$this->T('相册').":</span>".$this->T($name)):
+                                    ($_GET['gallery']=='trash'?$this->T('垃圾桶'):$this->T('画廊'))?></h2>
             <div class='hidden_on_desktop'>
+                <?=$this->T('前往')?>
                 <select id="gallery_go_to" onchange="window.location.href='?gallery='+this.value;">
-                <option value="main"><?=$this->T('全部')?></option>
-                <?php if(isset($this->Galleries[0])) foreach($this->Galleries as $g){ ?>
-                    <option value="<?=$g['name']?>" <?=$_GET['gallery']==$g['name']?"selected":""?>><?=$g['name']?></option>
+                <?php if(isset($this->Galleries[0])) foreach($this->Galleries as $g){
+                    if(!isset($g['featured']) || !$g['featured']){ continue; } $is_this = ($_GET['gallery']==$g['name']);?>
+                    <option value="<?=$g['name']?>" <?=$is_this?"selected":""?>><?=$this->T($g['name'])?></option>
+                <?php } ?>
+                <option value="main" <?=$_GET['gallery']=='main'?"selected":""?>><?=$this->T('全部')?></option>
+                <?php if($this->LoggedIn){ ?>
+                    <option value="trash" <?=$_GET['gallery']=='trash'?"selected":""?>><?=$this->T('垃圾桶')?></option>
+                <?php } ?>
+                <?php if(isset($this->Galleries[0])) foreach($this->Galleries as $g){
+                    if(isset($g['featured']) && $g['featured']){ continue; } $is_this = ($_GET['gallery']==$g['name']);?>
+                    <option value="<?=$g['name']?>" <?=$is_this?"selected":""?>><?=$this->T($g['name'])?></option>
                 <?php } ?>
                 </select>
             </div>
@@ -1721,7 +1761,14 @@ header{padding-top:0.3em;}
                 <div>
                     <?php if(isset($name)){ ?>
                         <div style='text-align:right;position:absolute;right:0;top:0;width:100%;' class='invert_a smaller'>
-                            <a href='javascript:ShowDeleteMenu();'  class='smaller'><?=$this->T('删除相册')?></a>
+                            <a href='javascript:ShowDeleteMenu();'  class='smaller'><?=$this->T('删除相册')?></a><br />
+                            <?php if(isset($gal['featured']) && $gal['featured']!=false){ ?>
+                                <a href='?gallery=<?=$_GET['gallery']?>&gallery_set_featured=<?=$_GET['gallery']?>&value=false'
+                                    class='smaller'><?=$this->T('取消精选')?></a>
+                            <?php }else{ ?>
+                                <a href='?gallery=<?=$_GET['gallery']?>&gallery_set_featured=<?=$_GET['gallery']?>&value=true'
+                                    class='smaller'><?=$this->T('设为精选')?></a>
+                            <?php } ?>
                             <div class='pop_menu smaller invert_a' id='gallery_delete_menu' style='display:none;'>
                                 <div style='float:left;' class='gray'><?=$this->T('该操作不删除图片。')?></div>
                                 <a href='javascript:HidePopMenu();'>×</a>
@@ -1761,7 +1808,7 @@ header{padding-top:0.3em;}
                             <select id="gallery_move_to">
                             <option value="trash"><?=$this->T('垃圾桶')?></option>
                             <?php if(isset($this->Galleries[0])) foreach($this->Galleries as $g){ ?>
-                                <option value="<?=$g['name']?>"><?=$g['name']?></option>
+                                <option value="<?=$g['name']?>"><?=$this->T($g['name'])?></option>
                             <?php } ?>
                             </select>
                             <a href='javascript:AddToGallery()'><?=$this->T('执行')?></a>
@@ -1772,6 +1819,7 @@ header{padding-top:0.3em;}
                     </div>
                 </div>
             <?php } ?>
+            <p>&nbsp;</p>
             <div>
                 <div class='p_row'>
                 <?php if(isset($this->Images[0])) foreach($this->Images as $im){
@@ -1836,23 +1884,29 @@ header{padding-top:0.3em;}
     }
     
     function MakeGalleryLeft(){?>
-        <div class='left hidden_on_mobile' id='div_left'>
+        <div class='left hidden_on_mobile gallery_left' id='div_left'>
             <h2><?=$this->T('相册')?></h2>
             <div>
+                <span class='gray smaller'><?=$this->T('精选')?><hr>  </span>
                 <ul>
-                    <a href='?gallery=main'><li class='post post_box<?=$_GET['gallery']=='main'?' bold':' gray'?>'>
-                        <?=$this->T('全部图片')?></li></a>
-                    <?php if(isset($this->Galleries[0])) foreach($this->Galleries as $g){ ?>
+                    <?php if(isset($this->Galleries[0])) foreach($this->Galleries as $g){ 
+                        if(!isset($g['featured']) || !$g['featured']){ continue; } ?>
                         <a href='?gallery=<?=$g['name']?>'>
-                            <li class='post post_box<?=$g['name']==$_GET['gallery']?' bold':' gray'?>'>
-                                <?=$g['name']?>
-                            </li></a>
-                    <?php } ?>
-                    <?php if($this->LoggedIn){ ?>
-                        <a href='?gallery=trash'><li class='post post_box<?=$_GET['gallery']=='trash'?' bold':' gray'?>'>
-                            <?=$this->T('垃圾桶')?></li></a>
+                            <li class='<?=$_GET['gallery']==$g['name']?'selected':""?>'><?=$this->T($g['name'])?></li></a>
                     <?php } ?>
                 </ul>
+                <span class='gray smaller'><?=$this->T('其他相册')?><hr></span>
+                <div class='smaller'><ul>
+                    <a href='?gallery=main'><li class='<?=$_GET['gallery']=='main'?' selected':""?>'><?=$this->T('全部图片')?></li></a>
+                    <?php if(isset($this->Galleries[0])) foreach($this->Galleries as $g){ 
+                        if(isset($g['featured']) && $g['featured']){ continue; } ?>
+                        <a href='?gallery=<?=$g['name']?>'>
+                            <li class='<?=$_GET['gallery']==$g['name']?' selected':""?>'><?=$this->T($g['name'])?></li></a>
+                    <?php } ?>
+                    <?php if($this->LoggedIn){ ?>
+                        <a href='?gallery=trash'><li class='<?=$_GET['gallery']=='trash'?' selected':""?>'><?=$this->T('垃圾桶')?></li></a>
+                    <?php } ?>
+                </ul></div>
                 <p>&nbsp;</p>
                 <script>
                 </script>
@@ -1909,6 +1963,9 @@ header{padding-top:0.3em;}
                     <tr><td><?=$this->T('置顶文')?><?=isset($this->SpecialPinned)?"<a href='?post=".$this->SpecialPinned."'>→</a>":""?></td>
                         <td><input type="text" form="settings_form" id='settings_special_pinned' name='settings_special_pinned'
                         value='<?=$this->SpecialPinned?>'/></td></tr>
+                    <tr><td><?=$this->T('默认相册')?></td>
+                        <td><input type="text" form="settings_form" id='settings_default_gallery' name='settings_default_gallery'
+                        value='<?=$this->DefaultGallery?>'/></td></tr>
                     <tr><td><?=$this->T('附加操作')?></td><td><a class='gray' href='index.php?extras=true'><?=$this->T('进入')?></a></td></tr>
                     <tr><td class='smaller gray'>&nbsp;</td></tr>
                     <tr><td class='smaller gray'><?=$this->T('管理员')?></td><td class='smaller'>
@@ -1944,23 +2001,35 @@ header{padding-top:0.3em;}
     }
     
     function MakeExtraOperations(){?>
-        <div class='settings'>
-            <h3><?=$this->T('附加操作')?></h3>
+        <div class='settings' style='overflow:auto;'>
+            <h2><?=$this->T('附加操作')?></h2>
             <a href='?index.php&settings=true'><?=$this->T('返回一般设置')?></a>
             <p>&nbsp;</p>
-            <h4><?=$this->T('自动重定向')?></h4>
-            <span class='smaller gray'><?=$this->T('P为帖子跳转，按域名后的字符串匹配跳到目标文章；S为站点跳转，可以重定向来源域名，例子：')?>
-            <br />P discount:20001001010101;<br />S old_domain:www.new_domain.com:20001001010101;</span>
+            <h3><?=$this->T('自动重定向')?></h3>
+            <span class='smaller gray'>
+                <?=$this->T('P为帖子跳转，按域名后的字符串匹配跳到目标文章；S为站点跳转，可以重定向来源域名，例子：')?>
+            <br /><pre>P discount:20001001010101;<br />S old_domain:www.new_domain.com:20001001010101;</pre></span>
             <form action="<?=$_SERVER['REQUEST_URI']?>" method="post" style='display:none;' id='settings_form2'></form>
-            <textarea id="settings_redirect" name="settings_redirect" rows="4"
+            <textarea id="settings_redirect" name="settings_redirect" rows="3" class='full_box' wrap="off"
                 form='settings_form2'><?=$this->DisplayRedirectConfig()?></textarea>
             <input class='button' form="settings_form2" type="submit" name='settings_save_redirect'
                 value='<?=$this->T('保存重定向设置')?>' /></input>
+            <p>&nbsp;</p>
+            <h3><?=$this->T('自定义翻译')?></h3>
+            <span class='smaller gray'>
+                <?=$this->T('填写格式：')?>
+            <br /><pre>- 语言 | Language</pre></span>
+            <form action="<?=$_SERVER['REQUEST_URI']?>" method="post" style='display:none;' id='settings_form3'></form>
+            <textarea id="settings_translation" name="settings_translation" rows="3" class='full_box' wrap="off"
+                form='settings_form3'><?=$this->CustomTranslationContent?></textarea>
+            <input class='button' form="settings_form3" type="submit" name='settings_save_translation'
+                value='<?=$this->T('保存翻译')?>' /></input>
             <p>&nbsp;</p>
             <p class='smaller gray'><?=$this->T('当心！下列操作将立即执行：')?></p>
             <ul>
                 <li><a href='index.php?rewrite_styles=true'><?=$this->T('重新写入默认CSS')?></a></li>
             </ui>
+            <br /><br /><br /><a href='?index.php&settings=true'><?=$this->T('返回一般设置')?></a><br />&nbsp;
         </div>
     <?php
     }
@@ -1978,10 +2047,8 @@ header{padding-top:0.3em;}
         <div class='small_footer'>
             <hr />
             <b><?=$this->T($this->Title)?></b>
-            <span ondblclick='javascript:window.location.href="index.php?settings=true"'>©<?=$this->T($this->DisplayName)?></span>
-            <?php if($this->LoggedIn){ ?>
-                <a href='index.php?settings=true'><?=$this->T('设置')?></a>
-            <?php } ?>
+            <span onclick='event.stopPropagation()'
+                ondblclick='javascript:window.location.href="index.php?settings=true"'>©</span><?=$this->T($this->DisplayName)?>
         </div>
         <div class='footer'>
             <div style='white-space:nowrap;'>
@@ -2000,7 +2067,7 @@ header{padding-top:0.3em;}
         <p>&nbsp;<p>
         <div id='dropping_background' style='display:none;' onclick='this.style.display="none";'
             ondrop="_dropHandler(event);" ondragover="_dragOverHandler(event);">
-            <h2><?=$this->T('上传到这里')?></h2>
+            <h2 style='width:100%;'><?=$this->T('上传到这里')?></h2>
         </div>
         <div id='big_image_overlay' style='display:none'>
             <div class='big_image_box' onclick='HideBigImage()'>
@@ -2008,8 +2075,11 @@ header{padding-top:0.3em;}
             </div>
             <div class='big_side_box' onclick='HideBigImage();'>
                 <div class='side_box_mobile_inner'>
-                    <div style='text-align:right;'>
+                    <div style='float:right;'>
                         <a class='clean_a' onclick='HideBigImage();'><?=$this->T('关闭')?>→</a>
+                    </div>
+                    <div>
+                        <b><a class='clean_a' download id='image_download' onclick="event.stopPropagation();">↓<?=$this->T('下载')?></a></b>
                         <hr />
                     </div>
                     <div id='big_image_share' class='clean_a' onclick="event.stopPropagation();">
@@ -2159,7 +2229,8 @@ header{padding-top:0.3em;}
                 copy = document.getElementById('share_copy');
                 copy.innerHTML='&#128203;&#xfe0e;';
                 copy.addEventListener("click", function(){
-                    copy_text(window.location.href);
+                    url = window.location
+                    copy_text(url.protocol+"//"+url.host+"/index.php?post="+id);
                     this.innerHTML='&#128203;&#xfe0e;&#10003;&#xfe0e;';
                 });
                 document.getElementById('share_pin').href='https://www.pinterest.com/pin/create/button/?url='+
@@ -2195,7 +2266,9 @@ header{padding-top:0.3em;}
             function ShowBigImage(imgsrc,do_push){
                 share = document.querySelector('#big_image_share');
                 img = document.querySelector('#big_image');
+                down = document.querySelector('#image_download');
                 img.src = src = "images/"+imgsrc;
+                down.href="images/"+imgsrc;
                 
                 if(do_push){PushGalleryHistory(src)}
                 
@@ -2332,7 +2405,9 @@ $la->DetectPageType();
 $la->ReadImages(false);
 $la->ReadPosts();
 
-$la->MakeHeader();
+$p = &$la->GetPost($la->CurrentPostID);
+
+$la->MakeHeader($p);
 $la->MakeMainBegin();
 
 
@@ -2344,7 +2419,7 @@ if($la->PageType=='extras'){
     $la->MakeGalleryLeft();
     $la->MakeGallerySection();
 }else if($la->PageType=='post'){
-    if($p = &$la->GetPost($la->CurrentPostID)){
+    if($p){
         $la->MakeLinkedPosts($p);
         $la->MakePostSection($p);
         $la->MakeTOC();

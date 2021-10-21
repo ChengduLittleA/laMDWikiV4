@@ -55,7 +55,7 @@
 - 清除 | Clear
 - 添加到 | Add to
 - 执行 | Execute
-- 或者 | Or
+- 或者 | Or&nbsp;
 - 从相册移除 | remove from album
 - 全部图片 | All Pictures
 - 未找到目录 | No table of contents found
@@ -72,6 +72,7 @@
 - 进入 | Enter
 - 登出 | Log out
 - 帐号 | ID
+- 密码 | Password
 - 新密码 | New Password
 - 再次输入 | Re-enter
 - 旧密码 | Old Passowrd
@@ -95,5 +96,14 @@
 - 该图片出现在 | This image appeared in
 - 个帖子中 | posts
 - 该图片未被引用 | This images is not referenced
+- 精选 | Featured
+- 设为精选 | Set Featured
+- 取消精选 | Stop Featuring
+- 其他相册 | Other Albums
+- 下载 | Download
+- 前往 | Go to
+- 填写格式： | Format:
+- 自定义翻译 | Custom Translations
+- 保存翻译 | Save Translations
 
 
