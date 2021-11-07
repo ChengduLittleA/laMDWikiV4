@@ -100,10 +100,31 @@
 - 设为精选 | Set Featured
 - 取消精选 | Stop Featuring
 - 其他相册 | Other Albums
+- 默认相册 | Default Album
 - 下载 | Download
 - 前往 | Go to
 - 填写格式： | Format:
 - 自定义翻译 | Custom Translations
 - 保存翻译 | Save Translations
-
+- 请稍候 | Please Wait
+- 咨询 | Inquiry
+- 网站图片咨询 | Blog Artwork Inquiry
+- 你好！我对你网站上的这张图片感兴趣： | Hi! I'm interested in this piece of artwork on your blog:
+- 电子邮件 | E-Mail
+- 省略的表格 | Table Omitted
+- 阅读更多 | Read More
+- 未找到这个帖子 | Post not found
+- 返回首页 | Return to home page
+- 购买印刷品 | Purchase Print
+- 印刷品链接 | Link to print
+- 保存 | Save
+- 重新生成图片缩略图 | Regenerate Thumbnails
+- 删除所有登录 | Clear All Logins
+- 搜索 | Search
+- 和 | And
+- 个商品 | products
+- 商品 | Product
+- 未设置价格 | No Price
+- 购买 | Purchase
+- 你好！我想购买 | Hi! I'd like to purchase&nbsp;
 

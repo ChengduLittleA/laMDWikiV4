@@ -19,6 +19,7 @@ class LA{
     protected $Admin;
     protected $Password;
     protected $DisplayName;
+    protected $EMail;
     protected $SpecialNavigation;
     protected $SpecialFooter;
     protected $SpecialFooter2;
@@ -34,6 +35,7 @@ class LA{
     protected $HotPostCount;
     
     protected $LoggedIn;
+    protected $LoginTokens;
     protected $LanguageAppendix;
     
     protected $Posts;
@@ -53,8 +55,14 @@ class LA{
     public $PageType;
     public $CurrentPostID;
     
+    function FullURL(){
+        return (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ?
+                "https" : "http") . "://" . $_SERVER['HTTP_HOST'] . 
+                $_SERVER['REQUEST_URI'];
+    }
+    
     function T($str){
-        if(!$this->LanguageAppendix) return $zh;
+        if(!$this->LanguageAppendix) return $str;
         foreach($this->Translations as $entry){
             if($entry['zh']==$str)
                 return $entry[$this->LanguageAppendix];
@@ -90,7 +98,11 @@ class LA{
         if(isset($this->Redirect) && isset($this->Redirect[0])) foreach($this->Redirect as $r){
             if($r['for']=='S'){
                 if(preg_match('/'.$r['format'].'/ui', $_SERVER['HTTP_HOST'])){
-                    header('Location:https://'.$r['domain'].'/index.php?post='.$r['target']); exit;
+                    if($_SERVER['REQUEST_URI']=='/'||$_SERVER['REQUEST_URI']==''){
+                        header('Location:https://'.$r['domain'].'/index.php?post='.$r['target']); exit;
+                    }else{
+                        header('Location:https://'.$r['domain'].$_SERVER['REQUEST_URI']); exit;
+                    }
                 }
             }
         }
@@ -104,6 +116,7 @@ class LA{
                 fwrite($conf,"RewriteRule ^".$r['format'].'$ /index.php?post='.$r['target'].' [R=302,L]'.PHP_EOL.PHP_EOL);
             }// do site redirect in php.
         }
+        fwrite($conf,'<Files ~ "\.md$">'.PHP_EOL.'deny from all'.PHP_EOL.'</Files>'.PHP_EOL);
         fflush($conf);fclose($conf);
     }
     
@@ -123,6 +136,16 @@ class LA{
         }
     }
     
+    function WriteTokens(){
+        $tf = fopen('la_tokens.md','w');
+        if(isset($this->LoginTokens) && sizeof($this->LoginTokens)) {
+             foreach($this->LoginTokens as $t){
+                fwrite($tf,'- '.$t.PHP_EOL);
+            }
+        }
+        fflush($tf);fclose($tf);
+    }
+    
     function WriteConfig(){
         if(!isset($this->Title)) $this->Title = $this->T('那么的维基');
         if(!isset($this->ShortTitle)) $this->ShortTitle = $this->T('基');
@@ -135,6 +158,7 @@ class LA{
         fwrite($conf,'- Admin = '.$this->Admin.PHP_EOL);
         fwrite($conf,'- DisplayName = '.$this->DisplayName.PHP_EOL);
         fwrite($conf,'- Password = '.$this->Password.PHP_EOL);
+        fwrite($conf,'- EMail = '.$this->EMail.PHP_EOL);
         fwrite($conf,'- SpecialNavigation = '.$this->SpecialNavigation.PHP_EOL);
         fwrite($conf,'- SpecialFooter = '.$this->SpecialFooter.PHP_EOL);
         fwrite($conf,'- SpecialFooter2 = '.$this->SpecialFooter2.PHP_EOL);
@@ -144,6 +168,7 @@ class LA{
         $conf = fopen('la_redirect.md','w');
         fwrite($conf,$this->DisplayRedirectConfig());fflush($conf);fclose($conf);
         $this->WriteHTACCESS();
+        $this->WriteTokens();
     }
     
     function Install(){
@@ -156,6 +181,7 @@ class LA{
         if(!is_dir('styles')) mkdir('styles');
         
         $this->WriteStyles();
+        $this->WriteHTACCESS();
     }
     
     function ReadConfig(){
@@ -168,6 +194,7 @@ class LA{
         if(preg_match('/-\s*Admin\s*=\s*(\S+)\s*$/um', $c, $m)) $this->Admin = $m[1];
         if(preg_match('/-\s*Password\s*=\s*(\S+)\s*$/um', $c, $m)) $this->Password = $m[1];
         if(preg_match('/-\s*DisplayName\s*=\s*(\S+)\s*$/um', $c, $m)) $this->DisplayName = $m[1];
+        if(preg_match('/-\s*EMail\s*=\s*(\S+)\s*$/um', $c, $m)) $this->EMail = $m[1];
         if(preg_match('/-\s*SpecialNavigation\s*=\s*(\S+)\s*$/um', $c, $m)) $this->SpecialNavigation = $m[1];
         if(preg_match('/-\s*SpecialFooter\s*=\s*(\S+)\s*$/um', $c, $m)) $this->SpecialFooter = $m[1];
         if(preg_match('/-\s*SpecialFooter2\s*=\s*(\S+)\s*$/um', $c, $m)) $this->SpecialFooter2 = $m[1];
@@ -192,6 +219,13 @@ class LA{
                 $this->Translations[] = $entry;
             }
         }
+        $this->LoginTokens=[];
+        if(file_exists('la_tokens.md')){
+            $c = file_get_contents('la_tokens.md');
+            if(preg_match_all('/-\s+(\S.*)\s*$/um',$c, $ma, PREG_SET_ORDER)) foreach($ma as $m){
+                $this->LoginTokens[] = $m[1];
+            }
+        }
     }
     
     function __construct() {
@@ -201,7 +235,7 @@ class LA{
         $this->Posts = [];
         $this->Threads = [];
         
-        $this->Markers=['●', '○', '✓', '×', '!'];
+        $this->Markers=['●', '○', '✓', '×', '!', 'P'];
         
         $this->PostsPerPage = 40;
         $this->HotPostCount = 15;
@@ -209,22 +243,53 @@ class LA{
     
     function DoLogout(){
         $this->LoggedIn = false;
-        unset($_SESSION['user_id']); unset($_SESSION['la_theme']);
+        unset($_SESSION['user_id']);
+        $this->RecordToken(true);
+    }
+    
+    function RecordToken($unset_current=false){
+        if(isset($unset_current) && isset($_COOKIE['la_token'])){
+            $t = $_COOKIE['la_token'];
+            setcookie('la_token', null, -1, '/'); unset($_COOKIE['la_token']);
+            if (($key = array_search($t,$this->LoginTokens)) !== false) { unset($this->LoginTokens[$key]); }
+            $this->WriteTokens();
+            return null;
+        }else{
+            $t = uniqid('la_',true);
+            setcookie('la_token',$t,time()+3600*24*7); $_COOKIE['la_token'] = $t;
+            $this->LoginTokens[] = $t;
+            $this->WriteTokens();
+            return $t;
+        }
+    }
+    
+    function LoginThroughToken(){
+        if(!isset($_COOKIE['la_token'])) return false;
+        $t = $_COOKIE['la_token'];
+        if (($key = array_search($t,$this->LoginTokens)) !== false) {
+            $_SESSION['user_id']=$this->Admin;
+            $this->LoggedIn = true;
+            setcookie('la_token',$t,time()+3600*24*7);
+            return true;
+        }
+        return false;
     }
     
     function DoLogin(){
         session_start();
         $redirect=false;
-        if(isset($_GET['logout'])){ $this->DoLogout(); }
+        if(isset($_GET['logout'])){ $this->DoLogout(); header('Location:index.php'); }
         else if(!isset($_SESSION['user_id'])){
             if(isset($_POST['login_button'])){
                 $id = trim($_POST['login_id']);
                 $pwd = trim($_POST['login_password']);
                 if(strtolower($this->Admin)==strtolower($id)&&password_verify($pwd, $this->Password)){
                     $_SESSION['user_id']=$id;
-                    
+                    $this->RecordToken(false);
                 }
                 $redirect = true;
+            }else if($this->LoginThroughToken()){
+                // nothing;
             }
         }else{
             if(strtolower($_SESSION['user_id']) == strtolower($this->Admin)){ $this->LoggedIn = true; }
@@ -241,6 +306,7 @@ class LA{
 html{font-size:18px;font-family:'Noto Serif CJK SC','Times New Roman','SimSun',Georgia,serif;}
 body{background-color:%white%;color:%black%;}
 sup,sub{line-height:0;}
+blockquote{border-left:2px solid %black%;padding-left:0.3em;}
 *{box-sizing:border-box;padding:0;margin:0;}
 .page,.page_gallery{padding:1em;padding-top:0;}
 .hidden_on_desktop, .hidden_on_wide{display:none;}
@@ -252,46 +318,49 @@ header a,.left a,.footer a,.clean_a,.clean_a a{text-decoration:none;}
 header a:hover,.button:hover{color:%gray% !important;}
 .invert_a,.invert_a a{color:%gray%;text-decoration:none;}
 .invert_a:hover,.invert_a a:hover{color:%black% !important;}
-.gray{color:%gray%;}
+.gray,.gray a{color:%gray%;}
 hr{border:1px solid %gray%;}
-p{margin:0;margin-bottom:0.5em}
-p:last-child{margin-bottom:0;}
 header ul{display:inline-block;}
 header li{display:inline-block;}
 header li::before{content:' - '}
 header h1,header h2,header h3,header h4,header h5,header p{display:inline;font-size:1rem;}
 .main{position:relative;word-spacing:-1em;}
-.main div{word-spacing:initial;}
-pre{overflow:auto;}
+.main *{word-spacing:initial;}
+pre{overflow:auto;max-width:100%;display:block;}
 ul{display:block;}
 li{display:block;}
 table{width:100%;border-collapse:collapse;border-bottom:2px solid %black%;border-top:2px solid %black%;}
 table input{border:none!important;}
+table img{max-width:10rem !important;}
 td{padding-left:0.1em;padding-right:0.1em;}
 td:first-child{padding-left:0;}
 td:last-child{padding-right:0;}
 tbody tr:hover{box-shadow:inset 0 -2px 0 0px %black%;}
 thead{border-bottom:1px solid %black%;} 
 .left{display:inline-block;vertical-align:top;width:25%;height:calc(100vh - 5.2em);
-position:sticky;top:2.5em;overflow:auto;padding-right:0.2em;padding-bottom:70vh;}
-.center{display:inline-block;vertical-align:top;width:50%;padding-left:0.3em;overflow:auto;padding-bottom:70vh;}
-.center .post:hover{background-color:%graybkg%;}
-.right{display:inline-block;vertical-align:top;width:25%;position:sticky;top:2.5em;padding-left:0.5em;height:calc(100vh - 2.6em);overflow:auto;padding-bottom:70vh;}
+position:sticky;top:2.5em;overflow:auto;padding-right:0.2em;padding-bottom:50vh;}
+.center{display:inline-block;vertical-align:top;width:50%;padding-left:0.3em;overflow:visible;padding-bottom:50vh;}
+.table_top{position:relative;left:calc(-50% - 0.45em);width:calc(200% + 0.6em);background:%white%;z-index:1;
+box-shadow:0px 0px 2em 1em %white%;margin-top:2em;margin-bottom:2em;}
+.right{display:inline-block;vertical-align:top;width:25%;position:sticky;top:2.5em;padding-left:0.5em;height:calc(100vh - 2.6em);overflow:auto;padding-bottom:50vh;}
 textarea,input[type=text],input[type=password]{width:100%;display:block;font-family:inherit;max-height:60vh;}
 select,textarea,input[type=text],input[type=password]{background:none;border:none;border-bottom:1px solid %black%;color:%black%;}
 .button{background:none;border:none;font-family:inherit;color:%black%;font-size:inherit;font-weight:bold;}
-.post{position:relative;scroll-margin:2.5em;border-radius:0.3em;padding:0.5rem;padding-left:0rem;padding-top:0.3rem;padding-bottom:0.3rem;}
-.post{margin-top:0.2em;margin-bottom:0.2em;}
+.post{position:relative;scroll-margin:2.5em;border-radius:0.3em;
+padding-right:0.5rem;padding-left:0rem;padding-top:0.3rem;padding-bottom:0.3rem;margin-top:0.2em;margin-bottom:0.2em;}
 .post_width li,.post_width_big li,.footer_additional li,.footer_additional li{display:list-item;margin-left:1em;list-style:disc;}
 .post_width li li,.post_width_big li li,.footer_additional li li,.footer_additional li li{list-style:circle;}
+.post_width > *,.post_width_big > *{margin:0;margin-bottom:0.5em}
+.post_width > *:last-child,.post_width_big > *:last-child{margin-bottom:0em;}
+.post_width h1,.post h2,.post h3,.post h4{margin-bottom:0.5rem}
 .gallery_left li{display:list-item;margin-left:1em;list-style:none;}
 .gallery_left .selected{list-style:'→';}
 .gallery_left ul{font-size:1.4em;}
-.focused_post{font-size:1.2em;margin-top:0.1em;margin-bottom:0.1em;padding:0.5rem;background-color:%focusedbkg%;}
-.post_width{position:relative;left:1.4rem;width:calc(100% - 1.6rem);padding-left:0.2em;}
-.post_width_big{position:relative;left:0;width:100%;}
+.focused_post{font-size:1.2em;margin-top:0.1em;margin-bottom:0.1em;padding:0.5rem;border:2px dashed #ac7843;}
+.post_width{position:relative;left:1.4rem;width:calc(100% - 1.7rem);padding-left:0.2em;overflow:visible;}
+.post_width_big{position:relative;left:0;width:100%;overflow:visible;}
 .post .post{padding:0;padding-top:0.3rem;}
-.post_menu_button{position:absolute;display:none;right:-0.2rem;width:1.5rem;
+.post_menu_button{position:absolute;display:none;right:0rem;width:1.5rem;
 text-align:center;border-radius:0.3em;user-select:none;cursor:pointer;}
 .pointer{cursor:pointer;}
 .post:hover .post_menu_button{display:block;}
@@ -309,7 +378,7 @@ border-right:2px solid %black% !important;}
 .post_box:hover,.post_menu_button:hover{background-color:%lightopbkg%}
 #big_image_info .post_box:hover{background-color:%graybkg%;}
 .post_preview{font-size:0.9rem;overflow:hidden;}
-.post .post_ref{margin:0;padding-left:1.6rem;}
+.post .post_ref{margin:0;padding-left:1.7rem;}
 .post_ref_main{display:inline-block;vertical-align:top;}
 .post_preview .post_ref_main{max-height:6rem;overflow:hidden;}
 .post_ref_images{overflow:hidden;}
@@ -319,6 +388,7 @@ border-right:2px solid %black% !important;}
 .block{display:block;}
 .opt_compact,.ref_compact{margin-top:0;}
 .opt_compact{margin-left:1.9em;}
+.opt_compact .post_width {margin-left:0.3em;}
 .post_box_top{padding-bottom:0.3em;padding-top:0.3em;}
 .post_box_fixed_bottom{position:sticky;bottom:0em;background-color:%white%;z-index:5;}
 .spacer{height:0.5em;}
@@ -339,14 +409,14 @@ transition-timing-function:ease-out;padding:1rem;overflow:auto;}
 h1,h2,h3,h4,h5{scroll-margin:1.5em;}
 {display:inline}
 .left ul h1,.left ul h2,.left ul h3,.left ul h4,.left ul h5,.left ul p
-{font-size:1em;display:inline-block;}
+{font-size:1em;}
 .deleted_post{color:%gray%;text-decoration:line-through;}
 #file_list{margin-top:0.5em;}
 .file_thumb img{max-height:100%;max-width:100%;object-fit:cover;min-width:100%;min-height:100%;}
 #file_list li{margin-bottom:0.3em;}
 .ref_thumb{white-space:nowrap;overflow:hidden;}
 .ref_thumb .file_thumb{width:3em;height:3em;}
-.side_thumb li{margin:0.2em;display:inline-block;}
+.side_thumb li{margin:0.4em;display:inline-block;}
 .file_thumb{width:4em;height:4em;display:inline-block;box-shadow:0px 0px 10px rgb(0, 0, 0);
 line-height:0;vertical-align:middle;overflow:hidden;}
 .p_row{display:flex;flex-wrap:wrap;margin-left:0.25rem;margin-top:0.25rem;}
@@ -358,7 +428,8 @@ box-shadow:0px 0px 10px rgb(0, 0, 0);overflow:hidden;position:relative;}
 .p_thumb_selected{color:%black% !important;}
 .p_thumb_selected{display:block;}
 .post .p_thumb img{max-height:8rem;}
-.big_image_box{position:fixed;top:0;bottom:0;left:0;width:75%;z-index:95;text-align:center;}
+.big_image_box{position:fixed;top:0;bottom:0;left:0;width:75%;z-index:95;text-align:center;pointer-events:none;}
+.big_image_box *{pointer-events:auto;}
 .big_image_box img{position:absolute;margin:auto;top:0;left:0;right:0;bottom:0;box-shadow: 0px 0px 30px black;cursor:unset;}
 .big_side_box{position:fixed;top:0;bottom:0;right:0;width:25%;overflow:auto;z-index:98;color:%black%;padding:1rem;
 background:linear-gradient(to right, rgba(0,0,0,0), rgb(1, 1, 1));transition:background-size .2s linear;background-size: 300% 100%;}
@@ -369,21 +440,52 @@ background:linear-gradient(to right, rgba(0,0,0,0), rgb(1, 1, 1));transition:bac
 box-shadow:0px 0px 500px black inset;display:flex;align-items:center;}
 img{cursor:pointer;max-height:100%;max-width:100%;}
 .post img{box-shadow:0px 0px 10px rgb(0, 0, 0);max-height:min(70vh, 20rem);;max-width:min(100%, 20rem);}
+.post .original_img{max-width:100%;max-height:70vh;}
 .b ul{font-size:1.4em;}
 no_pop{cursor:unset;}
 p{min-height:0.8em;}
 .bold{font-weight:bold;}
 .footer_additional{display:inline-block;width:50%;vertical-align:text-top;white-space:normal;}
-.small_footer{position:sticky;bottom:0em;background-color:%white%;padding-bottom:1em;}
+.small_footer{position:sticky;bottom:0em;background-color:%white%;padding-bottom:1em;z-index:10;}
 .top_post_hint{margin-left:1.5em;font-weight:bold;}
 .white{color:%white%;}
 .full_box{border:1px solid %black%;padding:0.3rem;overflow:auto;}
+.image_nav_prev,.image_nav_next{z-index:100;position:absolute;line-height:0;height:100%;width:20%;display:flex;align-items:center;
+transition:background-size .2s ease;padding:0.5em;text-shadow:0px 0px 5px black;user-select:none;pointer-events:auto;}
+.image_nav_prev{left:0;justify-content:left;background:linear-gradient(to left, rgba(0,0,0,0), rgba(0,0,0,0.2));
+background-repeat:no-repeat;background-size:0% 100%;}
+.image_nav_prev:hover,.image_nav_next:hover{background-size:100% 100%;}
+.image_nav_next{right:0;justify-content:right;background:linear-gradient(to right, rgba(0,0,0,0), rgba(0,0,0,0.2));
+background-repeat:no-repeat;background-size:0% 100%;transition:background-size .2s ease;background-position-x:100%;}
+.inquiry_buttons{position:fixed;left:0;right:25%;text-align:center;bottom:1em;margin:0 auto;width:max-content;
+background-color:rgba(0,0,0,0.5);z-index:110;padding:0.2em;padding-left:1em;padding-right:1em;
+border-radius:1em;box-shadow:0px 0px 5px;text-shadow:0px 0px 5px black;opacity:1;user-select:none;}
+.lr_buttons{background-color:rgba(0,0,0,0.5);padding:0.5em;padding-top:1em;padding-bottom:1em;
+border-radius:1em;box-shadow:0px 0px 5px;font-size:1.2rem;text-shadow:0px 0px 5px black;}
+.img_btn_hidden{opacity:0;transition:opacity 0.2s;}
+.special_alipay{background-color:#027aff;color:white;white-space:nowrap;
+font-family:sans-serif;font-weight:bold;border-radius:0.7em;font-size:0.75em;padding:0.25em;}
+.special_paypal{background-color:white;color:#253b80;white-space:nowrap;
+font-family:sans-serif;font-weight:bold;border-radius:2em;font-size:0.75em;
+padding:0.25em;padding-left:0.5em;padding-right:0.65em;font-style: italic;}
+.special_paypal_inner{color:#169bd7;}
+#waiting_bar{position:fixed;z-index:200;top:0;left:0;right:0;height:0.2em;background-color:%black%;transform:translate(-100%,0);
+animation:anim_loading 1s linear infinite;}
+@keyframes anim_loading{0%{transform:translate(-100%,0);} 100%{transform:translate(100%,0);}}
+.product_ref{width:32%;padding:0.2em!important;display:inline-block;text-align:center;vertical-align:top;margin-bottom:0.8em;}
+.product_thumb{max-height:15em;max-width:15em;display:inline-flex;margin-bottom:0.2em;background-color:%graybkg%;}
+.product_thumb img{box-shadow:none;object-fit:contain;max-height:unset;max-width:unset;width:100%;}
+.product_ref p{margin-bottom:0.2em;text-align:left;}
+.post_preview .product_thumb{max-height:4em;max-width:6em;}
+.purchase_button{background-color:%black%;color:%white%;padding-left:0.5em;padding-right:0.5em;text-decoration:none;font-weight:bold;}
+.page_break{page-break-after:always;}
+.text_highlight,.text_highlight a{background-color:%black%;color:%white%;}
 
 @media screen and (max-width:1000px){
 .left{width:35%;}
 .center{width:65%;}
 .right{display:none;}
-.post_width{left:1.5em;width:calc(100% - 1.7rem);padding-left:0.2em;}
+.post_width{width:calc(100% - 1.5rem);padding-left:0.2em;}
 .post_width_big{left:0;width:100%;}
 .hidden_on_wide{display:unset;}
 .hidden_on_narrow{display:none;}
@@ -395,6 +497,8 @@ p{min-height:0.8em;}
 @keyframes pop_slide_out_big{0%{right:0%;}100%{right:-40%;}}
 .big_side_box{width:35%;}
 .big_image_box{width:65%;}
+.inquiry_buttons{right:35%;}
+.table_top{left:calc(-50% - 1.7em);width: calc(154% + 0.5em);}
 }
 
 @media screen and (max-width:666px){
@@ -413,19 +517,33 @@ header li::before{content:''}
 @keyframes pop_slide_out{0%{bottom:0%;}100%{bottom:-30%;}}
 @keyframes pop_slide_in_big{0%{bottom:-70%;}100%{bottom:0%;}}
 @keyframes pop_slide_out_big{0%{bottom:0%;}100%{bottom:-70%;}}
-.big_image_box{position:fixed;top:0;bottom:7.5rem;left:0;right:0;width:100%;}
+.big_image_box{position:fixed;top:0;bottom:8.5rem;left:0;right:0;width:100%;}
 .side_box_mobile_inner{background:linear-gradient(to bottom, rgba(0,0,0,0), rgba(1,1,1,0.9) 20%);
 transition:none;background-size:100% 100%;padding:0.5rem;padding-bottom: 5em;}
 .side_box_mobile_inner:hover{background-size:100% 100%;}
 .big_side_box{position:fixed;top:0;bottom:0;right:0;left:0;width:100%;
-height:unset;padding:0;padding-top:calc(100vh - 7.5rem);background:none;}
+height:unset;padding:0;padding-top:calc(100vh - 8.5rem);background:none;}
 .p_thumb{height:3rem;}
+.post{padding-right:0.3rem;}
 .post .p_thumb img{max-height:3rem;}
-.page,.page_gallery{padding:0.3em;padding-top:0;}
+.page,.page_gallery{padding:0.2em;padding-top:0;}
 header{padding-top:0.3em;}
 .small_footer{padding-bottom:0.3em;}
 .footer_additional{display:block;width:100%;}
 .album_hint{display:block;font-size:1rem;}
+.image_nav{position:absolute !important;}
+.image_nav_prev,.image_nav_next{width:25%;}
+.image_nav_prev:hover,.image_nav_next:hover{background-size:0% 100%;color:%black% !important;}
+.inquiry_buttons{position:relative;left:unset;right:unset;text-align:left;bottom:unset;margin:unset;width:unset;
+background-color:unset;z-index:unset;padding:unset;padding-left:unset;padding-right:unset;
+border-radius:unset;box-shadow:unset;text-shadow:unset;}.img_btn_hidden{opacity:1;}
+.lr_buttons{background-color:unset;padding:unset;padding-top:unset;padding-bottom:unset;
+border-radius:unset;box-shadow:unset;font-size:1.3rem;text-shadow:unset;}
+.opt_compact,.ref_compact{line-break:anywhere;}
+.post_width,.post_width_big{overflow:auto;}
+.table_top{left:unset;width:100%;overflow:auto;}
+table img{max-width:30vw !important;}
+.product_ref{width:100%;display:block;}
 }
 ";
         $this->style=preg_replace('/%white%/','#231a0d',$this->style);
@@ -438,6 +556,10 @@ header{padding-top:0.3em;}
         $f = fopen('styles/main.css','w');
         fwrite($f,$this->style);
         fclose($f);
+    }
+    
+    function GiveSafeEMail(){
+        return preg_replace('/\./u','[dot]',preg_replace('/\@/u','[at]',$this->EMail));
     }
     
     function &FindImage($name){
@@ -467,6 +589,9 @@ header{padding-top:0.3em;}
             if(preg_match('/GAL\s+([^;]*);/u',$m[2],$gals) && preg_match_all('/(\S+)/u',$gals[1],$ga, PREG_SET_ORDER)){
                 $item['galleries']=[];
                 foreach($ga as $g){ if(!in_array($g[0], $item['galleries'])) $item['galleries'][] = $g[0]; }
+            }
+            if(preg_match('/PRODUCT\s+([^;]*);/u',$m[2],$product)){
+                $item['product']=$product[1];
             }
             $this->Images[] = $item;
         }
@@ -520,26 +645,55 @@ header{padding-top:0.3em;}
             fwrite($f, "- ".$im['name'].'; ');
             if(isset($im['refs']) && isset($im['refs'][0])){ fwrite($f, 'REFS '.implode(" ",$im['refs'])."; "); }
             if(isset($im['galleries']) && isset($im['galleries'][0])){ fwrite($f, 'GAL '.implode(" ",$im['galleries'])."; "); }
+            if(isset($im['product']) && $im['product']!=''){ fwrite($f, 'PRODUCT '.$im['product']."; "); }
             fwrite($f, PHP_EOL);
         }
         fflush($f);
         fclose($f);
     }
     
-    function EditImage($name, $link_gallery, $do_remove = false){
+    function EditImage($name, $link_gallery, $do_remove = false, $product_link=NULL){
         if(!($im = &$this->FindImage($name))) return;
-        if($do_remove){
-            if(!isset($im['galleries']) || !isset($im['galleries'][0])) return;
-            foreach($im['galleries'] as $key => $g){ if ($g==$link_gallery) unset($im['galleries'][$key]); }
-            $im['galleries'] = array_merge($im['galleries']);
-        }else{
-            if(!isset($im['galleries'])) $im['galleries']=[];
-            foreach($im['galleries'] as &$g){ if ($g==$link_gallery) return; }
-            $im['galleries'][]=$link_gallery;
+        if(isset($link_gallery)){
+            if($do_remove){
+                if(!isset($im['galleries']) || !isset($im['galleries'][0])) return;
+                foreach($im['galleries'] as $key => $g){ if ($g==$link_gallery) unset($im['galleries'][$key]); }
+                $im['galleries'] = array_merge($im['galleries']);
+            }else{
+                if(!isset($im['galleries'])) $im['galleries']=[];
+                foreach($im['galleries'] as &$g){ if ($g==$link_gallery) return; }
+                $im['galleries'][]=$link_gallery;
+            }
+        }
+        if(isset($product_link)){
+            if($product_link!=''){$im['product']=$product_link;}
+            else{unset($im['product']);}
         }
     }
     
-    function compressImage($source, $destination, $thumb_destination, $quality, $sizelim) {
+    function RegenerateThumbnails(){
+        $glob = glob('images/*.jpg');
+        if(!is_dir('images/thumb')) mkdir('images/thumb');
+        foreach($glob as $file) {
+            $thumb_destination = 'images/thumb/'.basename($file);
+            $image = imagecreatefromjpeg($file);
+            list($width, $height) = getimagesize($file);
+            $filter = IMG_BICUBIC;
+            if(max($width,$height)<800){$filter = IMG_BICUBIC_FIXED;}
+            $sizelim=400; $anychanged=false;
+            if ($width > $sizelim) {
+                $newwidth = $sizelim; $newheight = ($height / $width) * $newwidth; $anychanged = true;$width=$newwidth;$height=$newheight;
+            }
+            if ($height > $sizelim) {
+                $newheight = $sizelim; $newwidth = ($width / $height) * $newheight; $anychanged = true;
+            }
+            if($anychanged){ $thumbimage = imagescale($image, $newwidth,$newheight, $filter);
+                             imagejpeg($thumbimage, $thumb_destination,80); }
+            imagedestroy($image);
+        }
+    }
+    
+    function CompressImage($source, $destination, $thumb_destination, $quality, $sizelim) {
         $info = getimagesize($source);
         if ($info['mime'] == 'image/jpeg')
             $image = imagecreatefromjpeg($source);
@@ -559,7 +713,6 @@ header{padding-top:0.3em;}
         $newimage=$image;
         if($anychanged){ $newimage = imagescale($image, $newwidth,$newheight, IMG_BICUBIC); }
         imagejpeg($newimage, $destination, $quality);
-        imagedestroy($newimage);
         $sizelim=400; $anychanged=false;
         if ($width > $sizelim) {
             $newwidth = $sizelim; $newheight = ($height / $width) * $newwidth; $anychanged = true;$width=$newwidth;$height=$newheight;
@@ -567,9 +720,11 @@ header{padding-top:0.3em;}
         if ($height > $sizelim) {
             $newheight = $sizelim; $newwidth = ($width / $height) * $newheight; $anychanged = true;
         }
-        if($anychanged){ $newimage = imagescale($image, $newwidth,$newheight, IMG_BICUBIC);
-                         imagejpeg($newimage, $thumb_destination, $quality);imagedestroy($newimage); }
-        imagedestroy($image);
+        if($anychanged){ $thumbimage = imagescale($image, $newwidth,$newheight, IMG_BICUBIC);
+                         imagejpeg($thumbimage, $thumb_destination, $quality); }
+        #imagedestroy($image);
+        #imagedestroy($newimage);
+        #imagedestroy($thumbimage);
     }
     function DoUpload(){
         if(!isset($_FILES['upload_file_name'])) return 0;
@@ -666,6 +821,9 @@ header{padding-top:0.3em;}
                         }
                         $post['refs'] = $entries;
                     }
+                }
+                if(isset($post['mark_value']) && $post['mark_value']==5){
+                    $post['product']=[];
                 }
                 /* marks add here */
                 $this->Posts[] = $post;
@@ -860,6 +1018,7 @@ header{padding-top:0.3em;}
                         $rep = preg_replace('/<-/','<@-',$rep);
                         $rep = preg_replace('/\R([+]{3,})\R/',PHP_EOL.'@$1'.PHP_EOL,$rep);
                         $rep = preg_replace('/\[-/','[@-',$rep);
+                        $rep = preg_replace('/\{/','{@',$rep);
                         return $rep;
                     },
                     $replacement);
@@ -873,6 +1032,9 @@ header{padding-top:0.3em;}
         $replacement = preg_replace("/<[=]+/","⇐",$replacement);
         $replacement = preg_replace("/\R([+]{3,})\R/","<div class='page_break'></div>",$replacement);
         $replacement = preg_replace("/\[-(.*)-\]/U","<span class='text_highlight'>$1</span>",$replacement);
+        $replacement = preg_replace("/{支付宝(\s+[^}]*?)?}/u","<span class='special_alipay'>支付宝$1</span>",$replacement);
+        $replacement = preg_replace("/{PayPal(\s+[^}]*?)?}/ui",
+            "<span class='special_paypal'>Pay<span class='special_paypal_inner'>Pal</span>$1</span>",$replacement);
         $replacement = preg_replace_callback("/(```|`)([^`]*)(?1)/U",
                     function($matches){
                         $rep = preg_replace('/-@>/','->',$matches[0]);
@@ -881,6 +1043,7 @@ header{padding-top:0.3em;}
                         $rep = preg_replace('/<@=/','<=',$rep);
                         $rep = preg_replace('/\R@([+]{3,})\R/',PHP_EOL.'$1'.PHP_EOL,$rep);
                         $rep = preg_replace('/\[@-/','[-',$rep);
+                        $rep = preg_replace('/\{@/','{',$rep);
                         return $rep;
                     },
                     $replacement);
@@ -893,7 +1056,7 @@ header{padding-top:0.3em;}
             return 0;
         }
         if(isset($_GET['set_language'])){
-            setcookie('la_language',$_GET['set_language']); $_COOKIE['la_language'] = $_GET['set_language'];
+            setcookie('la_language',$_GET['set_language'],time()+3600*24*7); $_COOKIE['la_language'] = $_GET['set_language'];
             $redirect='index.php';return 0;
         }
         if(isset($_GET['post'])){
@@ -908,6 +1071,9 @@ header{padding-top:0.3em;}
         }
         if(isset($_GET['post'])){
             $this->ExtraScripts.="window.addEventListener('load', (event) => {ScrollToPost('".$_GET['post']."');});";
+        }
+        if(isset($_POST['search_content'])){
+            $redirect='index.php?search='.$_POST['search_content'];return 0;
         }
         if(isset($_GET['image_info'])){
             $m=$_GET['image_info'];
@@ -930,6 +1096,7 @@ header{padding-top:0.3em;}
                 if(isset($_POST['settings_title'])) $this->Title=$_POST['settings_title'];
                 if(isset($_POST['settings_short_title'])) $this->ShortTitle=$_POST['settings_short_title'];
                 if(isset($_POST['settings_display_name'])) $this->DisplayName=$_POST['settings_display_name'];
+                if(isset($_POST['settings_email'])) $this->EMail=$_POST['settings_email'];
                 if(isset($_POST['settings_special_navigation'])) $this->SpecialNavigation=$_POST['settings_special_navigation'];
                 if(isset($_POST['settings_special_footer'])) $this->SpecialFooter=$_POST['settings_special_footer'];
                 if(isset($_POST['settings_special_footer2'])) $this->SpecialFooter2=$_POST['settings_special_footer2'];
@@ -1008,7 +1175,7 @@ header{padding-top:0.3em;}
                 if(preg_match('/^(REM|ADD)\s+(\S+)\s+(.*)$/u', $_POST['gallery_move_ops'], $ma)){
                     $this->ReadImages();
                     if(preg_match_all('/(\S+)/u', $ma[3], $files, PREG_SET_ORDER)) foreach($files as $name){
-                        $this->EditImage($name[1], $ma[2], ($ma[1]=='REM'));
+                        $this->EditImage($name[1], $ma[2], ($ma[1]=='REM'), NULL);
                     }
                     $this->WriteImages();
                     $this->ClearData();
@@ -1031,33 +1198,58 @@ header{padding-top:0.3em;}
                 }
                 exit;
             }
+            if(isset($_POST['image_button'])&&isset($_POST['image_ops_product_link'])){
+                if(preg_match('/([0-9]{14,}\.(jpg|png|jpeg|gif))/u',$_SERVER['REQUEST_URI'],$ma)){
+                    $this->ReadImages();
+                    $this->EditImage($ma[1], NULL, false, $_POST['image_ops_product_link']);
+                    $this->WriteImages();
+                    $redirect=$_SERVER['REQUEST_URI'];
+                    return 0;
+                }
+            }
             if(isset($_GET['rewrite_styles'])){
                 $this->WriteStyles();
                 $redirect='?extras=true'; return 0;
             }
+            if(isset($_GET['regenerate_thumbnails'])){
+                $this->RegenerateThumbnails();
+                $redirect='?extras=true'; return 0;
+            }
+            if(isset($_GET['clear_all_logins'])){
+                $this->LoginTokens=[];
+                $this->WriteTokens();
+            }
+            
         }
         return 0;
     }
     
-    function PostProcessHTML($html,&$added_images=null){
+    function PostProcessHTML($html,&$added_images=null,$do_product_info=false, &$product_info=null){
         $html = preg_replace("/(<a[^>]*href=[\'\"])([0-9]{14})([\'\"][^>]*>)(.*?<\/a>)/u","$1?post=$2$3$4",$html);
-        $html = preg_replace("/(<a[^>]*href=[\'\"])((.*?:\/\/).*?)([\'\"][^>]*>)(.*?)(<\/a>)/u","$1$2$4$5<sup>↗</sup>$6",$html);
+        $html = preg_replace("/(<a[^>]*href=[\'\"])((.*?:\/\/).*?)([\'\"][^>]*)(>)(.*?)(<\/a>)/u",
+                             "$1$2$4 target='_blank'$5$6<sup>↗</sup>$7",$html);
         $images = [];
         $images_noclick = [];
-        $html = preg_replace_callback("/(<img[^>]*src=[\'\"])(images\/([0-9]{14,}\.(jpg|png|jpeg|gif)))([\'\"][^>]*)>/u",
+        $html = preg_replace_callback("/(<img([^>]*)src=[\'\"])(images\/([0-9]{14,}\.(jpg|png|jpeg|gif)))([\'\"][^>]*)>/u",
                     function($m) use (&$images,&$images_noclick) {
-                        $src = $m[3];
-                        if(($im = &$this->FindImage($m[3]))!=NULL && isset($im['thumb'])){ 
-                            $src = $im['thumb'];
+                        $orig_src = $src = $m[4]; $keep = false; $original = false;
+                        if (preg_match('/alt=[\'\"].*keep_inline.*[\'\"]/u',$m[2]) ||
+                            preg_match('/alt=[\'\"].*keep_inline.*[\'\"]/u',$m[6])) { $keep=true; }
+                        if ($keep && preg_match('/alt=[\'\"].*original.*[\'\"]/u',$m[2]) ||
+                                     preg_match('/alt=[\'\"].*original.*[\'\"]/u',$m[6])) { $original=true; }
+                        if(($im = &$this->FindImage($m[4]))!=NULL && isset($im['thumb'])){ 
+                            $src = $im['thumb']; $orig_src=$im['file'];
                         }
-                        $images[]=$m[1].$src.$m[5]." data-imgsrc='".$m[3]."'>";
-                        $images_noclick[]=$m[1].$src.$m[5].">";
-                        return "";
+                        $click = $m[1].($original?$orig_src:$src).$m[6]." data-imgsrc='".$m[4]."'".
+                            (isset($im['product'])?" data-product='".$im['product']."'":"").
+                            ($original?" class='original_img'":"").">";
+                        $images_noclick[]=$m[1].$src.$m[6].">";
+                        if($keep) return $click;
+                        else {$images[] = $click; return "";}
                     },$html,-1,$count);
-        if($count){
-            $added_images = $images_noclick;
-            $html = preg_replace("/<p>[\s]*<\/p>/u","",$html);
-            if($count==1){$html.=$images[0];}
+        $html = preg_replace('/<p>\s*<\/p>/u',"", $html);
+        if(sizeof($images)){
+            if(sizeof($images)==1){$html.=$images[0];}
             else{
                 $html.="<div class='p_row'>";
                 foreach($images as $img){
@@ -1065,15 +1257,35 @@ header{padding-top:0.3em;}
                 }
                 $html.="<div class='p_thumb' style='flex-grow:10000;box-shadow:none;height:0;'></div></div>";
             }
-        }else{
-            $added_images = NULL;
+        }
+        if(sizeof($images_noclick)){
+            $added_images = $images_noclick;
+        }
+        if($do_product_info){
+            $html = preg_replace_callback("/\{PRICE\s+([^]]+?)\}/u",
+                    function($m) use (&$product_info) { $product_info['price']=$m[1];return ""; },$html);
+            $html = preg_replace_callback("/\{SHORT\s+([^]]+?)\}/u",
+                    function($m) use (&$product_info) { $product_info['short']=$m[1];return ""; },$html);
+            $html = preg_replace('/<p>\s*<\/p>/u',"", $html);
+            if (preg_match('/<h[1-5]>(.+?)<\/h/u',$html,$title)){ $product_info['title']=$title[1]; }
+            else { $product_info['title'] = $this->T('商品'); }
+            if(!isset($product_info['price'])) $product_info['price']=$this->T('未设置价格');
+            $html = preg_replace_callback("/\{PURCHASE\s+([^]]+?)\}/u",function($m) use (&$product_info) {
+                    return "<a class='purchase_button' href=\"mailto:".$this->T($this->DisplayName)."<".$this->EMail.">?subject=".
+                            $this->T('购买').$product_info['title'].
+                            "&body=".$this->T('你好！我想购买').$product_info['title'].urlencode(PHP_EOL.PHP_EOL).
+                            $this->FullURL().urlencode(PHP_EOL.PHP_EOL)."\">".$m[1]."</a>"; },$html);
         }
         return $html;
     }
     
     function ConvertPost(&$post){
         if(!isset($post['html'])){
-            $post['html'] = $this->PostProcessHTML($this->PDE->text($this->InsertReplacementSymbols($post['content'])),$post['images']);
+            $info=[];
+            $post['html'] = $this->PostProcessHTML($this->PDE->text($this->InsertReplacementSymbols($post['content'])),
+                                                   $post['images'],
+                                                   isset($post['product']), $info);
+            if(isset($post['product'])) $post['product']=$info;
         }
     }
     
@@ -1081,6 +1293,7 @@ header{padding-top:0.3em;}
         if(isset($_GET['extras'])) $this->PageType='extras';
         else if(isset($_GET['settings'])) $this->PageType='settings';
         else if(isset($_GET['gallery'])) $this->PageType='gallery';
+        else if(isset($_GET['search'])) $this->PageType='search';
         else if(isset($this->CurrentPostID)) $this->PageType = "post";
         else $this->PageType = "main";
     }
@@ -1152,14 +1365,22 @@ header{padding-top:0.3em;}
                 if(!(post = document.querySelector("[data-post-id='"+id+"']"))) return;
                 post.scrollIntoView({ behavior: 'smooth', block: 'start'});
             }
+            function ShowWaitingBar(){
+                wait = document.querySelector("#waiting_bar");
+                wait.style.display='';
+            }
+            function HideWaitingBar(){
+                wait = document.querySelector("#waiting_bar");
+                wait.style.display='none';
+            }
         </script>
         <header>
             <?php $this->MakeNavButtons($p); ?>
             <hr />
         </header>
-        <div id='post_menu' style='display:none;' class='pop_menu invert_a'>
+        <div id='post_menu' style='display:none;' class='pop_menu clean_a'>
             <ul>
-            <li><span id='_time_hook' class='smaller gray'>时间</span>&nbsp;&nbsp;<a href='javascript:HidePopMenu();'>×</a></li>
+            <li><span id='_time_hook' class='smaller'>时间</span>&nbsp;&nbsp;<a href='javascript:HidePopMenu();'>×</a></li>
             <li>
                 <a id='share_copy'>📋︎</a>
                 <a id='share_pin' target='_blank'>Pin</a>
@@ -1181,15 +1402,18 @@ header{padding-top:0.3em;}
                     <a id='mark_set_2' href='javascript:SetMark(2);'><?=$this->Markers[2]?></a>
                     <a id='mark_set_3' href='javascript:SetMark(3);'><?=$this->Markers[3]?></a>
                     <a id='mark_set_4' href='javascript:SetMark(4);'><?=$this->Markers[4]?></a>
+                    <a id='mark_set_5' href='javascript:SetMark(5);'><?=$this->Markers[5]?></a>
                 </b></li>
                 <hr />
                 <li><a id='menu_delete' class='smaller'></a></li>
             <?php } ?>
             </ul>
         </div>
+        <div id='waiting_bar' style='display:none;'></div>
+        <script>ShowWaitingBar();window.addEventListener('load',(event) =>{HideWaitingBar();}); </script>
         <div id='backdrop' style='display:none;' class='backdrop' onclick='HideRightSide()'
             ondrop="_dropHandler(event);" ondragover="_dragOverHandler(event);"></div>
-        <div id='pop_right' class='pop_right'>
+        <div id='pop_right' class='pop_right' onclick='event.stopPropagation()'>
             <div style='text-align:right;position:sticky;top:0;'><a class='clean_a' href='javascript:HideRightSide();'>
                 <?=$this->T('关闭')?>→</a></div>
             <?php if($this->LoggedIn && in_array($this->PageType,['main','post'])){ ?>
@@ -1205,7 +1429,7 @@ header{padding-top:0.3em;}
     }
     
     function TranslatePostParts($html){
-        $html = preg_replace_callback('/>([^<]+?)</u', function($ma){
+        $html = preg_replace_callback('/>([^><]+?)</u', function($ma){
                 return ">".$this->T($ma[1])."<";
             }, $html);
         return $html;
@@ -1237,13 +1461,14 @@ header{padding-top:0.3em;}
                 <a href='javascript:ShowLeftSide();toggle_mobile_show(document.getElementById("mobile_nav"));'><?=$this->T('热门')?></a></li>
         <?php } ?>
             <?php $this->SpecialNavigation;if(isset($this->SpecialNavigation) && ($p = &$this->GetPost($this->SpecialNavigation))!=NULL){
-                echo $this->TranslatePostParts($this->GenerateSinglePost($p, false, false, false, false));
+                echo $this->TranslatePostParts($this->GenerateSinglePost($p, false, false, false, false,$this->NULL_POST));
             } ?>
             <li><a href='?gallery=default'><?=$this->T('媒体')?></a></li>
+            <li><a href='?search='><?=$this->T('搜索')?></a></li>
             <?php if($this->LanguageAppendix=='zh'){ ?>
-                <li class='invert_a smaller'><a href='<?='index.php?&set_language=en'?>'><b>汉语</b>/English</a></li>
+                <li class='invert_a smaller'><a href='<?=$_SERVER['REQUEST_URI'].'?&set_language=en'?>'><b>汉语</b>/English</a></li>
             <?php }else { ?>
-                <li class='invert_a smaller'><a href='<?='index.php?&set_language=zh'?>'>汉语/<b>English</b></a></li>
+                <li class='invert_a smaller'><a href='<?=$_SERVER['REQUEST_URI'].'?&set_language=zh'?>'>汉语/<b>English</b></a></li>
             <?php } ?>
         </ul>
     <?php
@@ -1255,25 +1480,69 @@ header{padding-top:0.3em;}
                 $rp = &$this->GetPost($m[1]);
                 $s="<div class='smaller block post ref_compact gray'>".
                     "<div class='post_ref'><div class='smaller'>".$m[2]."</div>".
-                    ($rp!==NULL?$this->GenerateSinglePost($rp,true,false,false,true):$this->T("未找到该引用。")).
+                    ($rp!==NULL?$this->TranslatePostParts(
+                                $this->GenerateSinglePost($rp,false,false,false,true,$this->NULL_POST,true)):$this->T("未找到该引用。")).
                     "</div><a href='?post=".$m[1]."' class='post_access invert_a'>→</a></div>";
+                return $s;
+            },
+            $ht
+        );
+        $ht = preg_replace_callback('/<li>[\s]*<a[^>]*href=[\'\"]\?post=([0-9]{14})[\'\"]>PRODUCT\s+(.*)<\/a>[\s]*<\/li>/u',
+            function($m){
+                $rp = &$this->GetPost($m[1]);
+                $s="<div class='product_ref block post ref_compact'><a href='?post=".$m[1]."' class='clean_a'>".
+                    ($rp!==NULL?$this->TranslatePostParts(
+                                $this->GenerateSinglePost($rp,true,false,false,true,$this->NULL_POST,true)):$this->T("未找到该引用。")).
+                    "</a></div>";
                 return $s;
             },
             $ht
         );
         return $ht;
     }
+    
+    function ExtractBigTables($html, &$table_out){
+        $table = NULL;
+        $new_html = preg_replace_callback('/<p>\s*\{big_table\}\s*<\/p>\s*(<table>[\s\S]*?<\/table>)/u', function ($m) use (&$table){
+            $table = $m[1];
+            return "";
+        }, $html);
+        $table_out = $table;
+        return $new_html;
+    }
 
-    function GenerateSinglePost(&$post, $strip_tags, $generate_anchor=false, $generate_refs=false, $generate_thumbs=false){
+    function GenerateSinglePost(&$post, $strip_tags, $generate_anchor=false, $generate_refs=false,
+                                 $generate_thumbs=false, &$table_out, $hide_long = false){
         $this->ConvertPost($post);
         if($generate_anchor){ $this->CreatePostAnchor($post); }
         $ht = $post['html'];
+        if(isset($post['mark_value']) && $post['mark_value']==5 && ($generate_thumbs || !$generate_anchor)){
+            $ht="<div class='product_thumb'>".$post['images'][0]."</div>".
+                "<p class='bold'>".$post['product']['title']."</p>".
+                (isset($post['product']['short'])?("<p class='smaller gray'>".$post['product']['short']."</p>"):"").
+                "<p class='smaller bold'>".$post['product']['price']."</p>";
+            return $ht;
+        }
+        if($hide_long){
+            $ht = preg_replace('/<p>\s*\{read_more\}\s*<\/p>[\s\S]*/u',"<p class='smaller bold'>[".$this->T("阅读更多")."]</p>", $ht);
+        }else{
+            $ht = preg_replace('/<p>\s*\{read_more\}\s*<\/p>/u',"", $ht);
+        }
         if ($strip_tags){
             $ht = strip_tags($ht,'<b><i><h1><h2><h3><h4><p><blockquote>');
-            $ht = "<div class='post_ref_main'>".$ht."</div>";    
+            $ht = preg_replace('/<p>\s*<\/p>/u',"", $ht);
+            $ht = "<div class='post_ref_main'>".$ht."</div>";
         }
-        else if($generate_refs) $ht = $this->GenerateLinkedPosts($ht);
-        if ($generate_thumbs && isset($post['images']) && isset($post['images'][0])){
+        else{
+            if($generate_refs) $ht = $this->GenerateLinkedPosts($ht);
+            if($table_out!==$this->NULL_POST){
+                $table = NULL; $ht = $this->ExtractBigTables($ht,$table);
+                $table_out = $table;
+            }else{
+                $ht = preg_replace('/<p>\s*\{big_table\}\s*<\/p>/u','',$ht);
+            }
+        }
+        if ($strip_tags && $generate_thumbs && isset($post['images']) && isset($post['images'][0])){
             $ht.="<div class='post_ref_images'><ul class='side_thumb ref_thumb'>";
             foreach($post['images'] as $im){
                 $ht.="<li class='file_thumb'>".$im."</li>";
@@ -1289,23 +1558,29 @@ header{padding-top:0.3em;}
         $is_deleted = (isset($post['mark_delete'])&&$post['mark_delete']);
         $mark_value = isset($post['mark_value'])?$this->Markers[$post['mark_value']]:-1;
         $ref_count = isset($post['refs'])?sizeof($post['refs']):0;
+        $big_table = ($show_thread_link)?$this->NULL_POST:"";
+        $is_product = isset($post['mark_value'])&&$post['mark_value']==5;
         ?>
         <li class='post<?=isset($extra_class_string)?' '.$extra_class_string:''?><?=$side?" post_box":""?>'
             data-post-id='<?=$post['id']?>' <?=$is_deleted?"data-mark-delete='true'":""?>>
-            <?php if($mark_value>=0 && !$show_link){?>
-                <div style='font-size:1rem;' class='<?=$is_deleted?"gray":""?>'><?=$this->Markers[$post['mark_value']]?>
+            <?php if($mark_value>=0 && !$show_link && $mark_value!='P'){?>
+                <div class='<?=$is_deleted?"gray":""?>'><?=$mark_value?>
                     <?=$this->T('标记')?></div>
             <?php } ?>
             <?php if($is_top){?>
                 <div class='top_post_hint'><?=$this->T('置顶帖子')?><hr /></div>
             <?php } ?>
                 <?=$side?"<a href='?post={$post['id']}'>":""?>
-            <div class='<?=$side?"":($show_link?'post_width':'post_width_big')?>
-                <?=$is_deleted?"deleted_post":""?>'>
+            <div class='<?=$side?"":($show_link?'post_width':'post_width_big')?><?=$is_deleted?"deleted_post":""?>'>
                     <?php if(!$side && !$strip_tags){?>
                         <div class='post_menu_button _menu_hook' >+</div>
-                    <?php } ?>
-                    <?=$this->GenerateSinglePost($post, $strip_tags, $generate_anchor, true, $generate_thumb)?>
+                    <?php } if($is_product&&!$generate_anchor){
+                        echo "<p class='smaller gray'>".$this->T('商品')."</p>";
+                        echo "<div class='product_ref clean_a'><a href='?post={$post['id']}'>";} ?>
+                    <?=$this->TranslatePostParts(
+                           $this->GenerateSinglePost($post, $strip_tags, $generate_anchor, true,
+                                                     $generate_thumb,$big_table,$show_thread_link||$side)); ?>
+                    <?php if($is_product&&!$generate_anchor){echo "</a></div>";} ?>
             </div>
             <?=$side?"</a>":""?>
             <?php if(!$side && $show_link){ ?>
@@ -1318,20 +1593,27 @@ header{padding-top:0.3em;}
                 <?php } ?>
                 </a>
             <?php }
-                if($show_thread_link && isset($post['tid']) && $post['tid']['first']['id']!=$post['id']){ ?>
-                    <div class='gray smaller block opt_compact post'>
-                        <div class='post_width'><div class='smaller'><?=$this->T('回复给主题帖：')?></div>
-                            <?=$this->GenerateSinglePost($post['tid']['first'], true, false, false, true);?>
-                        </div>
-                        <a href='?post=<?=$post['tid']['first']['id']?>'>
-                            <div class='post_access invert_a hover_dark'><?=isset($post['tid']['first']['mark_value'])?
-                                    $this->Markers[$post['tid']['first']['mark_value']]:"→"?></div></a>
+            if(!$show_thread_link && $big_table!==$this->NULL_POST && !$side){
+                echo "</ul></li><div class='table_top'>".$big_table.'</div>';
+            ?><ul>
+                <li class='post<?=isset($extra_class_string)?' '.$extra_class_string:''?>' <?=$is_deleted?"data-mark-delete='true'":""?>>
+            <?php
+            }
+            if($show_thread_link && isset($post['tid']) && $post['tid']['first']['id']!=$post['id']){ ?>
+                <div class='gray smaller block opt_compact post'>
+                    <div class='post_width'><div class='smaller'><?=$this->T('回复给主题帖：')?></div>
+                        <?=$this->TranslatePostParts(
+                                $this->GenerateSinglePost($post['tid']['first'], false, false, false, true,$this->NULL_POST,true));?>
                     </div>
-                <?php }
-                if($show_reply_count && isset($post['tid'])){ ?>
-                    <a class='smaller block invert_a' href='?post=<?=$post['tid']['last']['id']?>'><?=$post['tid']['count']?>
-                        <?=$this->T('个回复')?></a>
-                <?php }
+                    <a href='?post=<?=$post['tid']['first']['id']?>'>
+                        <div class='post_access invert_a hover_dark'><?=isset($post['tid']['first']['mark_value'])?
+                                $this->Markers[$post['tid']['first']['mark_value']]:"→"?></div></a>
+                </div>
+            <?php }
+            if($show_reply_count && isset($post['tid'])){ ?>
+                <a class='smaller block invert_a' href='?post=<?=$post['tid']['last']['id']?>'><?=$post['tid']['count']?>
+                    <?=$this->T('个回复')?></a>
+            <?php }
             ?>    
         </li>
     <?php
@@ -1344,7 +1626,8 @@ header{padding-top:0.3em;}
                   onfocus="if (value =='<?=$this->T('有什么想说的')?>'){value ='';}la_auto_grow(this);"
                   onblur="if (value ==''){value='<?=$this->T('有什么想说的')?>';la_auto_grow(this);}"    
                   oninput="la_auto_grow(this);" onload="la_auto_grow(this);"><?=$this->T('有什么想说的')?></textarea>
-        <input class='button' form="post_form" type="submit" name='post_button' value=<?=$this->T('发送')?> /></input>
+        <input class='button' form="post_form" type="submit" name='post_button' value=<?=$this->T('发送')?> 
+            onclick='ShowWaitingBar();' /></input>
         | <a class='gray smaller pointer' onclick='ShowSideUploader();'><?=$this->T('图片')?></a>
         <div style='float:right;'>
             <a class='gray smaller pointer' onclick='t=document.querySelector("#post_content");t.value="";la_auto_grow(t);'>
@@ -1359,26 +1642,36 @@ header{padding-top:0.3em;}
     <?php
     }
     
-    function MakeRecentPosts(){?>
+    function MakeRecentPosts($search_term=NULL){?>
         <div class='center' id='div_center'>
-            <h2><?=$this->T('最近')?></h2>
-            <?php if($this->LoggedIn){ ?>
+            <h2><?=isset($search_term)?$this->T('搜索'):$this->T('最近')?></h2>
+            <?php if(isset($search_term)){ ?>
+                <form action="index.php" method="post" style='display:none;' id='search_form'></form>
+                <input id="search_content" name="search_content" rows="4" form='search_form' type='text' value='<?=$search_term?>'>
+                <input class='button' form="search_form" type="submit" name='search_button' value=<?=$this->T('搜索')?> 
+            <?php }else if($this->LoggedIn){ ?>
                 <div class='post_box_top _input_bundle'>
                     <?php $this->MakePostingFields(NULL,false); ?>
                 </div>
             <?php } ?>
             <ul>
                 <?php
-                    if(isset($this->SpecialPinned) && ($p = &$this->GetPost($this->SpecialPinned))!=NULL && !$this->CurrentOffset){
+                    if(!isset($search_term) &&
+                       (isset($this->SpecialPinned) && ($p = &$this->GetPost($this->SpecialPinned))!=NULL && !$this->CurrentOffset)){
                         $this->MakeSinglePost($p, true, false, false, false, true, false, false, false, true);
                     }
                     $i = 0;
                     foreach(array_reverse($this->Posts) as &$p){
-                        if(in_array($p['id'],[$this->SpecialPinned,$this->SpecialFooter,$this->SpecialFooter2,$this->SpecialNavigation]))
-                            continue;
-                        if(isset($p['tid'])){
-                            if(isset($p['tid']['displayed'])) continue;
-                            $p['tid']['displayed'] = True;
+                        if(isset($search_term)){
+                            if ($search_term=='' || !preg_match("/".preg_quote($search_term)."/u", $p['content'])) continue;
+                        }else{
+                            if(in_array($p['id'],
+                                [$this->SpecialPinned,$this->SpecialFooter,$this->SpecialFooter2,$this->SpecialNavigation]))
+                                continue;
+                            if(isset($p['tid'])){
+                                if(isset($p['tid']['displayed'])) continue;
+                                $p['tid']['displayed'] = True;
+                            }
                         }
                         if($i < $this->PostsPerPage * $this->CurrentOffset) {$i++; continue;}
                         $this->MakeSinglePost($p, true, false, NULL, false, true, false, false, false, false);
@@ -1388,17 +1681,20 @@ header{padding-top:0.3em;}
             </ul>
             <div class='page_selector clean_a'>
                 <hr />
-                <a <?=$this->CurrentOffset>0?("href='index.php?offset=".($this->CurrentOffset-1)."'"):""?>
+                <a <?=$this->CurrentOffset>0?("href='index.php?offset=".($this->CurrentOffset-1).
+                                                (isset($search_term)?"&search=".$search_term:"")."'"):""?>
                    <?=$this->CurrentOffset==0?"class='gray'":""?>>←</a>
                 <?=$this->CurrentOffset+1?>
-                <a href='index.php?offset=<?=$this->CurrentOffset+1?>'>→</a>
+                <a href='index.php?offset=<?=$this->CurrentOffset+1?><?=(isset($search_term)?"&search=".$search_term:"")?>'>→</a>
             </div>
         </div>
     <?php
     }
     
-    function MakeHotPosts(){?>
+    function MakeHotPosts($placeholder_only=false){?>
         <div class='left hidden_on_mobile' id='div_left'>
+            <?php if ($placeholder_only){ ?>&nbsp;
+            <?php }else{ ?>
             <h2><?=$this->T('热门')?></h2>
             <ul>
                 <?php
@@ -1409,6 +1705,7 @@ header{padding-top:0.3em;}
                         $i++;
                     } ?>
             </ul>
+            <?php } ?>
         </div>
     <?php
     }
@@ -1420,12 +1717,15 @@ header{padding-top:0.3em;}
         <?php
             if($has_ref){ ?>
                 <span class='smaller'><?=sizeof($p['refs'])?> <?=$this->T('个引用：')?></span>
-                <ul><?php
+                <ul><?php $count_product=0;
                 foreach($p['refs'] as &$pr){
+                    $post = $this->GetPost($pr);
+                    if(isset($post['mark_value']) && $post['mark_value']==5){ $count_product++; continue; }
                     $this->MakeSinglePost($this->GetPost($pr), false, true, "post_preview", true, false, false, false, true, false);
                 } 
                 ?></ul>
-            <?php }else{ ?>
+            <?php if($count_product){ ?> <span class='smaller'><?=$this->T('和').' '.$count_product.' '.$this->T('个商品')?></span> <?php }
+                }else{ ?>
                 <span class='gray smaller'><?=$this->T('没有帖子链接到这里。')?></span>
             <?php } ?>
         </div>
@@ -1827,7 +2127,8 @@ header{padding-top:0.3em;}
                         <?php if($this->LoggedIn){ ?>
                             <div class="post_menu_button _select_hook white" onclick='ToggleSelectImage(this, "<?=$im["name"]?>")'>●</div>
                         <?php } ?>
-                        <img src='<?=$im['thumb']?>' data-imgsrc='<?=$im["name"]?>' />
+                        <img src='<?=$im['thumb']?>' data-imgsrc='<?=$im["name"]?>'<?=isset($im['product'])?
+                            'data-product="'.$im["product"].'"':""?>/>
                     </div>
                 <?php } ?>
                 <div class='p_thumb' style='flex-grow:10000;box-shadow:none;height:0;'></div>
@@ -1919,7 +2220,7 @@ header{padding-top:0.3em;}
                 <h2><?=$this->T('目录')?></h2><ul>
                 <?php
                     foreach($this->Anchors as $a){?>
-                        <li class='toc_entry_<?=$a[0]>5?5:$a[0]?>'><a href='#<?=$a[1]?>'><?=$a[2]?></a></li>
+                        <li class='toc_entry_<?=$a[0]>5?5:$a[0]?>'><a href='#<?=$a[1]?>'><?=$this->T($a[2])?></a></li>
                     <?php }
                 ?></ul>
             <?php }else{ ?>
@@ -1948,6 +2249,9 @@ header{padding-top:0.3em;}
                     <tr><td><?=$this->T('显示名称')?></td>
                         <td><input type="text" form="settings_form" id='settings_display_name' name='settings_display_name'
                         value='<?=$this->DisplayName?>'/></td></tr>
+                    <tr><td><?=$this->T('电子邮件')?></td>
+                        <td><input type="text" form="settings_form" id='settings_email' name='settings_email'
+                        value='<?=$this->EMail?>'/></td></tr>
                     <tr><td><?=$this->T('导航栏')?>
                         <?=isset($this->SpecialNavigation)?"<a href='?post=".$this->SpecialNavigation."'>→</a>":""?></td>
                         <td><input type="text" form="settings_form" id='settings_special_navigation' name='settings_special_navigation'
@@ -2026,6 +2330,8 @@ header{padding-top:0.3em;}
             <p class='smaller gray'><?=$this->T('当心！下列操作将立即执行：')?></p>
             <ul>
                 <li><a href='index.php?rewrite_styles=true'><?=$this->T('重新写入默认CSS')?></a></li>
+                <li><a href='index.php?regenerate_thumbnails=true'><?=$this->T('重新生成图片缩略图')?></a></li>
+                <li><a href='index.php?clear_all_logins=true'><?=$this->T('删除所有登录')?>(<?=sizeof($this->LoginTokens);?>)</a></li>
             </ui>
             <br /><br /><br /><a href='?index.php&settings=true'><?=$this->T('返回一般设置')?></a><br />&nbsp;
         </div>
@@ -2052,12 +2358,12 @@ header{padding-top:0.3em;}
             <div style='white-space:nowrap;'>
                 <div class='footer_additional'>
                 <?php if(isset($this->SpecialFooter) && ($p = &$this->GetPost($this->SpecialFooter))!=NULL){
-                    echo $this->TranslatePostParts($this->GenerateSinglePost($p, false, false, false, false));
+                    echo $this->TranslatePostParts($this->GenerateSinglePost($p, false, false, false, false,$this->NULL_POST,false));
                 } ?>
                 </div>
                 <div class='footer_additional'>
                 <?php if(isset($this->SpecialFooter2) && ($p = &$this->GetPost($this->SpecialFooter2))!=NULL){
-                    echo $this->TranslatePostParts($this->GenerateSinglePost($p, false, false, false, false));
+                    echo $this->TranslatePostParts($this->GenerateSinglePost($p, false, false, false, false,$this->NULL_POST,false));
                 } ?>
                 </div>
             </div>
@@ -2068,17 +2374,27 @@ header{padding-top:0.3em;}
             <h2 style='width:100%;'><?=$this->T('上传到这里')?></h2>
         </div>
         <div id='big_image_overlay' style='display:none'>
-            <div class='big_image_box' onclick='HideBigImage()'>
-                <img id='big_image' />
+            <div class='big_image_box clean_a' onclick='HideBigImage(1)'>
+                <div style='display:flex;align-items:center;height:100%;justify-content:center;width:100%;'><?=$this->T('请稍候')?></div>
+                <img id='big_image' onload="HideWaitingBar();"/>
             </div>
-            <div class='big_side_box' onclick='HideBigImage();'>
+            <div class='big_side_box' onclick='HideBigImage(1);'>
+            <div class='big_image_box clean_a image_nav' onclick='HideBigImage(1)'>
+                <div ><a id='prev_image' class='image_nav_prev img_btn_hidden' onclick="event.stopPropagation();">
+                    <div class='lr_buttons'>←</div></a></div>
+                <div ><a id='next_image' class='image_nav_next img_btn_hidden' onclick="event.stopPropagation();">
+                    <div class='lr_buttons'>→</div></a></div>
+            </div>
                 <div class='side_box_mobile_inner'>
-                    <div style='float:right;'>
-                        <a class='clean_a' onclick='HideBigImage();'><?=$this->T('关闭')?>→</a>
-                    </div>
-                    <div>
-                        <b><a class='clean_a' download id='image_download' onclick="event.stopPropagation();">↓<?=$this->T('下载')?></a></b>
-                        <hr />
+                    <div class='inquiry_buttons img_btn_hidden' id='inquiry_buttons' onclick="event.stopPropagation();">
+                        <span style='display:none;' id='image_purchase' class='clean_a'>
+                            <b><a id='image_purchase_button' target="_blank">￥<?=$this->T('购买印刷品')?></a></b>
+                            <br class='hidden_on_desktop block_on_mobile' /></span>
+                        <b><a class='clean_a' id='image_download'><span id='download_processing'>↓</span><?=$this->T('下载')?></a></b>
+                        <?php if(isset($this->EMail) && $this->EMail!=""){ ?>
+                            &nbsp;<a class='clean_a' id='image_inquiry'>
+                            <b>@</b><?=$this->T('咨询')?></a>
+                        <?php } ?><hr class='hidden_on_desktop block_on_mobile' />
                     </div>
                     <div id='big_image_share' class='clean_a' onclick="event.stopPropagation();">
                         <li>
@@ -2090,6 +2406,12 @@ header{padding-top:0.3em;}
                         <hr />
                     </div>
                     <div id='big_image_info' onclick="event.stopPropagation();"></div>
+                    <?php if($this->LoggedIn){ ?><div id='big_image_ops' onclick="event.stopPropagation();">
+                        <br /><?=$this->T('印刷品链接')?>
+                        <form action="" method="post" style='display:none;' id='image_ops_form'></form>
+                        <input type='text' id='image_ops_product_link' name='image_ops_product_link' form="image_ops_form" ></input>
+                        <input class='button' form="image_ops_form" type="submit" name='image_button' value=<?=$this->T('保存')?> /></input>
+                    </div><?php } ?>
                 </div>
             </div>
         </div>
@@ -2155,7 +2477,7 @@ header{padding-top:0.3em;}
                     }
                 }
                 function CopyRefer(id){
-                    copy_text("[<?=$this->T('引用文章')?>]("+id.toString()+")");
+                    copy_text(id.toString());
                     menu.querySelector('#menu_refer_copy').innerHTML="<?=$this->T('已复制')?>";
                 }
                 function MakeEdit(id){
@@ -2260,17 +2582,103 @@ header{padding-top:0.3em;}
                 });
             });
             
+            function FindImage(imgsrc){
+                for(var i=0;i<document.images_filtered.length;i++){
+                    if (document.images_filtered[i].dataset.imgsrc==imgsrc) return document.images_filtered[i]
+                }
+                return null
+            }
+            
+            var dottime1;
+            var dottime2;
+            
+            function ToDataURL(url) {
+                return fetch(url).then((response) => {return response.blob();}).then(blob => {
+                    clearTimeout(dottime1);clearTimeout(dottime2);
+                    ps = document.querySelector('#download_processing');
+                    ps.innerHTML='↓';ps.style.opacity='';
+                    return URL.createObjectURL(blob);});
+            }
+            async function DownloadAsImage(url,name) {
+                const a = document.createElement("a"); a.href = await ToDataURL(url); a.download = name;
+                document.body.appendChild(a); a.click(); document.body.removeChild(a);
+            }
+            function basename(url){return url.split(/[\\/]/).pop();}
+            
             pushed=0;
             function ShowBigImage(imgsrc,do_push){
+                ShowWaitingBar();
                 share = document.querySelector('#big_image_share');
                 img = document.querySelector('#big_image');
                 down = document.querySelector('#image_download');
+                img.src = "";
                 img.src = src = "images/"+imgsrc;
                 down.href="images/"+imgsrc;
+                var downname='<?=$this->T($this->Title);?>_<?=$this->T($this->DisplayName);?>_+<?=$this->GiveSafeEMail()?>+_'+
+                    basename(down.href);
+                img.alt = downname; down.download=downname;
+                var use_href = "images/"+imgsrc;
+                
+                down.onclick=function(event){event.stopPropagation();event.preventDefault();
+                ps = this.querySelector('#download_processing');ps.innerText='…';
+                var dotwait = function(ps){ var self = this;
+                    dottime1 = setTimeout(function(ps){
+                        ps.style.opacity='0'; dottime2 = setTimeout(function(ps){ps.style.opacity='1'; dotwait(ps);},300,ps); },300,ps) }
+                dotwait(this.querySelector('#download_processing'));
+                DownloadAsImage(use_href,downname);};
+
                 
                 if(do_push){PushGalleryHistory(src)}
                 
-                title = document.title;
+                page_url = encodeURIComponent(window.location.href);
+                
+                <?php if(isset($this->EMail) && $this->EMail!=""){ ?>
+                    inqb = document.querySelector('#image_inquiry');
+                    inqb.href="mailto:<?=$this->T($this->DisplayName);?>\<<?=$this->EMail?>\>?subject=<?=$this->T('网站图片咨询');?>&body="+
+                        encodeURIComponent("<?=$this->T('你好！我对你网站上的这张图片感兴趣：')?>"+'\n\n')+
+                        (page_url)+encodeURIComponent('\n\n');
+                <?php } ?>
+                
+                this_image = FindImage(imgsrc);
+                if(this_image.dataset.prevsrc){
+                    new_image = FindImage(this_image.dataset.prevsrc);
+                    new_prev = new_image?new_image.dataset.prevsrc:null;
+                    im = document.querySelector('#prev_image');
+                    if(new_prev) {im.href='javascript:ShowBigImage("'+this_image.dataset.prevsrc+'",'+do_push+')';im.style.opacity='';}
+                    else {im.style.opacity='0';im.removeAttribute("href");}
+                }
+                if(this_image.dataset.nextsrc){
+                    new_image = FindImage(this_image.dataset.nextsrc);
+                    new_next = new_image?new_image.dataset.nextsrc:null;
+                    im = document.querySelector('#next_image');
+                    if(new_next) {im.href='javascript:ShowBigImage("'+this_image.dataset.nextsrc+'",'+do_push+')';im.style.opacity='';}
+                    else {im.style.opacity='0';im.removeAttribute("href");}
+                }
+                purchase = document.querySelector('#image_purchase');
+                purchase_btn = document.querySelector('#image_purchase_button');
+                <?php if($this->LoggedIn){ ?>
+                    product_link = document.querySelector('#image_ops_product_link');
+                    product_form = document.querySelector('#image_ops_form');
+                    product_form.action = window.location.href;
+                    if(this_image.dataset.product){
+                        product_link.value = this_image.dataset.product;
+                    }else{
+                        product_link.value = "";
+                    }
+                <?php } ?>
+                if(this_image.dataset.product){
+                    purchase.style.display='';
+                    href = this_image.dataset.product;
+                    if(this_image.dataset.product.match('^[0-9]{14}$')){
+                        href = '?post='+href;
+                    }
+                    purchase_btn.href = href;
+                }else{
+                    purchase.style.display='none';
+                    purchase_btn.removeAttribute("href");
+                }
+                
+                title = encodeURIComponent(document.title);
                 copy = document.getElementById('big_share_copy');
                 copy.innerHTML='&#128203;&#xfe0e;';
                 copy.addEventListener("click", function(){
@@ -2278,16 +2686,11 @@ header{padding-top:0.3em;}
                     this.innerHTML='&#128203;&#xfe0e;&#10003;&#xfe0e;';
                 });
                 document.getElementById('big_share_pin').href='https://www.pinterest.com/pin/create/button/?url='+
-                    encodeURIComponent(window.location.href)+
-                    '&media='+window.location.host+'/'+src+
-                    '&description='+encodeURIComponent(title);
+                    page_url+'&media='+window.location.host+'/'+src+'&description='+title;
                 document.getElementById('big_share_twitter').href='http://twitter.com/share?text='+
-                    encodeURIComponent(title)+
-                    '&url='+window.location.href+
-                    "&hashtags="
+                    title+'&url='+page_url+"&hashtags=";
                 document.getElementById('big_share_weibo').href='https://service.weibo.com/share/share.php?title='+
-                    encodeURIComponent(title)+
-                    ': '+window.location.href
+                    title+': '+page_url;
                 
                 o = document.querySelector('#big_image_overlay');
                 info = document.querySelector('#big_image_info');
@@ -2313,21 +2716,49 @@ header{padding-top:0.3em;}
                 xhr.open("GET", "index.php?image_info="+imgsrc+"", true);
                 xhr.send();
             }
-            function HideBigImage(){
+            function HideBigImage(do_push){
                 o = document.querySelector('#big_image_overlay');
                 img = document.querySelector('#big_image');
                 img.src = "";
                 o.style.display="none";
                 HideBackdrop();
-                PopGalleryHistory()
+                if(do_push){PushGalleryHistory("");}
+                HideWaitingBar();
             }
+            var lbtn=document.querySelector('#prev_image'),rbtn=document.querySelector('#next_image');
+            var inq=document.querySelector('#inquiry_buttons');
+            var overlay=document.querySelector('#big_image_overlay');
+            var hide_timeout;
+            function DontHideImgBtn(e){ clearTimeout(hide_timeout); e.stopPropagation(); }
+            function DelayHideImgBtn(e){
+                lbtn.classList.remove('img_btn_hidden');
+                rbtn.classList.remove('img_btn_hidden');
+                inq.classList.remove('img_btn_hidden');
+                clearTimeout(hide_timeout);
+                hide_timeout = setTimeout(function(e1,e2,e3){e1.classList.add('img_btn_hidden');
+                    e2.classList.add('img_btn_hidden');
+                    e3.classList.add('img_btn_hidden');}, 500, lbtn, rbtn, inq);
+            }
+            lbtn.addEventListener('mousemove',DontHideImgBtn);
+            rbtn.addEventListener('mousemove',DontHideImgBtn);
+            inq.addEventListener('mousemove',DontHideImgBtn);
+            overlay.addEventListener('mousemove',DelayHideImgBtn);
             var images = document.querySelectorAll('img');
+            var images_filtered=new Array();
             [].forEach.call(images, function(img){
-                imgid = null;
                 if(img.classList.contains("no_pop") || (!(imgsrc = img.dataset.imgsrc))) return;
-                function wrap(imgsrc){return function(){ShowBigImage(imgsrc, 1);}}
-                img.addEventListener("click", wrap(imgsrc));
+                images_filtered.push(img);
             });
+            for(var i=0; i<images_filtered.length; i++){
+                previmg = nextimg = null; img = images_filtered[i];
+                if(i>0) previmg=images_filtered[i-1];
+                if(i<images_filtered.length-1) nextimg=images_filtered[i+1];
+                function wrap(imgsrc){return function(){ShowBigImage(imgsrc, 1);}}
+                prevsrc=previmg?previmg.dataset.imgsrc:null; nextsrc=nextimg?nextimg.dataset.imgsrc:null; 
+                img.dataset.prevsrc = prevsrc; img.dataset.nextsrc = nextsrc; 
+                img.addEventListener("click", wrap(img.dataset.imgsrc));
+            }
+            document.images_filtered = images_filtered;
             function PopGalleryHistory(){
                 if(pushed){
                     pushed = 0;
@@ -2341,33 +2772,32 @@ header{padding-top:0.3em;}
                 sp = new URLSearchParams(window.location.search)
                 if(sp.has('post')){extra+="post="+sp.get('post')}
                 if(sp.has('gallery')){extra+="&gallery="+sp.get('gallery')}
-                window.history.pushState({}, 'Title', extra+'&pic='+src);
+                window.history.pushState('&pic='+src, 'Title', extra+'&pic='+src);
                 pushed = 1;
             }
             document.addEventListener('keydown', function(e){
                 large = document.getElementById('big_image_overlay')
                 if (large.style.display!='block') return;
                 if(e.key=='Escape'||e.key=='Esc'||e.keyCode==27){
-                    HideBigImage();
+                    HideBigImage(1);
                 }
             }, true);
             window.addEventListener('popstate', (event) => {
                 if(event.state){
                     let sp = new URLSearchParams(event.state)
-                    if(searchParams.has('pic')){
-                        src = searchParams.get('pic')
+                    if(sp.has('pic')){
+                        src = sp.get('pic')
                         if(onlyimg = src.match(/[0-9]{14,}.(jpg|png|jpeg|gif)/u)) ShowBigImage(onlyimg[0], 0);
+                        else{HideBigImage(0);}
                     }
-                }else{
-                    HideBigImage();
-                }
+                }else{HideBigImage(0);}
             });
             
             let searchParams = new URLSearchParams(window.location.search)
             if(searchParams.has('pic')){
                 src = searchParams.get('pic')
                 if(onlyimg = src.match(/[0-9]{14,}.(jpg|png|jpeg|gif)/u)){
-                    ShowBigImage(onlyimg[0], 0);
+                    ShowBigImage(onlyimg[0], 1);
                 }
             }
             function _dropHandler(event){ if (typeof dropHandler === "function") dropHandler(event); }
@@ -2418,12 +2848,18 @@ if($la->PageType=='extras'){
     $la->MakeGallerySection();
 }else if($la->PageType=='post'){
     if($p){
+        //if(isset($p['mark_value']) && $p['mark_value']==5){
+        //}
         $la->MakeLinkedPosts($p);
         $la->MakePostSection($p);
         $la->MakeTOC();
     }else{
-        echo "Post not found.";
+        echo "<h2>".$la->T('未找到这个帖子')."</h2><p>".$_SERVER['REQUEST_URI'].
+            "</p><p><a href='index.php'>".$la->T('返回首页')."</a></p><br />";
     }
+}else if($la->PageType=='search'){
+    $la->MakeHotPosts(true);
+    $la->MakeRecentPosts($_GET['search']);
 }else{
     $la->MakeHotPosts();
     $la->MakeRecentPosts();
