@@ -66,7 +66,7 @@ Post can be referenced using Markdown link, simply put the 14 digit post ID into
 | `{PRICE my product price}` | 产品价格 |
 | `{SHORT product short description}` | 产品短描述 |
 | `{PURCHASE button name}` | 购买按钮 |
-| - [PRODUCT whatever](14_digit_id) | 商品列表项目 |
+| `- [PRODUCT whatever](14_digit_id)` | 商品列表项目 |
 | `{支付宝}` | {支付宝} |
 | `{PayPal}` | {PayPal} |
 
