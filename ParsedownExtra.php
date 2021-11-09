@@ -399,7 +399,8 @@ class ParsedownExtra extends Parsedown
     protected function inlineLink($Excerpt)
     {
         $Link = parent::inlineLink($Excerpt);
-
+        
+        if(!isset($Link['extent'])) return $Link;
         $remainder = substr($Excerpt['text'], $Link['extent']);
 
         if (preg_match('/^[ ]*{('.$this->regexAttribute.'+)}/', $remainder, $matches))

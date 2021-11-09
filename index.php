@@ -116,6 +116,10 @@ class LA{
                 fwrite($conf,"RewriteRule ^".$r['format'].'$ /index.php?post='.$r['target'].' [R=302,L]'.PHP_EOL.PHP_EOL);
             }// do site redirect in php.
         }
+        fwrite($conf, 'RewriteCond %{HTTP:X-Forwarded-Proto} !https'.PHP_EOL.
+                      'RewriteCond %{HTTP_HOST} !=localhost'.PHP_EOL.
+                      'RewriteCond %{REQUEST_URI}  !^.*(jpg|png|gif)$'.PHP_EOL.
+                      'RewriteRule ^(.*)$ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]'.PHP_EOL.PHP_EOL);
         fwrite($conf,'<Files ~ "\.md$">'.PHP_EOL.'deny from all'.PHP_EOL.'</Files>'.PHP_EOL);
         fflush($conf);fclose($conf);
     }
@@ -480,6 +484,7 @@ animation:anim_loading 1s linear infinite;}
 .purchase_button{background-color:%black%;color:%white%;padding-left:0.5em;padding-right:0.5em;text-decoration:none;font-weight:bold;}
 .page_break{page-break-after:always;}
 .text_highlight,.text_highlight a{background-color:%black%;color:%white%;}
+.gray.text_highlight,.gray.text_highlight a{background-color:%gray%;color:%white%;}
 
 @media screen and (max-width:1000px){
 .left{width:35%;}
@@ -524,7 +529,7 @@ transition:none;background-size:100% 100%;padding:0.5rem;padding-bottom: 5em;}
 .big_side_box{position:fixed;top:0;bottom:0;right:0;left:0;width:100%;
 height:unset;padding:0;padding-top:calc(100vh - 8.5rem);background:none;}
 .p_thumb{height:3rem;}
-.post{padding-right:0.3rem;}
+.post{padding-right:0.3rem;padding-left:0.3rem;}
 .post .p_thumb img{max-height:3rem;}
 .page,.page_gallery{padding:0.2em;padding-top:0;}
 header{padding-top:0.3em;}
