@@ -271,6 +271,7 @@ class LA{
         $this->Markers=['●', '○', '✓', '×', '!', 'P', 'E'];
         
         $this->PostsPerPage = 40;
+        $this->CommentsPerPage = 100;
         $this->HotPostCount = 15;
     }
     
@@ -348,7 +349,7 @@ blockquote{border-left:2px solid %black%;padding-left:0.3em;}
 a,button,::file-selector-button{text-decoration:underline;color:%black%;}
 a:hover,.button:hover,::file-selector-button:hover{text-decoration:none;color:%gray%;}
 .button:disabled{background-color:%gray%;pointer-events:none;}
-header{position:sticky;top:0;background-color:%white%;z-index:10;padding-top:0.5em;}
+header{position:sticky;top:0;background-color:%white%;z-index:10;padding-top:0.5em;max-height:100vh;overflow:auto;z-index:30;}
 .header_nav{display:inline;}
 header a,.left a,.footer a,.clean_a,.clean_a a{text-decoration:none;}
 header a:hover,.button:hover{color:%gray% !important;}
@@ -529,7 +530,7 @@ animation:anim_loading 1s linear infinite;}
 .gray.text_highlight,.gray.text_highlight a{background-color:%gray%;color:%white%;}
 .print_title{display:none;}
 .show_on_print{display:none;}
-.comment{font-size:0.9em;font-family:sans-serif;}
+.comment{font-size:0.9em;font-family:sans-serif;overflow:auto !important;width:100%;}
 .comment tbody tr:hover{box-shadow:none;}
 .comment table{border:none;}
 .comment li{display:list-item;list-style:'→';padding-left:0.3em;}
@@ -1462,8 +1463,8 @@ blockquote{border-left:2px solid black;}
                             $src = $im['thumb']; $orig_src=$im['file'];
                         }
                         if($this->InExperimentalMode){
-                            $click = "<a href='".$orig_src."'".($original?" class='original_img'":"")." target='_blank'>".
-                                        $m[2].($original?$orig_src:$src).$m[7]."></a>";
+                            $click = "<a href='".$orig_src."' class='original_img' target='_blank'>".
+                                        $m[2].$orig_src.$m[7]."></a>";
                             return $click;
                         }else{
                             $click = $m[2].($original?$orig_src:$src).$m[7]." data-imgsrc='".$m[5]."'".
@@ -1538,6 +1539,7 @@ blockquote{border-left:2px solid black;}
         else if(isset($_GET['gallery'])) $this->PageType='gallery';
         else if(isset($_GET['search'])) $this->PageType='search';
         else if(isset($this->CurrentPostID)) $this->PageType = "post";
+        else if(isset($_GET['comments'])) $this->PageType='comments';
         else $this->PageType = "main";
     }
     
@@ -1705,15 +1707,16 @@ blockquote{border-left:2px solid black;}
         <?php } ?>
         <ul class='hidden_on_mobile hidden_on_print' id='mobile_nav' style='text-align:center;'>
         <?php if($this->PageType!='main'){ ?>
-            <li class='hidden_on_desktop_force block_on_mobile' id='button_recent'>
-                <a href='index.php?part=recent' onclick='ShowWaitingBar()'><?=$this->T('最近')?></a></li>
-            <li class='hidden_on_desktop_force block_on_mobile' id='button_hot'>
-                <a href='index.php?part=hot' onclick='ShowWaitingBar()'><?=$this->T('热门')?></a></li>
+            <li class='hidden_on_desktop_force block_on_mobile'>
+                <a href='index.php?part=recent' onclick='ShowWaitingBar()'><?=$this->T('最近')?></a> |
+                <a href='index.php?part=hot' onclick='ShowWaitingBar()'><?=$this->T('热门')?></a><?php if($this->LoggedIn){ ?>
+                    | <span class='gray invert_a'><a href='index.php?comments=all'><?=$this->T('评论')?></a></span><?php } ?></li>
         <?php } else { ?>
-            <li class='hidden_on_desktop_force block_on_mobile' id='button_recent'>
-                <a href='javascript:ShowCenterSide();toggle_mobile_show(document.getElementById("mobile_nav"));'><?=$this->T('最近')?></a></li>
-            <li class='hidden_on_desktop_force block_on_mobile' id='button_hot'>
-                <a href='javascript:ShowLeftSide();toggle_mobile_show(document.getElementById("mobile_nav"));'><?=$this->T('热门')?></a></li>
+            <li class='hidden_on_desktop_force block_on_mobile'>
+                <a href='javascript:ShowCenterSide();toggle_mobile_show(document.getElementById("mobile_nav"));'><?=$this->T('最近')?></a> |
+                <a href='javascript:ShowLeftSide();toggle_mobile_show(document.getElementById("mobile_nav"));'><?=$this->T('热门')?></a>
+                    <?php if($this->LoggedIn){ ?>
+                        | <span class='gray invert_a'><a href='index.php?comments=all'><?=$this->T('评论')?></a></span><?php } ?></li>
         <?php } ?>
             <?php $this->SpecialNavigation;if(isset($this->SpecialNavigation) && ($p = &$this->GetPost($this->SpecialNavigation))!=NULL){
                 echo $this->TranslatePostParts($this->GenerateSinglePost($p, false, false, false, false,$this->NULL_POST));
@@ -1934,9 +1937,36 @@ blockquote{border-left:2px solid black;}
     <?php
     }
     
+    function MakeCommentPosts(){
+        if(!$this->LoggedIn) return; ?>
+        <h2><?=$this->T('评论')?></h2><div class='spacer'></div>
+        <div class='comment'><ul>
+        <?php $i=0;
+            foreach(array_reverse($this->Posts) as $p){
+                if(!isset($p['comment_to'])) continue;
+                if($i < $this->CommentsPerPage * $this->CurrentOffset) {$i++; continue;}
+                
+                $ht = $this->TranslatePostParts($this->GenerateSinglePost($p, false, false, false, false, $t, false));
+                $name = isset($p['link'])?("<a href='".$p['link']."'>".$p['name']."↗</a>"):$p['name'];
+                $post_to = $this->GetPost($p['comment_to']); $post_title = $this->GetPostTitle($post_to);
+                if(!$post_to) $post_title = "?";
+                $mail = "<span class='gray hidden_on_print'>&nbsp;".
+                        "<a href='mailto:".$p['email']."'>@</a>&nbsp;".
+                        (isset($p['ip'])?$p['ip']:"?")."&nbsp;<br class='hidden_on_desktop'/>".
+                        "<a href='index.php?post=".$p['comment_to']."'>(".$post_title.")</a></span>";
+                echo "<li><p><b>".$name.":</b>".$mail."<br /></p>".$ht."</li>";
+                
+                $i++;
+            }
+        ?>
+        </ul><br /></div>
+    <?php
+    }
+    
     function MakeRecentPosts($search_term=NULL){?>
         <div class='center' id='div_center'>
-            <h2><?=isset($search_term)?$this->T('搜索'):$this->T('最近')?></h2>
+            <h2><?=isset($search_term)?$this->T('搜索'):($this->T('最近').
+                                  ($this->LoggedIn?" <span class='gray invert_a'><a href='index.php?comments=all'>@</a></span>":""))?></h2>
             <?php if(isset($search_term)){ ?>
                 <form action="index.php" method="post" style='display:none;' id='search_form'></form>
                 <input id="search_content" name="search_content" rows="4" form='search_form' type='text' value='<?=$search_term?>'>
@@ -1957,7 +1987,7 @@ blockquote{border-left:2px solid black;}
                     foreach(array_reverse($this->Posts) as &$p){
                         if(!$this->CanShowPost($p) || $this->SkipProduct($p)) continue;
                         if(isset($search_term)){
-                            if ($search_term=='' || !preg_match("/".preg_quote($search_term)."/u", $p['content'])) continue;
+                            if ($search_term=='' || !preg_match("/".preg_quote($search_term)."/iu", $p['content'])) continue;
                         }else{
                             if(in_array($p['id'],
                                 [$this->SpecialPinned,$this->SpecialFooter,$this->SpecialFooter2,$this->SpecialNavigation])) continue;
@@ -2060,8 +2090,7 @@ blockquote{border-left:2px solid black;}
                         $ht = $this->TranslatePostParts($this->GenerateSinglePost($p, false, false, false, false, $t, false));
                         $name = isset($p['link'])?("<a href='".$p['link']."'>".$p['name']."↗</a>"):$p['name'];
                         $mail = $this->LoggedIn?("<span class='gray clean_a hidden_on_print'>&nbsp;".
-                                                 "<a href='mailto:".$p['email']."'>@</a>&nbsp;".
-                                                 (isset($p['ip'])?$p['ip']:"?")."</span>"):"";
+                                                 "<a href='mailto:".$p['email']."'>@</a>&nbsp;</span>"):"";
                         echo "<li><p><b>".$name.":</b>".$mail."</p>".$ht."</li>";
                     }
                     echo "</ul>";
@@ -3442,6 +3471,8 @@ if($la->PageType=='experimental'){
     }else if($la->PageType=='search'){
         $la->MakeHotPosts(true);
         $la->MakeRecentPosts($_GET['search']);
+    }else if($la->PageType=='comments'){
+        $la->MakeCommentPosts();
     }else{
         $la->MakeHotPosts();
         $la->MakeRecentPosts();

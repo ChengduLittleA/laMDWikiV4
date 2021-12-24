@@ -136,6 +136,7 @@
 - 继续 | Continue
 - 重命名 | Rename
 - 替换图像 | Replace Image
+- 启用评论 | Enable Comments
 - 发送评论 | Send a Reply
 - 称呼 | Name
 - 个人网站 | Personal Website
