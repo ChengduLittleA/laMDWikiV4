@@ -81,7 +81,7 @@
 - 登录 | Log In
 - 返回一般设置 | Back to general settings
 - 自动重定向 | Auto redirect
-- P为帖子跳转，按域名后的字符串匹配跳到目标文章；S为站点跳转，可以重定向来源域名，例子： | P for passage redirect, matching string after host url to jump to a specific passage, S is for site redirect, can relocate your source domain. Examples:
+- P为帖子跳转，匹配REQUEST_URI跳到目标文章；S为站点跳转，可以重定向来源域名，例子： | P for passage redirect, matching REQUEST_URI to jump to a specific passage, S is for site redirect, can relocate your source domain. Examples:
 - 保存重定向设置 | Save redirect settings
 - 当心！下列操作将立即执行： | Caution! Following operations will run immediately:
 - 重新写入默认CSS | Re-write default CSS
@@ -127,4 +127,19 @@
 - 未设置价格 | No Price
 - 购买 | Purchase
 - 你好！我想购买 | Hi! I'd like to purchase&nbsp;
+- 索引 | Index
+- 主机 | Host
+- 实验访问 | Exp Access
+- 设为实验 | Set Experimental
+- 取消实验 | Cancel Experimental
+- 首次提示 | First-time Hint
+- 继续 | Continue
+- 重命名 | Rename
+- 替换图像 | Replace Image
+- 发送评论 | Send a Reply
+- 称呼 | Name
+- 个人网站 | Personal Website
+- 您的邮箱不会公开展示。 | Your e-mail will not be shown to the public.
+- 评论 | Comments
+- 还没有评论 | No comment here yet.
 
