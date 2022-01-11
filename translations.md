@@ -2,7 +2,7 @@
 - 基 | Ki
 - 管理员 | Administrator
 - 微博 | Weibo
--   修改 | Edit
+- 修改 | Edit
 - 只复制 | Copy only
 - 引用 | Ref
 - 标记 | Mark
@@ -15,7 +15,9 @@
 - 目录 | TOC
 - 最近 | Recent
 - 热门 | Hot
-- 媒体 | Media
+- 画廊 | Gallery
+- 上一页 | Prev
+- 下一页 | Next
 - 未找到该引用。 | Could not find this reference.
 - 标记 | Mark
 - 置顶帖子 | Pinned Post
@@ -143,4 +145,7 @@
 - 您的邮箱不会公开展示。 | Your e-mail will not be shown to the public.
 - 评论 | Comments
 - 还没有评论 | No comment here yet.
+- 有趣 | Interesting
+- 未分类 | None
+- 分类 | Category
 
