@@ -139,7 +139,7 @@
 - 重命名 | Rename
 - 替换图像 | Replace Image
 - 启用评论 | Enable Comments
-- 发送评论 | Send a Reply
+- 写评论 | Write a Reply
 - 称呼 | Name
 - 个人网站 | Personal Website
 - 您的邮箱不会公开展示。 | Your e-mail will not be shown to the public.
@@ -148,4 +148,5 @@
 - 有趣 | Interesting
 - 未分类 | None
 - 分类 | Category
+- 已关闭评论 | Commenting is currently disabled
 

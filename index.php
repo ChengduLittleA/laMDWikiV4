@@ -353,6 +353,7 @@ header{position:sticky;top:0;background-color:%white%;z-index:10;padding-top:0.5
 .header_nav{display:inline;}
 header a,.left a,.footer a,.clean_a,.clean_a a{text-decoration:none;}
 header a:hover,.button:hover{color:%gray% !important;}
+.footer{background-color:%white%;z-index:10;position:relative;}
 .invert_a,.invert_a a{color:%gray%;text-decoration:none;}
 .invert_a:hover,.invert_a a:hover{color:%black% !important;}
 .gray,.gray a{color:%gray%;}
@@ -374,6 +375,7 @@ td:first-child{padding-left:0;}
 td:last-child{padding-right:0;}
 tbody tr:hover{box-shadow:inset 0 -2px 0 0px %black%;}
 thead{box-shadow:inset 0 -1px 0 0px %black%;position:sticky;top:2rem;background-color:%white%;z-index:5;}
+.post table{font-size:0.85em;}
 .interesting_tbody{background:linear-gradient(90deg, %white%ff, %white%88 20em);}
 .interesting_tbody td{display:contents;}
 .interesting_tbody tr{position:relative;scroll-margin:3.5em}
@@ -389,17 +391,17 @@ tr:hover .post_menu_button{opacity:1;}
 .post_current_row{background-color:%lightopbkg%;}
 .align_right{text-align:right;}
 .left{display:inline-block;vertical-align:top;width:25%;height:calc(100vh - 5.2em);top:2em;
-position:sticky;overflow:auto;padding-right:0.2em;padding-bottom:50vh;}
-.center{display:inline-block;vertical-align:top;width:50%;padding-left:0.3em;overflow:visible;padding-bottom:50vh;}
-.center_wide{display:inline-block;vertical-align:top;width:75%;padding-left:0.3em;overflow:visible;padding-bottom:50vh;}
-.center_full{display:inline-block;vertical-align:top;width:100%;overflow:visible;padding-bottom:50vh;}
+position:sticky;overflow:auto;padding-right:0.2em;padding-bottom:4rem;}
+.center{display:inline-block;vertical-align:top;width:50%;padding-left:0.3em;overflow:visible;padding-bottom:4rem;}
+.center_wide{display:inline-block;vertical-align:top;width:75%;padding-left:0.3em;overflow:visible;padding-bottom:4rem;}
+.center_full{display:inline-block;vertical-align:top;width:100%;overflow:visible;padding-bottom:4rem;}
 .center_wide .p_thumb{height:10rem;}
 .sticky_title{position:sticky;top:1.35em;z-index:1;box-shadow:6em 3.5em 0.75em -3em inset %white%;pointer-events:none;}
 .center_exp{display:block;width:80%;margin:0 auto;overflow:visible;padding-bottom:1em;}
 .table_top{position:relative;left:calc(-50% - 0.45em);width:calc(200% + 0.6em);background:%white%;z-index:1;
 box-shadow:0px 0px 2em 1em %white%;margin-top:2em;margin-bottom:2em;}
 .right{display:inline-block;vertical-align:top;width:25%;position:sticky;top:2em;
-padding-left:0.5em;height:calc(100vh - 2.6em);overflow:auto;padding-bottom:50vh;}
+padding-left:0.5em;height:calc(100vh - 2.6em);overflow:auto;padding-bottom:4rem;}
 textarea,input[type=text],input[type=password]{width:100%;display:block;font-family:inherit;max-height:60vh;font-size:inherit;}
 select,textarea,input[type=text],input[type=password]{background:none;border:none;border-bottom:1px solid %black%;color:%black%;}
 .button{background:none;border:none;font-family:inherit;color:%black%;font-size:inherit;font-weight:bold;}
@@ -413,7 +415,7 @@ padding-right:0rem;padding-left:0rem;padding-top:0.3rem;padding-bottom:0.3rem;ma
 .post_width > *:last-child,.post_width_big > *:last-child,.post_dummy > *:last-child,.post_ref > *:last-child{margin-bottom:0em;}
 .post_dummy > *{width:60%;margin:0 auto;margin-bottom:0.5em}
 .post_dummy > p img{display:block;width:100%;margin:0 auto;}
-.post h1,.post h2,.post h3,.post h4{margin-bottom:0.5rem}
+.post h1,.post h2,.post h3,.post h4{margin-bottom:0.5rem;}
 .gallery_left li{display:list-item;margin-left:1em;list-style:none;}
 .gallery_left .selected{list-style:'→';}
 .focused_post{font-size:1.2em;margin-top:0.1em;margin-bottom:0.1em;padding:0.5rem !important;border:2px dashed #ac7843;}
@@ -479,11 +481,9 @@ h1,h2,h3,h4,h5{scroll-margin:1.5em;}
 .ref_thumb{white-space:nowrap;overflow:hidden;}
 .ref_thumb .file_thumb{width:3em;height:3em;}
 .side_thumb li{margin:0.4em;display:inline-block;}
-.file_thumb{width:4em;height:4em;display:inline-block;box-shadow:0px 0px 10px rgb(0, 0, 0);
-line-height:0;vertical-align:middle;overflow:hidden;}
-.p_row{display:flex;flex-wrap:wrap;margin-left:0.25rem;margin-top:0.25rem;}
-.p_thumb{display:flex;flex-grow:1;height:6rem;margin-right:0.25rem;margin-bottom:0.25rem;
-box-shadow:0px 0px 10px rgb(0, 0, 0);overflow:hidden;position:relative;}
+.file_thumb{width:4em;height:4em;display:inline-block;line-height:0;vertical-align:middle;overflow:hidden;}
+.p_row{display:flex;flex-wrap:wrap;}
+.p_thumb{display:flex;flex-grow:1;height:6rem;margin-right:0.25rem;margin-bottom:0.25rem;overflow:hidden;position:relative;}
 .p_thumb img{object-fit:cover;max-height:100%;min-width:100%;}
 .ref_count,.p_thumb .post_menu_button{text-shadow: 0px 0px 10px rgb(0, 0, 0);}
 .p_thumb:hover .post_menu_button{display:block;}
@@ -492,7 +492,7 @@ box-shadow:0px 0px 10px rgb(0, 0, 0);overflow:hidden;position:relative;}
 .post .p_thumb img{max-height:6rem;}
 .big_image_box{position:fixed;top:0;bottom:0;left:0;width:75%;z-index:95;text-align:center;pointer-events:none;}
 .big_image_box *{pointer-events:auto;}
-.big_image_box img{position:absolute;margin:auto;top:0;left:0;right:0;bottom:0;box-shadow: 0px 0px 30px black;cursor:unset;}
+.big_image_box img{position:absolute;margin:auto;top:0;left:0;right:0;bottom:0;cursor:unset;}
 .big_side_box{position:fixed;top:0;bottom:0;right:0;width:25%;overflow:auto;z-index:98;color:%black%;padding:1rem;
 background:linear-gradient(to right, rgba(0,0,0,0), rgb(1, 1, 1));transition:background-size .2s linear;background-size: 300% 100%;}
 .big_side_box:hover{background-size: 100% 100%;}
@@ -501,9 +501,9 @@ background:linear-gradient(to right, rgba(0,0,0,0), rgb(1, 1, 1));transition:bac
 #dropping_background{background-color:rgba(0,0,0,0.4);position:fixed;top:0;right:0;bottom:0;left:0;z-index:100;text-align:center;
 box-shadow:0px 0px 500px black inset;display:flex;align-items:center;}
 img{cursor:pointer;max-height:100%;max-width:100%;}
-.post img{box-shadow:0px 0px 10px rgb(0, 0, 0);max-height:min(70vh, 20rem);max-width:min(100%, 20rem);}
+.post img{max-height:min(70vh, 20rem);max-width:min(100%, 20rem);}
 .post > a > img{display:block;margin:0.3em auto;}
-.post .original_img{max-width:100%;display:block;margin: 0 auto;margin-bottom:0.5em;max-width:100%;max-height:90vh;}
+.post .original_img{max-width:100%;display:block;margin-left:auto;margin-right:auto;max-width:100%;max-height:90vh;}
 .original_img img{max-height:90vh;max-width:100%;}
 .p_row .original_img{margin-bottom:0;}
 .post_ref .original_img{margin:unset;max-width:unset;max-height:min(70vh, 20rem);max-width:min(100%, 20rem);}
@@ -637,31 +637,38 @@ body,footer,header,.small_footer,a,.clean_a,.invert_a,.clean_a a,.invert_a a{bac
 table{border-bottom:2px solid black;border-top:2px solid black;}
 table img{max-width:5em;max-width:8em !important;max-height:8em !important;}
 thead{box-shadow:inset 0 -1px 0 0px black;background:none;}
-.post{padding:0;}
+.post,.focused_post{padding:0 !important;margin-top:0.3em;margin-bottom:0.5em;}
 .post_width,.post_width_big{overflow:hidden;left:0;width:100%;padding-left:0em;}
-.post img,.p_thumb{box-shadow:none;}
-.gray,.gray a{color:#888888;}
+.post h1,.post h2,.post h3,.post h4{margin-top:0.5rem;}
+.gray,.gray a,.deleted_post{color:rgba(0,0,0,0.5);}
 .left,.right{display:none;}
-.center{width:100%;padding:0;display:block;font-size:16px;line-height:1.3}
+.center, .center_wide, .center_full{width:100%;padding:0;display:block;font-size:16px;line-height:1.3}
 hr{border:1px solid black;}
 .post_box_top{display:none;}
-.opt_compact .post_access,.ref_compact .post_access{border-right:2px solid #888888;display:inline;}
+.opt_compact .post_access,.ref_compact .post_access{border-right:none;display:inline;}
 .text_highlight,.text_highlight a,.gray.text_highlight,.gray.text_highlight a,.purchase_button{background-color:lightgray;color:black;}
-.focused_post{border:none;font-size:1em;margin-top:0.2em;margin-bottom:0.2em;padding:0;}
+.focused_post{border:none;font-size:1em;}
 .hidden_on_print{display:none;}
-.print_column{column-count:2;}
+.print_column{column-count:2;margin-top:0.5rem;margin-bottom:0.5rem;}
 .post_access{display:none;}
 .opt_compact{margin-left:0;}
 .opt_compact .post_width{left:1.4rem;width:calc(100% - 1.7rem);padding-left:0.2em;}
-.print_title{column-span:all;display:block;margin-top:3em;margin-bottom:0.5rem;font-size:1.2em;}
-.print_title:first-of-type{margin-top:2em;}
-.post h1:first-of-type{display:none;}
+.print_title{column-span:all;display:block;margin-top:2em;margin-bottom:0.5rem;font-size:1.2em;}
+.print_title:first-of-type{margin-top:1em;}
+.print_title+.post h1:first-of-type{display:none;}
 .opt_compact h1:first-of-type,.ref_compact h1:first-of-type{display:unset;}
 .table_top{position:relative;left:0;width:100%;background:none;z-index:1;box-shadow:none;margin-top:0.2em;margin-bottom:0.2em;}
 .header_nav{display:none;}
 .show_on_print{display:block;}
 blockquote{border-left:2px solid black;}
 .footer_additional{display:none;}
+.small_footer{margin-top:1rem;}
+.page_selector{display:none;}
+.p_thumb{height:4rem;}
+.post .p_thumb img{max-height:4rem;}
+.sticky_title{box-shadow:none;}
+.center_wide .p_thumb{display:inline-flex;height:5.8rem;width:5.8rem;margin-right:0;}
+.center_wide .p_row{display:block;}
 }
 ";
         $this->style=preg_replace('/%white%/','#231a0d',$this->style);
@@ -1954,8 +1961,7 @@ blockquote{border-left:2px solid black;}
         <li class='post<?=isset($extra_class_string)?' '.$extra_class_string:''?><?=$side?" post_box":""?>'
             data-post-id='<?=$post['id']?>' <?=$is_deleted?"data-mark-delete='true'":""?>>
             <?php if($mark_value>=0 && !$show_link && $mark_value!='P'){?>
-                <div class='<?=$is_deleted?"gray":""?>'><?=$mark_value?>
-                    <?=$this->T('标记')?></div>
+                <div class='smaller <?=$is_deleted?"gray":""?>'><?=$mark_value?> <?=$this->T('标记')?></div>
             <?php } ?>
             <?php if($is_top){?>
                 <div class='top_post_hint'><?=$this->T('置顶帖子')?><hr /></div>
@@ -2036,6 +2042,8 @@ blockquote{border-left:2px solid black;}
     function MakeCommentPosts(){
         if(!$this->LoggedIn) return; ?>
         <h2><?=$this->T('评论')?></h2><div class='spacer'></div>
+        <?php if(!$this->CommentEnabled){
+            echo "<p><span class='text_highlight'>&nbsp;".$this->T("已关闭评论")."&nbsp;</span></p><br />"; } ?>
         <div class='comment'><ul>
         <?php $i=0;
             foreach(array_reverse($this->Posts) as $p){
@@ -2064,7 +2072,7 @@ blockquote{border-left:2px solid black;}
             <h2><?=isset($search_term)?$this->T('搜索'):
                                 (isset($category)?("<span class='gray'>".$this->T('分类')."</span> ".
                                     ($category=='none'?$this->T('未分类'):$this->T($category))):($this->T('最近')).
-                                ($this->LoggedIn?" <span class='gray invert_a'><a href='index.php?comments=all'>@</a></span>":""))?></h2>
+                    ($this->LoggedIn?" <span class='gray invert_a hidden_on_print'><a href='index.php?comments=all'>@</a></span>":""))?></h2>
             <?php if(isset($search_term)){ ?>
                 <form action="index.php" method="post" style='display:none;' id='search_form'></form>
                 <input id="search_content" name="search_content" rows="4" form='search_form' type='text' value='<?=$search_term?>'>
@@ -2178,7 +2186,7 @@ blockquote{border-left:2px solid black;}
                 }else{ ?>
                 <div class='gray smaller'><?=$this->T('没有帖子链接到这里。')?></div>
             <?php } ?>
-        <div style='margin-bottom:50vh'>&nbsp;</div>
+        <div style='margin-bottom:4rem;'>&nbsp;</div>
         </div>
     <?php
     }
@@ -2202,32 +2210,35 @@ blockquote{border-left:2px solid black;}
                 echo $this->T('还没有评论');
             } ?>
             <div class='hidden_on_print'>
-                <br />
-                <form action="/index.php?post=<?=$this->CurrentPostID?>&comment_to=<?=$to_post['id']?>"
+                <div class='spacer'></div>
+                <form action="index.php?post=<?=$this->CurrentPostID?>&comment_to=<?=$to_post['id']?>"
                     method="post" style="display:none;" id="comment_form"></form>
-                <h2><?=$this->T('发送评论');?></h2>
-                <p class='gray' style='margin-bottom:0.5em;'><?=$this->T('您的邮箱不会公开展示。');?></p>
-                <table style='white-space:nowrap;'>
-                    <tr><td colspan='2'>
-                        <textarea id="comment_box" name="comment_box" rows="4" class='full_box' form='comment_form'
-                            oninput="CommentUpdated();" ></textarea>
-                    </td></tr>
-                    <tr><td><?=$this->T('电子邮件')?>*</td><td><?=$this->T('称呼')?>*</td></tr>
-                    <tr><td><input type="text" form="comment_form" id='comment_email' name='comment_email'
-                                class='full_box' oninput="CommentUpdated();" /></td>
-                        <td><input type="text" form="comment_form" id='comment_name' name='comment_name'
-                                class='full_box' oninput="CommentUpdated();" /></td></tr>
-                    <tr><td colspan='2'><?=$this->T('个人网站')?></td></tr>
-                    <tr><td colspan='2'>
-                        <input type="text" form="comment_form" id='comment_link' name='comment_link'
-                                class='full_box' oninput="CommentUpdated();" />
-                    </td></tr>
-                    <tr><td colspan='2'>
-                        <div class='spacer'></div>
-                        <input class='button text_highlight bigger' type='submit' form='comment_form'
-                            name='comment_confirm' id='comment_confirm' value='&nbsp;<?=$this->T('发送')?>&nbsp;'>
-                    </td></tr>
-                </table>
+                <p><a class='text_highlight bold clean_a'
+                      onclick='document.getElementById("comment_box").style.display="block";this.parentNode.style.display="none"'>
+                      &nbsp;<?=$this->T('写评论');?>&nbsp;</a></p>
+                <div id='comment_box' style='display:none;'>
+                    <p class='gray' style='margin-bottom:0.5em;'><?=$this->T('您的邮箱不会公开展示。');?></p>
+                    <table style='white-space:nowrap;'>
+                        <tr><td colspan='2'>
+                            <textarea id="comment_box" name="comment_box" rows="4" class='full_box' form='comment_form'
+                                oninput="CommentUpdated();" ></textarea>
+                        </td></tr>
+                        <tr><td><?=$this->T('电子邮件')?>*</td><td><?=$this->T('称呼')?>*</td></tr>
+                        <tr><td><input type="text" form="comment_form" id='comment_email' name='comment_email'
+                                    class='full_box' oninput="CommentUpdated();" /></td>
+                            <td><input type="text" form="comment_form" id='comment_name' name='comment_name'
+                                    class='full_box' oninput="CommentUpdated();" /></td></tr>
+                        <tr><td colspan='2'><?=$this->T('个人网站')?></td></tr>
+                        <tr><td colspan='2'>
+                            <input type="text" form="comment_form" id='comment_link' name='comment_link'
+                                    class='full_box' oninput="CommentUpdated();" />
+                        </td></tr>
+                        <tr><td colspan='2'>
+                            <div class='spacer'></div>
+                            <input class='button text_highlight bigger' type='submit' form='comment_form'
+                                name='comment_confirm' id='comment_confirm' value='&nbsp;<?=$this->T('发送')?>&nbsp;'>
+                        </td></tr>
+                    </table></div>
                 <script>
                 const IsValidEmail = (email) => {
                   return String(email).toLowerCase().match(/^(([^<>()[\]\\.,;:\s@"]+(\.[^<>()[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/);
@@ -2244,7 +2255,7 @@ blockquote{border-left:2px solid black;}
                 function CommentUpdated(){
                     cconfirm.disabled=true;
                     if (cemail.value!="" && IsValidEmail(cemail.value) &&
-                        cbox.value.length>2 && cname.value.length>2 &&
+                        cbox.innerText.length>2 && cname.value.length>2 &&
                         clink.value=="" || IsValidHttpUrl(clink.value)){
                         cconfirm.removeAttribute("disabled");
                     }
@@ -2252,7 +2263,6 @@ blockquote{border-left:2px solid black;}
                 CommentUpdated();
                 </script>
             </div>
-            <br />
         </div>
     <?php
     }
@@ -2265,13 +2275,14 @@ blockquote{border-left:2px solid black;}
         ?>
         <script>function ClickImage(post_access){im=post_access.querySelector('img');if(im){im.click();}}</script>
         <div class='center_full' id='div_center'>
-            <h2 class='hidden_on_print'><?=$this->T('有趣')?></h2>
-            <ul class='print_column'><li class='post post_width_big' data-post-id='<?=$th['first']['id']?>'>
+            <h2 class='hidden_on_print'><?=$this->T('有趣')?>
+                <a class='gray clean_a' href='?post=<?=$th['first']['id']?>'>→</a></h2>
+            <ul><li class='post post_width_big' data-post-id='<?=$th['first']['id']?>'>
                 <div class='post_menu_button _menu_hook' onclick='ShowPostMenu(this.parentNode);'>+</div><?=$this->TranslatePostParts($ht)?>
                 <?php if($this->LoggedIn && (!$this->InExperimentalMode)){ ?>
                     <div class='post_width_big hidden_on_print'><br />
-                        <?php $this->MakePostingFields($th['last']['id'], true);?>
-                    </div><br />
+                        <?php $this->MakePostingFields($th['last']['id'], true);?><br />
+                    </div>
                 <?php } ?>
                 <table><thead><tr><th></th><?php foreach($th['interesting'] as $header){ ?>
                     <th><?=$this->T($header);?></th>
@@ -2349,9 +2360,8 @@ blockquote{border-left:2px solid black;}
                     </script><?php
                 } ?>
                 <?php if($this->LoggedIn && (!$this->InExperimentalMode)){ ?>
-                    <br />
                     <div class='post_width_big hidden_on_print'>
-                        <?php $this->MakePostingFields($is_thread?$th['last']['id']:$post['id'], true);?>
+                        <br /><?php $this->MakePostingFields($is_thread?$th['last']['id']:$post['id'], true);?>
                     </div>
                 <?php } 
                 $this->MakeCommentSection($post);
@@ -2435,14 +2445,15 @@ blockquote{border-left:2px solid black;}
     }
     
     function MakeUploader($is_side=false){ ?>
-        <div id='upload_operation_area'>
+        <div id='upload_operation_area' class='hidden_on_print'>
             <p><?=$this->T('选择、粘贴或者拖动到页面以上传图片。')?></p>
             <input type="file" id='upload_selector' accept="image/x-png,image/png,image/gif,image/jpeg" multiple/>
             <ul id='file_list'>
             </ul>
             <div class='smaller gray' id='upload_hint'><?=$this->T('就绪')?></div>
         </div>
-        <a id='upload_click' href='javascript:UploadList()'<?=$is_side?" data-is-side='true'":""?>><?=$this->T('上传列表中的文件')?></a>
+        <a id='upload_click' class='hidden_on_print'
+            href='javascript:UploadList()'<?=$is_side?" data-is-side='true'":""?>><?=$this->T('上传列表中的文件')?></a>
         <script>
             function pastehandler(event){
                 var items = (event.clipboardData || event.originalEvent.clipboardData).items;
@@ -2689,7 +2700,7 @@ blockquote{border-left:2px solid black;}
             <?php if($this->LoggedIn){?>
                 <div>
                     <?php if(isset($name)){ ?>
-                        <div style='text-align:right;position:absolute;right:0;top:0;width:100%;' class='invert_a smaller'>
+                        <div style='text-align:right;position:absolute;right:0;top:0;width:100%;' class='invert_a smaller hidden_on_print'>
                             <a href='javascript:ShowDeleteMenu();'  class='smaller'><?=$this->T('删除相册')?></a><br />
                             <?php if(isset($gal['featured']) && $gal['featured']!=false){ ?>
                                 <a href='?gallery=<?=$_GET['gallery']?>&gallery_set_featured=<?=$_GET['gallery']?>&value=false'
@@ -2714,7 +2725,7 @@ blockquote{border-left:2px solid black;}
                         </div>
                     <?php } ?>
                     <?php $this->MakeUploader(false); ?>
-                    <div style='text-align:right;position:relative;' class='invert_a smaller'>
+                    <div style='text-align:right;position:relative;' class='invert_a smaller hidden_on_print'>
                         <div style='position:relative'>
                         <?php if(isset($name)){ ?>
                             <a href='javascript:ShowGalleryEditMenu("<?=$name?>")'><?=$this->T('改名')?></a>
@@ -2733,7 +2744,7 @@ blockquote{border-left:2px solid black;}
                             </div>
                         </div>
                     </div>
-                    <div class='smaller'>
+                    <div class='smaller hidden_on_print'>
                         <form action="<?=$_SERVER['REQUEST_URI']?>"
                             method="post" style='display:none;' id='gallery_move_form'></form>
                         <input type='text' form='gallery_move_form' name='gallery_move_ops'
@@ -3271,7 +3282,8 @@ blockquote{border-left:2px solid black;}
                 copy.innerHTML='&#128203;&#xfe0e;';
                 copy.addEventListener("click", function(){
                     url = window.location
-                    copy_text(url.protocol+"//"+url.host+"/index.php?post="+id);
+                    path = location.pathname
+                    copy_text(url.protocol+"//"+url.host+path+"?post="+id);
                     this.innerHTML='&#128203;&#xfe0e;&#10003;&#xfe0e;';
                 });
                 document.getElementById('share_pin').href='https://www.pinterest.com/pin/create/button/?url='+
