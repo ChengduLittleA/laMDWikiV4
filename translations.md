@@ -149,4 +149,10 @@
 - 未分类 | None
 - 分类 | Category
 - 已关闭评论 | Commenting is currently disabled
+- 历史 | History
+- 历史记录 | History
+- 帖子 | Post
+- 差异 | Differences
+- 选择的版本 | Selected version
+- 下一个版本 | Next version
 

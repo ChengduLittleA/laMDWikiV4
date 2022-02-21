@@ -53,9 +53,14 @@ class LA{
     protected $Galleries;
     protected $Anchors;
     
+    protected $ArchiveHandles;
+    protected $Archive;
+    
     protected $Markers;
     
     protected $ExtraScripts;
+    
+    protected $TIME_STRING;
     
     protected $NULL_POST;
     protected $NULL_IMAGE;
@@ -203,6 +208,7 @@ class LA{
         if(!is_dir('images')) mkdir('images');
         if(!is_dir('images/thumb')) mkdir('images/thumb');
         if(!is_dir('styles')) mkdir('styles');
+        if(!is_dir('archive')) mkdir('archive');
         
         $this->WriteStyles();
         $this->WriteHTACCESS();
@@ -273,6 +279,8 @@ class LA{
         $this->PostsPerPage = 40;
         $this->CommentsPerPage = 100;
         $this->HotPostCount = 15;
+        
+        $this->TIME_STRING = date('YmdHis');
     }
     
     function DoLogout(){
@@ -341,7 +349,8 @@ html{font-size:18px;font-family:'Noto Serif CJK SC','Times New Roman','SimSun', 
 body{background-color:%white%;color:%black%;}
 sup,sub{line-height:0;}
 blockquote{border-left:2px solid %black%;padding-left:0.3em;}
-*{box-sizing:border-box;padding:0;margin:0;}
+*{box-sizing:border-box;padding:0;margin:0;font-weight:normal;}
+b,strong,th{font-weight:bold;}
 .page,.page_gallery{padding:1em;padding-top:0;}
 .hidden_on_desktop,.hidden_on_wide{display:none;}
 .hidden_on_desktop_force{display:none !important;}
@@ -405,23 +414,19 @@ padding-left:0.5em;height:calc(100vh - 2.6em);overflow:auto;padding-bottom:4rem;
 textarea,input[type=text],input[type=password]{width:100%;display:block;font-family:inherit;max-height:60vh;font-size:inherit;}
 select,textarea,input[type=text],input[type=password]{background:none;border:none;border-bottom:1px solid %black%;color:%black%;}
 .button{background:none;border:none;font-family:inherit;color:%black%;font-size:inherit;font-weight:bold;}
-.post{position:relative;scroll-margin:2.5em;border-radius:0.3em;
-padding-right:0rem;padding-left:0rem;padding-top:0.3rem;padding-bottom:0.3rem;margin-top:0.2em;margin-bottom:0.2em;}
+.post{position:relative;scroll-margin:2.5em;border-radius:0.3em;}
 .center_exp .post{padding-left:0;padding-right:0;padding-top:0;padding-bottom:0;border-radius:0;}
 .post_width li,.post_width_big li,.footer_additional li,.footer_additional li,.post_dummy li
-{display:list-item;margin-left:1em;list-style:disc;}
-.post_width li li,.post_width_big li li,.footer_additional li li,.footer_additional li li,.post_dummy li li{list-style:circle;}
-.post_width > *,.post_width_big > *,.post_dummy > *,.post_ref > *{margin:0;margin-bottom:0.5em}
-.post_width > *:last-child,.post_width_big > *:last-child,.post_dummy > *:last-child,.post_ref > *:last-child{margin-bottom:0em;}
-.post_dummy > *{width:60%;margin:0 auto;margin-bottom:0.5em}
+{display:list-item;margin-left:1em;list-style:'+ ';}
+.post_width li li,.post_width_big li li,.footer_additional li li,.footer_additional li li,.post_dummy li li{list-style:'- ';}
+.post_width > *,.post_width_big > *,.post_dummy > *,.post_ref > *{margin:0;margin-bottom:0.5rem}
+.post_dummy > *{width:60%;margin:0 auto;margin-bottom:0.5rem}
 .post_dummy > p img{display:block;width:100%;margin:0 auto;}
-.post h1,.post h2,.post h3,.post h4{margin-bottom:0.5rem;}
 .gallery_left li{display:list-item;margin-left:1em;list-style:none;}
 .gallery_left .selected{list-style:'→';}
 .focused_post{font-size:1.2em;margin-top:0.1em;margin-bottom:0.1em;padding:0.5rem !important;border:2px dashed #ac7843;}
 .post_width{position:relative;left:1.4rem;width:calc(100% - 1.7rem);padding-left:0.2em;overflow:visible;}
 .post_width_big{position:relative;left:0;width:100%;overflow:visible;}
-.post .post{padding:0;padding-top:0.3rem;}
 .post_menu_button{position:absolute;display:none;right:0rem;width:1.5rem;
 text-align:center;border-radius:0.3em;user-select:none;cursor:pointer;z-index:10;}
 .pointer{cursor:pointer;}
@@ -432,16 +437,15 @@ box-shadow:0px 0px 10px rgb(0, 0, 0);}
 .pop_menu li{list-style:none;margin-left:0;}
 .pop_menu hr{border:2px solid rgba(0,0,0,0.1);}
 .toc{left:60%;width:40%;top:0;position:absolute;}
-.post_access{width:1.4rem;top:0;position:absolute;height:100%;text-align:center;
-font-weight:bold;border-right:2px solid transparent;padding-top:0.3rem;}
+.post_access{width:1.4rem;top:0;position:absolute;height:100%;text-align:center;font-weight:bold;border-right:2px solid transparent;}
 .post_access:hover{background-color:%lightopbkg%;border-top-left-radius:0.3em;border-bottom-left-radius:0.3em;
 border-right:2px solid %black% !important;}
 .paa{width:1.4rem;min-width:1.4rem;}
-.opt_compact .post_access,.ref_compact .post_access{padding-top:0.2rem;border-right:2px solid %gray%;}
+.opt_compact .post_access,.ref_compact .post_access{border-right:2px solid %gray%;}
 .post_box{border:1px solid %gray%;border-radius:0.3em;padding:0.3em;}
 .post_box:hover,.post_menu_button:hover{background-color:%lightopbkg%}
 #big_image_info .post_box:hover{background-color:%graybkg%;}
-.post_preview{font-size:0.9rem;overflow:hidden;}
+.post_preview{font-size:0.9rem;overflow:hidden;margin-bottom:0.2em;}
 .post .post_ref{margin:0;padding-left:1.7rem;}
 .post_ref_main{display:inline-block;vertical-align:top;}
 .post_preview .post_ref_main{max-height:6rem;overflow:hidden;}
@@ -450,7 +454,6 @@ border-right:2px solid %black% !important;}
 .smaller{font-size:0.85em;}
 .bigger{font-size:1.3em;}
 .block{display:block;}
-.opt_compact,.ref_compact{margin-top:0;}
 .opt_compact{margin-left:1.6rem;}
 .opt_compact .post_width {margin-left:0.3em;width: calc(100% - 1.8rem);}
 .post_box_top{padding-bottom:0.3em;padding-top:0.3em;}
@@ -471,9 +474,7 @@ transition-timing-function:ease-out;padding:1rem;overflow:auto;}
 .toc_entry_4{font-size:0.85em;padding-left:1.5rem;}
 .toc_entry_5{font-size:0.8em;padding-left:2rem;}
 h1,h2,h3,h4,h5{scroll-margin:1.5em;}
-{display:inline}
-.left ul h1,.left ul h2,.left ul h3,.left ul h4,.left ul h5,.left ul p
-{font-size:1em;}
+.left ul h1,.left ul h2,.left ul h3,.left ul h4,.left ul h5,.left ul p{font-size:1em;}
 .deleted_post{color:%gray%;text-decoration:line-through;}
 #file_list{margin-top:0.5em;}
 .file_thumb img{max-height:100%;max-width:100%;object-fit:cover;min-width:100%;min-height:100%;}
@@ -482,7 +483,7 @@ h1,h2,h3,h4,h5{scroll-margin:1.5em;}
 .ref_thumb .file_thumb{width:3em;height:3em;}
 .side_thumb li{margin:0.4em;display:inline-block;}
 .file_thumb{width:4em;height:4em;display:inline-block;line-height:0;vertical-align:middle;overflow:hidden;}
-.p_row{display:flex;flex-wrap:wrap;}
+.p_row{display:flex;flex-wrap:wrap;width:calc(100% + 0.25rem);}
 .p_thumb{display:flex;flex-grow:1;height:6rem;margin-right:0.25rem;margin-bottom:0.25rem;overflow:hidden;position:relative;}
 .p_thumb img{object-fit:cover;max-height:100%;min-width:100%;}
 .ref_count,.p_thumb .post_menu_button{text-shadow: 0px 0px 10px rgb(0, 0, 0);}
@@ -503,7 +504,8 @@ box-shadow:0px 0px 500px black inset;display:flex;align-items:center;}
 img{cursor:pointer;max-height:100%;max-width:100%;}
 .post img{max-height:min(70vh, 20rem);max-width:min(100%, 20rem);}
 .post > a > img{display:block;margin:0.3em auto;}
-.post .original_img{max-width:100%;display:block;margin-left:auto;margin-right:auto;max-width:100%;max-height:90vh;}
+.post .original_img{max-width:100%;display:inline-block;vertical-align:middle;
+margin-left:auto;margin-right:auto;max-width:100%;max-height:90vh;}
 .original_img img{max-height:90vh;max-width:100%;}
 .p_row .original_img{margin-bottom:0;}
 .post_ref .original_img{margin:unset;max-width:unset;max-height:min(70vh, 20rem);max-width:min(100%, 20rem);}
@@ -555,6 +557,11 @@ animation:anim_loading 1s linear infinite;}
 .comment li{display:list-item;list-style:'→';padding-left:0.3em;}
 .comment ul{padding-left:1em;}
 .comment ul li *{margin-bottom:0.5em;}
+.diff_table{table-layout:fixed;}
+.diff_table thead{font-size:0.9em;text-align:center;}
+.diff_table tbody pre{font-size:1.0rem;}
+.diff_table td{vertical-align:top;}
+.omittable_title{display:block;width:100%;text-overflow:ellipsis;overflow:hidden;white-space:nowrap;}
 
 @media screen and (max-width:1000px){
 .left{width:35%;}
@@ -605,7 +612,6 @@ transition:none;background-size:100% 100%;padding:0.5rem;padding-bottom: 5em;}
 height:unset;padding:0;padding-top:calc(100vh - 8.5rem);background:none;}
 .p_thumb{height:3rem;}
 .center .post{padding-right:0rem;padding-left:0rem;}
-.post{padding-right:0.3rem;padding-left:0.3rem;}
 .post .p_thumb img{max-height:3rem;}
 .page,.page_gallery{padding:0.2em;padding-top:0;}
 header{padding-top:0.3em;}
@@ -634,12 +640,22 @@ table img{max-width:30vw !important;}
 
 @media print{
 body,footer,header,.small_footer,a,.clean_a,.invert_a,.clean_a a,.invert_a a{background:none;color:black;}
+.post *,.post_dummy *{margin-bottom:0em}
+.p_row,.post table,.post_width>img,.post_width_big>img,.post_ref>img,.post_ref>.original_img,
+.post_width>.original_img,.post_width_big>.original_img,.post pre{margin-top:0.7rem;margin-bottom:0.7rem;text-indent:0;}
+.post p{line-height:1.3;text-indent:2em;}
+table img{margin:0 !important;}
+.post h1+p,.post h2+p,.post img+p,.post table+p,.post p:first-child{text-indent:0;}
+.post ul,.post ol{margin:1rem;margin-left:1.4rem;margin-right: 0rem;}
 table{border-bottom:2px solid black;border-top:2px solid black;}
 table img{max-width:5em;max-width:8em !important;max-height:8em !important;}
 thead{box-shadow:inset 0 -1px 0 0px black;background:none;}
-.post,.focused_post{padding:0 !important;margin-top:0.3em;margin-bottom:0.5em;}
 .post_width,.post_width_big{overflow:hidden;left:0;width:100%;padding-left:0em;}
-.post h1,.post h2,.post h3,.post h4{margin-top:0.5rem;}
+.post h1,{margin-top:0.5rem;}
+.post h2{font-size:1.8em;margin:2.5em auto 0;}.list h2,.opt_compact h2,.ref_compact h2{margin:0 !important;}
+.post h3{font-size:1.5em;margin:1.5em auto 0;}.list h3,.opt_compact h3,.ref_compact h4{margin:0 !important;}
+.post h4{font-size:1.1em;margin:0.5em auto 0;}.list h4,.opt_compact h3,.ref_compact h4{margin:0 !important;}
+.post .post{margin-bottom:0.5rem;margin-top:0.5rem;}
 .gray,.gray a,.deleted_post{color:rgba(0,0,0,0.5);}
 .left,.right{display:none;}
 .center, .center_wide, .center_full{width:100%;padding:0;display:block;font-size:16px;line-height:1.3}
@@ -647,28 +663,31 @@ hr{border:1px solid black;}
 .post_box_top{display:none;}
 .opt_compact .post_access,.ref_compact .post_access{border-right:none;display:inline;}
 .text_highlight,.text_highlight a,.gray.text_highlight,.gray.text_highlight a,.purchase_button{background-color:lightgray;color:black;}
-.focused_post{border:none;font-size:1em;}
+.focused_post{border:none;font-size:1em;padding:0 !important;}
 .hidden_on_print{display:none;}
 .print_column{column-count:2;margin-top:0.5rem;margin-bottom:0.5rem;}
 .post_access{display:none;}
 .opt_compact{margin-left:0;}
-.opt_compact .post_width{left:1.4rem;width:calc(100% - 1.7rem);padding-left:0.2em;}
+.post .post_ref{padding-left:1.4rem;}
+.opt_compact .post_width{left:1.4rem;width:calc(100% - 1.4rem);margin-left:0;}
 .print_title{column-span:all;display:block;margin-top:2em;margin-bottom:0.5rem;font-size:1.2em;}
 .print_title:first-of-type{margin-top:1em;}
 .print_title+.post h1:first-of-type{display:none;}
 .opt_compact h1:first-of-type,.ref_compact h1:first-of-type{display:unset;}
-.table_top{position:relative;left:0;width:100%;background:none;z-index:1;box-shadow:none;margin-top:0.2em;margin-bottom:0.2em;}
+.table_top{position:relative;left:0;width:100%;background:none;z-index:1;box-shadow:none;}
 .header_nav{display:none;}
 .show_on_print{display:block;}
 blockquote{border-left:2px solid black;}
 .footer_additional{display:none;}
 .small_footer{margin-top:1rem;}
 .page_selector{display:none;}
-.p_thumb{height:4rem;}
+.p_thumb{height:4rem;margin-bottom:0.25rem;}
 .post .p_thumb img{max-height:4rem;}
 .sticky_title{box-shadow:none;}
 .center_wide .p_thumb{display:inline-flex;height:5.8rem;width:5.8rem;margin-right:0;}
 .center_wide .p_row{display:block;}
+.interesting_tbody{background:none;}
+.interesting_tbody img{display:none !important;}
 }
 ";
         $this->style=preg_replace('/%white%/','#231a0d',$this->style);
@@ -922,6 +941,52 @@ blockquote{border-left:2px solid black;}
         $this->Posts = [];
         $this->Threads = [];
         $this->Images = [];
+        $this->Archive = [];
+        $this->ArchiveHandles = [];
+    }
+    
+    function InsertArchivePost(&$post){
+        $a = NULL;
+        if(($a = &$this->GetArchiveHandle($post['id']))==$this->NULL_POST){
+            $ah = []; $ah['id'] = $post['id']; $ah['list'] = [];
+            $this->ArchiveHandles[] = &$ah; $a = &$ah;
+        }
+        $a['list'][] = $post;
+        $this->Archive[] = $post;
+    }
+    
+    function ReadArchiveFromFile($path){
+        if(!file_exists($path)){
+            return;
+        }
+        $c = file_get_contents($path);
+        if(preg_match_all('/\[LAMDWIKIPOST\s+([0-9]{14})\s*;\s*([\s\S]*?)\]([\S\s]*?)(?=\[LAMDWIKIPOST|$)/u',$c,$matches,PREG_SET_ORDER)){
+            foreach($matches as $m){
+                $post = [];
+                $post['id'] = $m[1];
+                $post['content'] = trim($m[3]);
+                if(preg_match('/VER\s+([0-9]{14})\s*;/u', $m[2], $n)) $post['version'] = $n[1];
+                $this->InsertArchivePost($post);
+            }
+        }
+    }
+    
+    function SortArchive(){
+        $cmpac = function($a, $b){
+            if ($a['id'] == $b['id']) return 0;
+            return (($a['id'] > $b['id']) ? 1 : -1);
+        };
+        $cmpap = function($a, $b){
+            if ($a['id'] == $b['id']) return ((($a['version'] > $b['version']) ? 1 : -1));
+            return (($a['id'] > $b['id']) ? 1 : -1);
+        };
+        if(isset($this->Archive[0]))usort($this->Archive,$cmpap);
+        if(isset($this->ArchiveHandles[0])){
+            usort($this->ArchiveHandles,$cmpac);
+            foreach($this->ArchiveHandles as &$a){
+                if(isset($a['list']))usort($a['list'],$cmpap);
+            }
+        }
     }
     
     function ReadPostsFromFile($path){
@@ -936,12 +1001,13 @@ blockquote{border-left:2px solid black;}
                 $post['id'] = $m[1];
                 $post['content'] = trim($m[3]);
                 if(preg_match('/COMMENT\s+([0-9]{14})\s*;/u', $m[2], $n)) $post['comment_to'] = $n[1];
-                if(preg_match('/EMAIL\s+([^;]+)\s*;/u', $m[2], $n)) $post['email'] = $n[1];
-                if(preg_match('/NAME\s+([^;]+)\s*;/u', $m[2], $n)) $post['name'] = $n[1];
-                if(preg_match('/LINK\s+([^;]+)\s*;/u', $m[2], $n)) $post['link'] = $n[1];
-                if(preg_match('/IP\s+([^;]+)\s*;/u', $m[2], $n)) $post['ip'] = $n[1];
+                if(preg_match('/EMAIL\s+([^;]+)\s*;/u', $m[2], $n))    $post['email'] = $n[1];
+                if(preg_match('/NAME\s+([^;]+)\s*;/u', $m[2], $n))     $post['name'] = $n[1];
+                if(preg_match('/LINK\s+([^;]+)\s*;/u', $m[2], $n))     $post['link'] = $n[1];
+                if(preg_match('/IP\s+([^;]+)\s*;/u', $m[2], $n))       $post['ip'] = $n[1];
                 if(preg_match('/NEXT\s+([0-9]{14})\s*;/u', $m[2], $n)) $post['next'] = $n[1];
                 if(preg_match('/PREV\s+([0-9]{14})\s*;/u', $m[2], $n)) $post['prev'] = $n[1];
+                if(preg_match('/VER\s+([0-9]{14})\s*;/u', $m[2], $n))  $post['version'] = $n[1];
                 if(preg_match('/MDEL\s*;/u', $m[2]))                   $post['mark_delete'] = True;
                 if(preg_match('/MVAL\s*([^;]+);/u', $m[2], $n))        $post['mark_value'] = trim($n[1]);
                 if(preg_match('/REFS\s*([^;]+);/u', $m[2], $ma)){
@@ -978,11 +1044,11 @@ blockquote{border-left:2px solid black;}
     function ReadPosts(){
         if ((!file_exists('la_config.md') || is_readable('la_config.md') == false) ||
             (!is_dir('posts') || is_readable('posts') == false) ||
+            (!is_dir('history') || is_readable('history') == false) ||
             (!is_dir('images') || is_readable('images') == false) ||
             (!is_dir('styles') || is_readable('styles') == false)){
             $this->Install();
         }
-        
         $file_list = [];
         $glob = glob('posts/*');
         foreach($glob as $file) {
@@ -991,14 +1057,26 @@ blockquote{border-left:2px solid black;}
             }
         }
         sort($file_list, SORT_NATURAL | SORT_FLAG_CASE);
-        
         foreach($file_list as $f) {
             $this->ReadPostsFromFile($f);
         }
-        
         $this->SortPosts();
-        
         $this->DetectThreads();
+    }
+    
+    function ReadArchive(){
+        if (!is_dir('archive') || is_readable('archive') == false){ $this->Install(); }
+        $file_list = []; $glob = glob('archive/*');
+        foreach($glob as $file) {
+            if(preg_match('/[0-9]{6}\.md/', $file)) {
+                $file_list[] = $file;
+            }
+        }
+        sort($file_list, SORT_NATURAL | SORT_FLAG_CASE);
+        foreach($file_list as $f) {
+            $this->ReadArchiveFromFile($f);
+        }
+        $this->SortArchive();
     }
     
     function GetThreadForPost(&$post){
@@ -1073,13 +1151,55 @@ blockquote{border-left:2px solid black;}
     
     function &GetPost($id){
         if(!isset($id)) return $this->NULL_POST;
-        $i=0; $found=0;
-        if(isset($this->Posts[0])) foreach($this->Posts as $p){
-            if($p&& $p['id'] == $id) { $found = 1; break; }
-            $i++;
+        if(isset($this->Posts[0])) foreach($this->Posts as &$p){
+            if($p&& $p['id'] == $id) { return $p; }
         }
-        if($found) return $this->Posts[$i];
         return $this->NULL_POST;
+    }
+    function &GetArchiveHandle($id){
+        if(!isset($id)) return $this->NULL_POST;
+        if(isset($this->ArchiveHandles[0])) foreach($this->ArchiveHandles as &$p){
+            if($p && $p['id'] == $id) { return $p; }
+        }
+        return $this->NULL_POST;
+    }
+    function &GetArchive($id){
+        if(!isset($id)) return $this->NULL_POST;
+        if(isset($this->Archive[0])) foreach($this->Archive as &$p){
+            if($p && $p['id'] == $id) { return $p; }
+        }
+        return $this->NULL_POST;
+    }
+    function &GetArchiveVersion(&$ah, $version, &$next_ver){
+        if(!isset($ah)) return $this->NULL_POST;
+        $found = NULL;
+        if(isset($ah['list'][0])) foreach($ah['list'] as &$p){
+            if(isset($found)){ $next_ver = $p; return $found; }
+            if($p && $p['version'] == $version) { $found = &$p; }
+        }
+        if(isset($found)) { $next_ver=NULL; return $found; }
+        return $this->NULL_POST;
+    }
+    
+    function WriteArchive(){
+        $cf = NULL;$opened =NULL;
+        $this->SortArchive();
+        foreach($this->Archive as $p){
+            $nid = substr($p['id'], 0,6);
+            if($cf != $nid){
+                if($opened){
+                    fflush($opened);
+                    fclose($opened);
+                }
+                $cf = $nid;
+                $opened = fopen("archive/$cf.md", 'w');
+            }
+            $info = "[LAMDWIKIPOST {$p['id']}; ".
+                    "VER {$p['version']}; ".
+                    ']';
+                    
+            fwrite($opened, $info.PHP_EOL.PHP_EOL.$p['content'].PHP_EOL.PHP_EOL);
+        }
     }
     
     function WritePosts(){
@@ -1096,6 +1216,7 @@ blockquote{border-left:2px solid black;}
                 $opened = fopen("posts/$cf.md", 'w');
             }
             $info = "[LAMDWIKIPOST {$p['id']}; ".
+                    ((isset($p['version']) && $p['version'])?"VER {$p['version']}; ":"").
                     ((isset($p['comment_to']) && $p['comment_to'])?"COMMENT {$p['comment_to']}; ":"").
                     ((isset($p['email']) && $p['email'])?"EMAIL {$p['email']}; ":"").
                     ((isset($p['name']) && $p['name'])?"NAME {$p['name']}; ":"").
@@ -1162,15 +1283,30 @@ blockquote{border-left:2px solid black;}
         $post['id'] = $rename;
     }
     
-    function &EditPost($id_if_edit, $content, $mark_delete, $reply_to, $get_original_only=false, $mark_value=NULL, $rename=NULL){
+    function PushPostVersion(&$post, $optime_id){
+        $a = &$this->GetArchiveHandle($post['id']);
+        $ap = []; $ap['id'] = $post['id']; $ap['content'] = $post['content'];
+        $ap['version'] = isset($post['version'])?$post['version']:$ap['id'];
+        $this->InsertArchivePost($ap);
+        $post['version'] = $optime_id;
+    }
+    
+    function &EditPost($id_if_edit, $content, $mark_delete, $reply_to,
+                       $get_original_only=false, $mark_value=NULL, $rename=NULL, $push_version=false){
         $this->ReadImages();
         $this->ReadPosts();
+        if($push_version){
+            $this->ReadArchive();
+        }
         $p_success = NULL;
         if(isset($id_if_edit)){
             $post = &$this->GetPost($id_if_edit);
             if($post===$this->NULL_POST) return $this->NULL_POST;
             if($get_original_only){
                 return $post['content'];
+            }
+            if($push_version){
+                $this->PushPostVersion($post,$this->TIME_STRING);
             }
             if(isset($content)) $post['content'] = $content;
             if(isset($mark_delete)) $post['mark_delete'] = $mark_delete;
@@ -1193,6 +1329,9 @@ blockquote{border-left:2px solid black;}
         }
         $this->CachePostLinks();
         $this->WritePosts();
+        if($push_version){
+            $this->WriteArchive();
+        }
         $this->WriteImages();
         $this->ClearData();
         return $p_success;
@@ -1398,17 +1537,17 @@ blockquote{border-left:2px solid black;}
             }
             if(isset($_GET['post'])){
                 if(isset($_GET['post_original'])){
-                    echo $this->EditPost($_GET['post'],NULL,false,NULL,true,NULL,NULL);
+                    echo $this->EditPost($_GET['post'],NULL,false,NULL,true,NULL,NULL,false);
                     exit;
                 }
             }
             if(isset($_GET['mark_delete']) && isset($_GET['target'])){
-                $this->EditPost($_GET['target'],NULL,$_GET['mark_delete']=='true',NULL,false,NULL,NULL);
+                $this->EditPost($_GET['target'],NULL,$_GET['mark_delete']=='true',NULL,false,NULL,NULL,false);
                 if(isset($_GET['post'])) $redirect='?post='.$_GET['target']; else $redirect='index.php';
                 return 0;
             }
             if(isset($_GET['set_mark']) && isset($_GET['target'])){
-                $this->EditPost($_GET['target'],NULL,NULL,NULL,NULL,$_GET['set_mark'],NULL);
+                $this->EditPost($_GET['target'],NULL,NULL,NULL,NULL,$_GET['set_mark'],NULL,false);
                 if(isset($_GET['post'])) $redirect='?post='.$_GET['target']; else $redirect='index.php';
                 return 0;
             }
@@ -1419,13 +1558,14 @@ blockquote{border-left:2px solid black;}
                     { $message='Can\'t use character sequence"[LAMDWIKIPOST" anywhere in the post...'; return 1; }
                 $reply_to = (isset($_POST['post_reply_to'])&&$_POST['post_reply_to']!="")?$_POST['post_reply_to']:NULL;
                 $edit_id = (isset($_POST['post_edit_target'])&&$_POST['post_edit_target']!="")?$_POST['post_edit_target']:NULL;
-                if(($edited = $this->EditPost($edit_id, $c, NULL, $reply_to,NULL,NULL,NULL))!=NULL){
+                $push_history = (isset($edit_id) && isset($_POST['post_record_edit']));
+                if(($edited = $this->EditPost($edit_id, $c, NULL, $reply_to,NULL,NULL,NULL,$push_history))!=NULL){
                     $redirect='?post='.$edited['id'];
                     return 0;
                 };
             }
             if(isset($_POST['post_rename_confirm']) && isset($_POST['post_rename_name']) && isset($_GET['rename_post'])){
-                if(($edited = $this->EditPost($_GET['rename_post'], NULL, NULL, NULL,NULL,NULL,$_POST['post_rename_name']))!=NULL){
+                if(($edited = $this->EditPost($_GET['rename_post'], NULL, NULL, NULL,NULL,NULL,$_POST['post_rename_name'],false))!=NULL){
                     $redirect='?post='.$edited['id'];
                     return 0;
                 };
@@ -1514,10 +1654,10 @@ blockquote{border-left:2px solid black;}
                 $this->WriteImages();
                 if($do_image_redirect) return 0;
             }
-            if(isset($_GET['rewrite_styles'])){
+            //if(isset($_GET['rewrite_styles'])){
                 $this->WriteStyles();
-                $redirect='?extras=true'; return 0;
-            }
+            //    $redirect='?extras=true'; return 0;
+            //}
             if(isset($_GET['regenerate_thumbnails'])){
                 $this->RegenerateThumbnails();
                 $redirect='?extras=true'; return 0;
@@ -1573,7 +1713,7 @@ blockquote{border-left:2px solid black;}
                     },$html,-1,$count);
         $html = preg_replace('/<p>\s*<\/p>/u',"", $html); if($html==""){$html="<p>&nbsp;</p>";}
         if(sizeof($images)){
-            if(sizeof($images)==1){$html.=$images[0];}
+            if(sizeof($images)==1){$html.="<div>".$images[0]."</div>";}
             else{
                 $html.="<div class='p_row'>";
                 foreach($images as $img){
@@ -1619,7 +1759,7 @@ blockquote{border-left:2px solid black;}
                 return NULL;
             }
             if(preg_match('/^#{1,6}\s+(.*?)$/mu',$post['content'],$m)){$post['title']=$m[1];}
-            else{ $post['title'] = $this->T('未命名'); if(preg_match('/(\s.*)$/mu',$post['content'],$m))
+            else{ $post['title'] = $this->T('未命名'); if(preg_match('/(.*)$/mu',$post['content'],$m))
                                                             {$post['title'].=' ('.strip_tags($this->PDE->text($m[1])).')';} }
         }
         return $post['title'];
@@ -1627,6 +1767,7 @@ blockquote{border-left:2px solid black;}
     
     function DetectPageType(){
         if($this->InExperimentalMode) $this->PageType='experimental';
+        else if(isset($_GET['history'])) $this->PageType='history';
         else if(isset($_GET['extras'])) $this->PageType='extras';
         else if(isset($_GET['settings'])) $this->PageType='settings';
         else if(isset($_GET['gallery'])) $this->PageType='gallery';
@@ -1737,7 +1878,8 @@ blockquote{border-left:2px solid black;}
             </li>
             <?php if($this->LoggedIn){ ?>
                 <hr />
-                <li><a id='menu_edit'><?=$this->T('修改')?></a></li>
+                <li><a id='menu_history'><?=$this->T('历史')?></a>
+                    <a id='menu_edit'><?=$this->T('修改')?></a></li>
                 <li>   
                     <a id='menu_refer_copy'><?=$this->T('只复制')?></a>
                     <a id='menu_refer'><?=$this->T('引用')?></a><br class='hidden_on_desktop' />
@@ -1864,7 +2006,7 @@ blockquote{border-left:2px solid black;}
             function($m){
                 $rp = &$this->GetPost($m[1]);
                 $s="<div class='smaller block post ref_compact gray'>".
-                    "<a href='?post=".$m[1]."' class='post_access invert_a' onclick='ShowWaitingBar()'>→</a>".
+                    "<a href='?post=".$m[1]."' class='post_access invert_a smaller' onclick='ShowWaitingBar()'>→</a>".
                     "<div class='post_ref'><div class='smaller'>".$m[2]."</div>".
                     (($rp!==NULL && $this->CanShowPost($rp))?$this->TranslatePostParts(
                                 $this->GenerateSinglePost($rp,false,false,false,true,$this->NULL_POST,true)):$this->T("未找到该引用。")).
@@ -1999,7 +2141,7 @@ blockquote{border-left:2px solid black;}
                 $post['tid']['first']['id']!=$post['id']){ ?>
                 <div class='gray smaller block opt_compact post'>
                     <a href='?post=<?=$post['tid']['first']['id']?>' onclick='ShowWaitingBar()'>
-                        <div class='post_access invert_a hover_dark'><?=isset($post['tid']['first']['mark_value'])?
+                        <div class='post_access invert_a hover_dark smaller'><?=isset($post['tid']['first']['mark_value'])?
                                 $this->Markers[$post['tid']['first']['mark_value']]:"→"?></div></a>
                     <div class='post_width'><div class='smaller'><?=$this->T('回复给主题帖：')?></div>
                         <?=$this->TranslatePostParts(
@@ -2017,8 +2159,12 @@ blockquote{border-left:2px solid black;}
     }
     
     function MakePostingFields($reply_to=NULL, $show_hint=false){?>
-        <div class='smaller' id='post_hint_text' style='display:<?=$show_hint?"block":"none"?>;'><?=$this->T('继续补充该话题：')?></div>
         <form action="<?=$_SERVER['REQUEST_URI']?>" method="post" style='display:none;' id='post_form'></form>
+        <div class='smaller' style='display:<?=$show_hint?"block":"none"?>;'>
+            <span id='post_hint_text'><?=$this->T('继续补充该话题：')?></span> <br/>
+            <span id='post_hint_modify'>
+                <input type="checkbox" name="post_record_edit" value="1" form='post_form' checked> <?=$this->T('新增历史记录');?></span></div>
+        
         <textarea id="post_content" name="post_content" rows="4" form='post_form'
                   onfocus="if (value =='<?=$this->T('有什么想说的')?>'){value ='';}la_auto_grow(this);"
                   onblur="if (value ==''){value='<?=$this->T('有什么想说的')?>';la_auto_grow(this);}"    
@@ -2084,7 +2230,7 @@ blockquote{border-left:2px solid black;}
                     <?php $this->MakePostingFields(NULL,false); ?>
                 </div>
             <?php } ?>
-            <ul class='print_column'>
+            <ul class='print_column list'>
                 <?php
                     if(!isset($search_term) && !isset($category) &&
                        (isset($this->SpecialPinned) && ($p = &$this->GetPost($this->SpecialPinned))!=NULL && !$this->CurrentOffset) &&
@@ -2191,12 +2337,62 @@ blockquote{border-left:2px solid black;}
     <?php
     }
     
+    function MakePostHistoryList(&$ah, &$post){ 
+        $title = $this->T($this->GetPostTitle($post, false)); if(!isset($title)) $title=$this->T('未命名');
+        if(!isset($ah)){ ?>
+            <h2><?=$this->T('没有历史记录')?></h2>
+            <span class='omittable_title'><?=$this->T('帖子')?> <a href='?post=<?=$ah['id']?>'><?=$title?></a></span>
+        <?php }else{ ?>
+            <h2><?=$this->T('历史记录')?></h2>
+            <span class='omittable_title'><?=$this->T('帖子')?> <a href='?post=<?=$ah['id']?>'><?=$title?></a></span>
+            <ul><?php if(isset($ah['list'][0])) foreach(array_reverse($ah['list']) as &$ver){ ?>
+                <li><a href='?post=<?=$this->CurrentPostID?>&history=1&version=<?=$ver['version']?>'><?=$ver['version']?></a></li>
+            <?php } ?></ul>
+        <?php } ?>
+    <?php
+    }
+    function MakePostDiff(&$this_ver, &$next_ver){
+        if(!isset($this_ver)){ ?>
+            <h2 class='gray'><?=$this->T('版本不存在')?></h2>
+        <?php }else{ ?>
+            <h2><?=$this->T('差异')?></h2>
+            <table class='diff_table'><thead>
+                <tr><td class='text_highlight'><?=$this->T('选择的版本')?><br /><?=$this_ver['version']?></td>
+                    <td><?=$this->T('下一个版本')?><br /><?=$next_ver['version']?></td></tr>
+            </thead><tbody>
+                <tr><td><pre><?=$this_ver['content']?></pre></td><td><pre><?=$next_ver['content']?></pre></td></tr>
+            </tbody>
+            </table>
+        <?php } ?>
+    <?php
+    }
+    function MakePostHistory(&$post, $version=NULL){
+        $ah = &$this->GetArchiveHandle($this->CurrentPostID);
+        ?>
+        <div class='left hidden_on_mobile' id='div_left'>
+            <?php if (isset($version)){
+                $this->MakePostHistoryList($ah, $post);
+            }else{ echo "&nbsp;"; } ?>
+        </div>
+        <div class='center' id='div_center'>
+            <?php if (!isset($version)){
+                $this->MakePostHistoryList($ah, $post);
+            }else{
+                $this_ver = NULL; $next_ver = NULL;
+                $this_ver = &$this->GetArchiveVersion($ah, $version, $next_ver);
+                if(isset($this_ver) && !isset($next_ver)){$next_ver = $post;}
+                $this->MakePostDiff($this_ver, $next_ver, $post);
+            } ?>
+        </div>
+    <?php
+    }
+    
     function MakeCommentSection(&$post){
         if(!$this->CommentEnabled){ return; }
         $to_post = isset($post['tid'])?$post['tid']['first']:$post;
         $comment_count = (isset($to_post['comments']) && isset($to_post['comments'][0]))?count($to_post['comments']):0;
         ?><div class='comment'>
-        <br class='hidden_on_print' /><h2><?=$this->T('评论')?> (<?=$comment_count;?>)</h2><div class='spacer'></div>
+        <br /><h2><?=$this->T('评论')?> (<?=$comment_count;?>)</h2><div class='spacer'></div>
             <?php if($comment_count) { echo "<ul>";
                     foreach($to_post['comments'] as $p){
                         $ht = $this->TranslatePostParts($this->GenerateSinglePost($p, false, false, false, false, $t, false));
@@ -3215,7 +3411,7 @@ blockquote{border-left:2px solid black;}
                         if (this.readyState == 4 && this.status == 200) {
                             ed.innerHTML='——';
                             ht = document.querySelector('#post_hint_text');
-                            ht.innerHTML = "<?=$this->T('修改帖子：')?>"; ht.style.display='block';
+                            ht.innerHTML = "<?=$this->T('修改帖子：')?>";
                             rs = document.querySelector('#post_reply_restore');
                             rs.style.display='inline'; rs.innerHTML="<?=$this->T('取消')?>";
                             t = document.querySelector('#post_content');
@@ -3266,6 +3462,8 @@ blockquote{border-left:2px solid black;}
                 <?php if($this->LoggedIn){ ?>
                     menu.querySelector('#menu_refer').href='javascript:MakeRefer(id)';
                     menu.querySelector('#menu_refer_copy').href='javascript:CopyRefer(id)';
+                    hs = menu.querySelector('#menu_history');
+                    hs.href='?post='+id+'&history=1';
                     ed = menu.querySelector('#menu_edit')
                     ed.href='javascript:MakeEdit(id)'; ed.innerHTML="<?=$this->T('修改')?>";
                     d = menu.querySelector('#menu_delete');
@@ -3459,10 +3657,12 @@ blockquote{border-left:2px solid black;}
                 o = document.querySelector('#big_image_overlay');
                 img = document.querySelector('#big_image');
                 img.src = "";
-                o.style.display="none";
-                HideBackdrop();
-                if(do_push){PushGalleryHistory("");}
-                HideWaitingBar();
+                if(o.style.display!='none'){
+                    o.style.display="none";
+                    HideBackdrop();
+                    if(do_push){PushGalleryHistory("");}
+                    HideWaitingBar();
+                }
             }
             var lbtn=document.querySelector('#prev_image'),rbtn=document.querySelector('#next_image');
             var inq=document.querySelector('#inquiry_buttons');
@@ -3667,6 +3867,9 @@ if($la->PageType=='experimental'){
             echo "<h2>".$la->T('未找到这个帖子')."</h2><p>".$_SERVER['REQUEST_URI'].
                 "</p><p><a href='index.php'>".$la->T('返回首页')."</a></p><br />";
         }
+    }else if($la->PageType=='history'){
+        $la->ReadArchive();
+        $la->MakePostHistory($p, $_GET['version']??NULL);
     }else if($la->PageType=='search'){
         $la->MakeHotPosts(true);
         $la->MakeRecentPosts($_GET['search']);
