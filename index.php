@@ -55,6 +55,9 @@ class LA{
     
     protected $ArchiveHandles;
     protected $Archive;
+    public    $WayBack;
+    protected $YearBegin;
+    protected $YearEnd;
     
     protected $Markers;
     
@@ -68,6 +71,11 @@ class LA{
     
     public $PageType;
     public $CurrentPostID;
+    
+    function ReadableTime($id){
+        $dt = DateTime::createFromFormat('YmdHis', $id);
+        return $dt->format('Y/m/d H:i:s');
+    }
     
     function FullURL(){
         return (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ?
@@ -94,6 +102,11 @@ class LA{
                 else $this->LanguageAppendix = 'en';
             }
         }
+    }
+    function SwitchWayBackMode(){        
+        if(isset($_COOKIE['la_wayback'])){
+            $this->WayBack = $_COOKIE['la_wayback'];
+        }else $this->WayBack = NULL;
     }
     
     function DisplayRedirectConfig(){
@@ -281,6 +294,8 @@ class LA{
         $this->HotPostCount = 15;
         
         $this->TIME_STRING = date('YmdHis');
+        $this->WayBack = NULL;
+        $this->YearBegin = $this->YearEnd = 2000;
     }
     
     function DoLogout(){
@@ -292,7 +307,7 @@ class LA{
     function RecordToken($unset_current=false){
         if(isset($unset_current) && isset($_COOKIE['la_token'])){
             $t = $_COOKIE['la_token'];
-            setcookie('la_token', null, -1, '/'); unset($_COOKIE['la_token']);
+            setcookie('la_token', null, -1); unset($_COOKIE['la_token']);
             if (($key = array_search($t,$this->LoginTokens)) !== false) { unset($this->LoginTokens[$key]); }
             $this->WriteTokens();
             return null;
@@ -387,7 +402,7 @@ thead{box-shadow:inset 0 -1px 0 0px %black%;position:sticky;top:2rem;background-
 .post table{font-size:0.85em;}
 .interesting_tbody{background:linear-gradient(90deg, %white%ff, %white%88 20em);}
 .interesting_tbody td{display:contents;}
-.interesting_tbody tr{position:relative;scroll-margin:3.5em}
+.interesting_tbody tr{position:relative;scroll-margin:4.5em}
 .interesting_tbody td>*{display:table-cell;}
 .interesting_tbody .post_access{padding-top:0;}
 .interesting_tbody .post_menu_button{top:0;opacity:0;}
@@ -414,7 +429,7 @@ padding-left:0.5em;height:calc(100vh - 2.6em);overflow:auto;padding-bottom:4rem;
 textarea,input[type=text],input[type=password]{width:100%;display:block;font-family:inherit;max-height:60vh;font-size:inherit;}
 select,textarea,input[type=text],input[type=password]{background:none;border:none;border-bottom:1px solid %black%;color:%black%;}
 .button{background:none;border:none;font-family:inherit;color:%black%;font-size:inherit;font-weight:bold;}
-.post{position:relative;scroll-margin:2.5em;border-radius:0.3em;}
+.post{position:relative;scroll-margin:3.5em;border-radius:0.3em;}
 .center_exp .post{padding-left:0;padding-right:0;padding-top:0;padding-bottom:0;border-radius:0;}
 .post_width li,.post_width_big li,.footer_additional li,.footer_additional li,.post_dummy li
 {display:list-item;margin-left:1em;list-style:'+ ';}
@@ -473,7 +488,7 @@ transition-timing-function:ease-out;padding:1rem;overflow:auto;}
 .toc_entry_3{font-size:0.9em;padding-left:1rem;}
 .toc_entry_4{font-size:0.85em;padding-left:1.5rem;}
 .toc_entry_5{font-size:0.8em;padding-left:2rem;}
-h1,h2,h3,h4,h5{scroll-margin:1.5em;}
+h1,h2,h3,h4,h5{scroll-margin:2.5em;}
 .left ul h1,.left ul h2,.left ul h3,.left ul h4,.left ul h5,.left ul p{font-size:1em;}
 .deleted_post{color:%gray%;text-decoration:line-through;}
 #file_list{margin-top:0.5em;}
@@ -512,7 +527,7 @@ margin-left:auto;margin-right:auto;max-width:100%;max-height:90vh;}
 .b ul{font-size:1.4em;}
 no_pop{cursor:unset;}
 p{min-height:0.8em;}
-.bold{font-weight:bold;}
+.bold,.bold *{font-weight:bold;}
 .footer_additional{display:inline-block;width:50%;vertical-align:text-top;white-space:normal;}
 .small_footer{position:sticky;bottom:0em;background-color:%white%;padding-bottom:0.5em;z-index:10;overflow:auto;white-space:nowrap;}
 .top_post_hint{margin-left:1.5em;font-weight:bold;}
@@ -547,8 +562,8 @@ animation:anim_loading 1s linear infinite;}
 .post_preview .product_thumb{max-height:4em;max-width:6em;}
 .purchase_button{background-color:%black%;color:%white%;padding-left:0.5em;padding-right:0.5em;text-decoration:none;font-weight:bold;}
 .page_break{page-break-after:always;}
-.text_highlight,.text_highlight a{background-color:%black%;color:%white%;}
-.gray.text_highlight,.gray.text_highlight a{background-color:%gray%;color:%white%;}
+.text_highlight,.text_highlight a,.text_highlight select{background-color:%black%;color:%white%;border:none;}
+.gray.text_highlight,.gray.text_highlight a,.gray.text_highlight select{background-color:%gray%;color:%white%;}
 .print_title{display:none;}
 .show_on_print{display:none;}
 .comment{font-size:0.9em;font-family:sans-serif;overflow:auto !important;width:100%;}
@@ -557,11 +572,18 @@ animation:anim_loading 1s linear infinite;}
 .comment li{display:list-item;list-style:'→';padding-left:0.3em;}
 .comment ul{padding-left:1em;}
 .comment ul li *{margin-bottom:0.5em;}
+.history li{display:list-item;list-style:'+ ';padding-left:0.3em;}
+.history ul{padding-left:1em;}
+.history a{text-decoration:underline;}
+.history .list{overflow:auto;white-space:nowrap;}
 .diff_table{table-layout:fixed;}
 .diff_table thead{font-size:0.9em;text-align:center;}
-.diff_table tbody pre{font-size:1.0rem;}
+.diff_table tbody pre{font-size:0.9rem;}
+.diff_table tbody pre{font-size:0.9rem;}
 .diff_table td{vertical-align:top;}
 .omittable_title{display:block;width:100%;text-overflow:ellipsis;overflow:hidden;white-space:nowrap;}
+.wayback_close{float:right;}
+.wayback_expand{display:inline;}
 
 @media screen and (max-width:1000px){
 .left{width:35%;}
@@ -636,6 +658,7 @@ table img{max-width:30vw !important;}
 #upload_selector{width:100%;}
 .focused_post{padding:0.3rem !important;}
 .interesting_tbody{background:linear-gradient(90deg, %white%ff, %white%88 10em);}
+.wayback_expand{display:block;text-align:center;}
 }
 
 @media print{
@@ -980,11 +1003,17 @@ blockquote{border-left:2px solid black;}
             if ($a['id'] == $b['id']) return ((($a['version'] > $b['version']) ? 1 : -1));
             return (($a['id'] > $b['id']) ? 1 : -1);
         };
-        if(isset($this->Archive[0]))usort($this->Archive,$cmpap);
+        if(isset($this->Archive[0])){
+            usort($this->Archive,$cmpap);
+            $this->YearBegin = substr($this->Archive[0]['id'],0,4);
+        }
         if(isset($this->ArchiveHandles[0])){
             usort($this->ArchiveHandles,$cmpac);
             foreach($this->ArchiveHandles as &$a){
                 if(isset($a['list']))usort($a['list'],$cmpap);
+                if(($p = &$this->GetPost($a['id']))!=NULL){
+                    $p['archive'] = $a;
+                }
             }
         }
     }
@@ -999,7 +1028,8 @@ blockquote{border-left:2px solid black;}
             foreach($matches as $m){
                 $post = [];
                 $post['id'] = $m[1];
-                $post['content'] = trim($m[3]);
+                $post['real_content'] = trim($m[3]);
+                $post['content'] = &$post['real_content'];
                 if(preg_match('/COMMENT\s+([0-9]{14})\s*;/u', $m[2], $n)) $post['comment_to'] = $n[1];
                 if(preg_match('/EMAIL\s+([^;]+)\s*;/u', $m[2], $n))    $post['email'] = $n[1];
                 if(preg_match('/NAME\s+([^;]+)\s*;/u', $m[2], $n))     $post['name'] = $n[1];
@@ -1038,7 +1068,10 @@ blockquote{border-left:2px solid black;}
             if ($a['id'] == $b['id']) return 0;
             return (($a['id'] > $b['id']) ? 1 : -1);
         };
-        if(isset($this->Posts[0]))usort($this->Posts,$cmpp);
+        if(isset($this->Posts[0])){
+            usort($this->Posts,$cmpp);
+            $this->YearEnd = substr($this->Posts[sizeof($this->Posts)-1]['id'],0,4);
+        }
     }
     
     function ReadPosts(){
@@ -1066,6 +1099,7 @@ blockquote{border-left:2px solid black;}
     
     function ReadArchive(){
         if (!is_dir('archive') || is_readable('archive') == false){ $this->Install(); }
+        if (isset($this->Archive[0])) return;
         $file_list = []; $glob = glob('archive/*');
         foreach($glob as $file) {
             if(preg_match('/[0-9]{6}\.md/', $file)) {
@@ -1132,12 +1166,10 @@ blockquote{border-left:2px solid black;}
             $this->GetThreadForPost($p);
             if(!isset($p['tid'])) { $this->IdentifyThreadCategory($this->NULL_POST, $p); }
         }
-        foreach($this->Threads as &$th){
-            $this->IdentifyThreadCategory($th, $th['first']);
-        }
         if(!isset($this->Threads) || !isset($this->Threads[0])) return;
         $now = date_timestamp_get(date_create());
         foreach($this->Threads as &$t){
+            $this->IdentifyThreadCategory($t, $t['first']);
             $lasttime = DateTime::createFromFormat('YmdHis', $t['last']['id']);
             $diff_days = ($now - date_timestamp_get($lasttime))/3600/24;
             $t['score'] = (float)$t['count']*0.2 - min($diff_days,200);
@@ -1229,7 +1261,7 @@ blockquote{border-left:2px solid black;}
                     ((isset($p['refs']) && isset($p['refs'][0]))?("REFS ".implode(" ",$p['refs'])."; "):"").
                     ']';
                     
-            fwrite($opened, $info.PHP_EOL.PHP_EOL.$p['content'].PHP_EOL.PHP_EOL);
+            fwrite($opened, $info.PHP_EOL.PHP_EOL.$p['real_content'].PHP_EOL.PHP_EOL);
         }
     }
     
@@ -1285,7 +1317,7 @@ blockquote{border-left:2px solid black;}
     
     function PushPostVersion(&$post, $optime_id){
         $a = &$this->GetArchiveHandle($post['id']);
-        $ap = []; $ap['id'] = $post['id']; $ap['content'] = $post['content'];
+        $ap = []; $ap['id'] = $post['id']; $ap['content'] = $post['real_content'];
         $ap['version'] = isset($post['version'])?$post['version']:$ap['id'];
         $this->InsertArchivePost($ap);
         $post['version'] = $optime_id;
@@ -1303,12 +1335,12 @@ blockquote{border-left:2px solid black;}
             $post = &$this->GetPost($id_if_edit);
             if($post===$this->NULL_POST) return $this->NULL_POST;
             if($get_original_only){
-                return $post['content'];
+                return $post['real_content'];
             }
             if($push_version){
                 $this->PushPostVersion($post,$this->TIME_STRING);
             }
-            if(isset($content)) $post['content'] = $content;
+            if(isset($content)) $post['real_content'] = $content;
             if(isset($mark_delete)) $post['mark_delete'] = $mark_delete;
             if(isset($mark_value)) $post['mark_value'] = $mark_value;
             if(isset($rename) && preg_match('/^[0-9]{14}$/u',$rename)) $this->RenamePost($post,$rename);
@@ -1319,10 +1351,10 @@ blockquote{border-left:2px solid black;}
             if($this->GetPost($id)!== $this->NULL_POST) return $this->NULL_POST;
             $post = [];
             $post['id'] = $id;
-            $post['content'] = $content;
+            $post['real_content'] = $content;
             if(isset($reply_to) && ($rep = &$this->GetPost($reply_to))!== $this->NULL_POST){
                 if(!(isset($rep['next']) && $rep['next'])){$rep['next'] = $id; $post['prev'] = $rep['id'];}
-                else $post['content'] = "[引用的文章]($reply_to)".$post['content'];
+                else $post['real_content'] = "[引用的文章]($reply_to)".$post['content'];
             }
             $this->Posts[] = $post;
             $p_success = &$this->Posts[count($this->Posts) - 1];
@@ -1442,6 +1474,10 @@ blockquote{border-left:2px solid black;}
             else if(isset($_GET['extras'])) $str.='&extras='.$_GET['extras'];
         if(isset($args['category'])) $str.='&category='.$args['category'];
             else if(isset($_GET['category'])) $str.='&category='.$_GET['category'];
+        if(isset($args['history'])) $str.='&history='.$args['history'];
+            else if(isset($_GET['history'])) $str.='&history='.$_GET['history'];
+        if(isset($args['version'])) $str.='&version='.$args['version'];
+            else if(isset($_GET['version'])) $str.='&version='.$_GET['version'];
         return $str;
     }
     
@@ -1452,6 +1488,14 @@ blockquote{border-left:2px solid black;}
         }
         if(isset($_GET['set_language'])){
             setcookie('la_language',$_GET['set_language'],time()+3600*24*7); $_COOKIE['la_language'] = $_GET['set_language'];
+            $redirect=$this->GetRedirect(); return 0;
+        }
+        if(isset($_GET['set_wayback'])){
+            if($_GET['set_wayback']!='false'){
+                $wayback = date('YmdHis'); setcookie('la_wayback',$wayback); $_COOKIE['la_wayback'] = $wayback;
+            }else{
+                setcookie('la_wayback', null, -1); unset($_COOKIE['la_wayback']);
+            }
             $redirect=$this->GetRedirect(); return 0;
         }
         if(isset($_GET['post'])){
@@ -1863,6 +1907,24 @@ blockquote{border-left:2px solid black;}
             $this->MakeNavButtons($p);
         } ?>
         <hr />
+        <?php if(isset($this->WayBack)){
+            $time=(isset($_COOKIE['la_wayback']) && preg_match('/[0-9]{14}/u',$_COOKIE['la_wayback']))?$_COOKIE['la_wayback']:date('YmdHis');
+            $year=substr($time,0,4);$month=substr($time,4,2);$day=substr($time,6,2);?> <div class='text_highlight'>
+                &nbsp;<b><span onclick='document.getElementById("wayback_config").classList.toggle("hidden_on_mobile")'>
+                <div class='wayback_close' onclick='event.stopPropagation()'><a href='<?=$this->GetRedirect()?>&set_wayback=false'>
+                    <span class='hidden_on_mobile'><?=$this->T('退出')?></span>×&nbsp;</a></div>
+                <?=$this->T('正以过去的日期浏览')?></b><div id='wayback_config' class='wayback_expand hidden_on_mobile'>
+                    <select id="wayback_year"><?php for($y=$this->YearBegin;$y<=$this->YearEnd;$y++){ ?>
+                        <option value="<?=$y?>"<?=$y==$year?" selected":""?>><?=$y?></option><?php } ?></select>
+                    <br class='hidden_on_desktop' />
+                    <select id="wayback_month"><?php for($y=1;$y<=12;$y++){ ?>
+                        <option value="<?=$y?>"<?=$y==$month?" selected":""?>><?=$y?></option><?php } ?></select>
+                    <select id="wayback_day"><?php for($y=1;$y<=31;$y++){ ?>
+                        <option value="<?=$y?>"<?=$y==$day?" selected":""?>><?=$y?></option><?php } ?></select>
+                    <br class='hidden_on_desktop' />
+                    <a href='<?=$this->GetRedirect()?>'><?=$this->T('查看')?> →</a>
+            </div>
+        </div><?php } ?>
         </header>
         <div id='waiting_bar' style='display:none;'></div>
         <script>ShowWaitingBar();window.addEventListener('load',(event) =>{HideWaitingBar();}); </script>
@@ -1871,13 +1933,13 @@ blockquote{border-left:2px solid black;}
             <ul>
             <li><span id='_time_hook' class='smaller'>时间</span>&nbsp;&nbsp;<a href='javascript:HidePopMenu();'>×</a></li>
             <li>
-                <a id='share_copy'>📋︎</a>
+                <a id='share_copy'>⧉</a>
                 <a id='share_pin' target='_blank'>Pin</a>
                 <a id='share_twitter' target='_blank'>Twitter</a>
                 <a id='share_weibo' target='_blank'><?=$this->T('微博')?></a>
             </li>
+            <hr />
             <?php if($this->LoggedIn){ ?>
-                <hr />
                 <li><a id='menu_history'><?=$this->T('历史')?></a>
                     <a id='menu_edit'><?=$this->T('修改')?></a></li>
                 <li>   
@@ -1905,6 +1967,8 @@ blockquote{border-left:2px solid black;}
                 </li>
                 <hr />
                 <li><a id='menu_delete' class='smaller'></a></li>
+            <?php }else{ ?>
+                <li><a id='menu_history'><?=$this->T('历史')?></a></li>
             <?php } ?>
             </ul>
         </div>
@@ -1939,7 +2003,6 @@ blockquote{border-left:2px solid black;}
             href='javascript:toggle_mobile_show(document.getElementById("mobile_nav"))'><?=$this->T($this->ShortTitle)?>...</a></b> 
         <div class='header_nav'>
         <?php if($this->PageType=='post'){ ?>
-            <div style='display:inline;'><a id='button_back' class='hidden_on_print'>←</a></div>
             <div style='float:right;' class='hidden_on_print'>
                 <?php if(isset($p) && isset($p['refs']) && isset($p['refs'][0])){ ?>
                     <span class='hidden_on_desktop'><a id='button_ref' href='javascript:ToggleLeftSide();'>
@@ -1948,6 +2011,10 @@ blockquote{border-left:2px solid black;}
                 <span class='hidden_on_wide hidden_on_print'>
                     <a id='button_toc'
                         href='javascript:ShowRightSide(true,document.querySelector("#div_right"));'><?=$this->T('目录')?></a></span></div>
+        <?php }else if($this->PageType=='history' && isset($_GET['version'])){ ?>
+            <div style='float:right;' class='hidden_on_print'>
+                    <span class='hidden_on_desktop'><a id='button_ref' href='javascript:ToggleLeftSide();'>
+                        <?=$this->T('历史')?></a></span></div>
         <?php } ?>
         <ul class='hidden_on_mobile hidden_on_print' id='mobile_nav' style='text-align:center;'>
             <li class='hidden_on_mobile'><a href='?gallery=default' onclick='ShowWaitingBar()'><?=$this->T('画廊')?></a></li>
@@ -2158,12 +2225,15 @@ blockquote{border-left:2px solid black;}
     <?php
     }
     
-    function MakePostingFields($reply_to=NULL, $show_hint=false){?>
+    function MakePostingFields($reply_to=NULL, $show_hint=false){
+        if(isset($this->WayBack)){ ?>
+            <span class='gray'><i><?=$this->T('以过去日期浏览时不能发帖。')?></i></span>
+        <?php return; } ?>
         <form action="<?=$_SERVER['REQUEST_URI']?>" method="post" style='display:none;' id='post_form'></form>
         <div class='smaller' style='display:<?=$show_hint?"block":"none"?>;'>
-            <span id='post_hint_text'><?=$this->T('继续补充该话题：')?></span> <br/>
-            <span id='post_hint_modify'>
-                <input type="checkbox" name="post_record_edit" value="1" form='post_form' checked> <?=$this->T('新增历史记录');?></span></div>
+            <span id='post_hint_text'><?=$this->T('继续补充该话题：')?></span>
+            <div id='post_hint_modify' style='display:none;'>
+                <input type="checkbox" name="post_record_edit" value="1" form='post_form' checked> <?=$this->T('新增历史记录');?></div></div>
         
         <textarea id="post_content" name="post_content" rows="4" form='post_form'
                   onfocus="if (value =='<?=$this->T('有什么想说的')?>'){value ='';}la_auto_grow(this);"
@@ -2218,7 +2288,8 @@ blockquote{border-left:2px solid black;}
             <h2><?=isset($search_term)?$this->T('搜索'):
                                 (isset($category)?("<span class='gray'>".$this->T('分类')."</span> ".
                                     ($category=='none'?$this->T('未分类'):$this->T($category))):($this->T('最近')).
-                    ($this->LoggedIn?" <span class='gray invert_a hidden_on_print'><a href='index.php?comments=all'>@</a></span>":""))?></h2>
+                                    " <span class='gray invert_a hidden_on_print'><a href='index.php?&set_wayback=true'>↶</a> ".
+                                    ($this->LoggedIn?"<a href='index.php?comments=all'>@</a>":"")."</span>")?></h2>
             <?php if(isset($search_term)){ ?>
                 <form action="index.php" method="post" style='display:none;' id='search_form'></form>
                 <input id="search_content" name="search_content" rows="4" form='search_form' type='text' value='<?=$search_term?>'>
@@ -2337,28 +2408,35 @@ blockquote{border-left:2px solid black;}
     <?php
     }
     
-    function MakePostHistoryList(&$ah, &$post){ 
+    function MakePostHistoryList(&$ah, &$post,$version=NULL){ 
         $title = $this->T($this->GetPostTitle($post, false)); if(!isset($title)) $title=$this->T('未命名');
         if(!isset($ah)){ ?>
             <h2><?=$this->T('没有历史记录')?></h2>
-            <span class='omittable_title'><?=$this->T('帖子')?> <a href='?post=<?=$ah['id']?>'><?=$title?></a></span>
+            <span class='omittable_title smaller'><?=$this->T('帖子')?> <a href='?post=<?=$post['id']?>'><?=$title?></a></span><br />
         <?php }else{ ?>
             <h2><?=$this->T('历史记录')?></h2>
-            <span class='omittable_title'><?=$this->T('帖子')?> <a href='?post=<?=$ah['id']?>'><?=$title?></a></span>
-            <ul><?php if(isset($ah['list'][0])) foreach(array_reverse($ah['list']) as &$ver){ ?>
-                <li><a href='?post=<?=$this->CurrentPostID?>&history=1&version=<?=$ver['version']?>'><?=$ver['version']?></a></li>
-            <?php } ?></ul>
+            <span class='omittable_title smaller'><?=$this->T('帖子')?> <a href='?post=<?=$ah['id']?>'><?=$title?></a></span><br />
+            <div class='list'><ul>
+            <li class='gray' style='list-style:"";'><?=$this->ReadableTime($post['id'])?>
+                <span class='smaller'><?=$this->T('长度').' '.strlen($post['content'])?></span></li>
+            <?php if(isset($ah['list'][0])) foreach(array_reverse($ah['list']) as &$ver){ ?>
+                <li<?=isset($version)&&$version==$ver['version']?" class='post_current_row bold'":""?>>
+                    <a href='?post=<?=$this->CurrentPostID?>&history=1&version=<?=$ver['version']?>'>
+                        <?=$this->ReadableTime($ver['version'])?></a>
+                    <span class='smaller gray'><?=$this->T('长度').' '.strlen($ver['content'])?></span></li>
+            <?php } ?></ul></div>
         <?php } ?>
     <?php
     }
+    
     function MakePostDiff(&$this_ver, &$next_ver){
         if(!isset($this_ver)){ ?>
             <h2 class='gray'><?=$this->T('版本不存在')?></h2>
         <?php }else{ ?>
             <h2><?=$this->T('差异')?></h2>
             <table class='diff_table'><thead>
-                <tr><td class='text_highlight'><?=$this->T('选择的版本')?><br /><?=$this_ver['version']?></td>
-                    <td><?=$this->T('下一个版本')?><br /><?=$next_ver['version']?></td></tr>
+                <tr><td class='text_highlight bold'><?=$this->T('选择的版本')?><br /><?=$this->ReadableTime($this_ver['version'])?></td>
+                    <td><?=$this->T('下一个版本')?><br /><?=$this->ReadableTime($next_ver['version'])?></td></tr>
             </thead><tbody>
                 <tr><td><pre><?=$this_ver['content']?></pre></td><td><pre><?=$next_ver['content']?></pre></td></tr>
             </tbody>
@@ -2369,14 +2447,14 @@ blockquote{border-left:2px solid black;}
     function MakePostHistory(&$post, $version=NULL){
         $ah = &$this->GetArchiveHandle($this->CurrentPostID);
         ?>
-        <div class='left hidden_on_mobile' id='div_left'>
+        <div class='left hidden_on_mobile history' id='div_left'>
             <?php if (isset($version)){
-                $this->MakePostHistoryList($ah, $post);
+                $this->MakePostHistoryList($ah, $post, $version);
             }else{ echo "&nbsp;"; } ?>
         </div>
-        <div class='center' id='div_center'>
+        <div class='center history' id='div_center'>
             <?php if (!isset($version)){
-                $this->MakePostHistoryList($ah, $post);
+                $this->MakePostHistoryList($ah, $post, NULL);
             }else{
                 $this_ver = NULL; $next_ver = NULL;
                 $this_ver = &$this->GetArchiveVersion($ah, $version, $next_ver);
@@ -2524,9 +2602,11 @@ blockquote{border-left:2px solid black;}
         $this->Anchors = []; ?>
         <div class='center' id='div_center'>
             <?php $th=NULL; $is_thread = isset($post['tid']); if($is_thread){ $th = $post['tid'];?>
-                <h2 class='hidden_on_print'><?=$this->T('话题')?></h2>
+                <h2 class='hidden_on_print'><?=$this->T('话题')?>
+                    <a class='clean_a gray' href='<?=$this->GetRedirect()?>&set_wayback=true'>↶</a></h2>
             <?php }else{ ?>
-                <h2 class='hidden_on_print'><?=$this->T('详细')?></h2>
+                <h2 class='hidden_on_print'><?=$this->T('详细')?>
+                    <a class='clean_a gray' href='<?=$this->GetRedirect()?>&set_wayback=true'>↶</a></h2>
             <?php } ?>
             <?php $cat = NULL; 
             if($is_thread) { if(isset($th['categories']) && isset($th['categories'][0])){ $cat = $th['categories']; } }
@@ -3187,7 +3267,7 @@ blockquote{border-left:2px solid black;}
     function MakeExtraOperations(){?>
         <div class='settings' style='overflow:auto;'>
             <h2><?=$this->T('附加操作')?></h2>
-            <a href='?index.php&settings=true'><?=$this->T('返回一般设置')?></a>
+            <a href='index.php?&settings=true'><?=$this->T('返回一般设置')?></a>
             <p>&nbsp;</p>
             <h3><?=$this->T('自动重定向')?></h3>
             <span class='smaller gray'>
@@ -3215,7 +3295,7 @@ blockquote{border-left:2px solid black;}
                 <li><a href='index.php?regenerate_thumbnails=true'><?=$this->T('重新生成图片缩略图')?></a></li>
                 <li><a href='index.php?clear_all_logins=true'><?=$this->T('删除所有登录')?>(<?=sizeof($this->LoginTokens);?>)</a></li>
             </ui>
-            <br /><br /><br /><a href='?index.php&settings=true'><?=$this->T('返回一般设置')?></a><br />&nbsp;
+            <br /><br /><br /><a href='index.php?&settings=true'><?=$this->T('返回一般设置')?></a><br />&nbsp;
         </div>
     <?php
     }
@@ -3306,7 +3386,7 @@ blockquote{border-left:2px solid black;}
                     </div>
                     <div id='big_image_share' class='clean_a' onclick="event.stopPropagation();">
                         <li>
-                            <a id='big_share_copy'>📋︎</a>
+                            <a id='big_share_copy'>⧉</a>
                             <a id='big_share_pin' target='_blank'>Pin</a>
                             <a id='big_share_twitter' target='_blank'>Twitter</a>
                             <a id='big_share_weibo' target='_blank'><?=$this->T('微博')?></a>
@@ -3381,6 +3461,8 @@ blockquote{border-left:2px solid black;}
                         ht.style.display='none';
                     }
                     document.querySelector('#post_edit_target').value="";
+                    ch = document.querySelector('#post_hint_modify');
+                    ch.style.display='none';
                 }
                 function MakeRefer(id){
                     t = document.querySelector('#post_content')
@@ -3396,6 +3478,8 @@ blockquote{border-left:2px solid black;}
                         rs = document.querySelector('#post_reply_restore');
                         rs.style.display='inline'; rs.innerHTML="<?=$this->T('切换为回复')?>";
                         document.getElementById('post_menu').style.display='none';
+                        ch = document.querySelector('#post_hint_modify');
+                        ch.style.display='none';
                     }
                 }
                 function CopyRefer(id){
@@ -3410,6 +3494,8 @@ blockquote{border-left:2px solid black;}
                     xhr.onreadystatechange = function() {
                         if (this.readyState == 4 && this.status == 200) {
                             ed.innerHTML='——';
+                            ch = document.querySelector('#post_hint_modify');
+                            ch.style.display='block';
                             ht = document.querySelector('#post_hint_text');
                             ht.innerHTML = "<?=$this->T('修改帖子：')?>";
                             rs = document.querySelector('#post_reply_restore');
@@ -3459,11 +3545,11 @@ blockquote{border-left:2px solid black;}
                 menu.onClick=(function(event){
                   event.stopPropagation();
                 });
+                hs = menu.querySelector('#menu_history');
+                hs.href='?post='+id+'&history=1';
                 <?php if($this->LoggedIn){ ?>
                     menu.querySelector('#menu_refer').href='javascript:MakeRefer(id)';
                     menu.querySelector('#menu_refer_copy').href='javascript:CopyRefer(id)';
-                    hs = menu.querySelector('#menu_history');
-                    hs.href='?post='+id+'&history=1';
                     ed = menu.querySelector('#menu_edit')
                     ed.href='javascript:MakeEdit(id)'; ed.innerHTML="<?=$this->T('修改')?>";
                     d = menu.querySelector('#menu_delete');
@@ -3477,12 +3563,12 @@ blockquote{border-left:2px solid black;}
                 
                 title = document.title;
                 copy = document.getElementById('share_copy');
-                copy.innerHTML='&#128203;&#xfe0e;';
+                copy.innerHTML='⧉&#xfe0e;';
                 copy.addEventListener("click", function(){
                     url = window.location
                     path = location.pathname
                     copy_text(url.protocol+"//"+url.host+path+"?post="+id);
-                    this.innerHTML='&#128203;&#xfe0e;&#10003;&#xfe0e;';
+                    this.innerHTML='⧉&#xfe0e;&#10003;&#xfe0e;';
                 });
                 document.getElementById('share_pin').href='https://www.pinterest.com/pin/create/button/?url='+
                     encodeURIComponent(window.location.href)+
@@ -3617,10 +3703,10 @@ blockquote{border-left:2px solid black;}
                 
                 title = encodeURIComponent(document.title);
                 copy = document.getElementById('big_share_copy');
-                copy.innerHTML='&#128203;&#xfe0e;';
+                copy.innerHTML='⧉&#xfe0e;';
                 copy.addEventListener("click", function(){
                     copy_text(window.location.href);
-                    this.innerHTML='&#128203;&#xfe0e;&#10003;&#xfe0e;';
+                    this.innerHTML='⧉&#xfe0e;&#10003;&#xfe0e;';
                 });
                 document.getElementById('big_share_pin').href='https://www.pinterest.com/pin/create/button/?url='+
                     page_url+'&media='+window.location.host+'/'+src+'&description='+title;
@@ -3808,6 +3894,7 @@ $err = $la->ProcessRequest($message, $redirect);
 $la->DoIdentiyExperimental();
 
 $la->SwitchLanguage();
+$la->SwitchWayBackMode();
 
 if($err){
     echo $message;
@@ -3823,6 +3910,10 @@ $la->DetectPageType();
 
 $la->ReadImages(false);
 $la->ReadPosts();
+
+if(isset($la->WayBack)){
+    $la->ReadArchive();
+}
 
 $p = &$la->GetPost($la->CurrentPostID);
 

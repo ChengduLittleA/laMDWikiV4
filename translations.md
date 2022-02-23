@@ -137,6 +137,7 @@
 - 首次提示 | First-time Hint
 - 继续 | Continue
 - 重命名 | Rename
+- 未命名 | Unamed
 - 替换图像 | Replace Image
 - 启用评论 | Enable Comments
 - 写评论 | Write a Reply
@@ -151,8 +152,15 @@
 - 已关闭评论 | Commenting is currently disabled
 - 历史 | History
 - 历史记录 | History
+- 没有历史记录 | No History
 - 帖子 | Post
 - 差异 | Differences
 - 选择的版本 | Selected version
 - 下一个版本 | Next version
+- 正以过去的日期浏览 | Wayback Mode
+- 退出 | Exit
+- 查看 | View
+- 新增历史记录 | Record edit history
+- 长度 | Length
+- 以过去日期浏览时不能发帖。 | Can't send new post in Wayback mode.
 
