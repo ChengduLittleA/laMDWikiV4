@@ -163,4 +163,8 @@
 - 新增历史记录 | Record edit history
 - 长度 | Length
 - 以过去日期浏览时不能发帖。 | Can't send new post in Wayback mode.
+- 合并帖子 | Merge posts
+- 合并话题 | Merge topic
+- 以过去的日期浏览 | Goto Wayback Mode
+- 工具 | Tools
 
