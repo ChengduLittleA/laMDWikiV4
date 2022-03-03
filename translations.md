@@ -1,9 +1,9 @@
 - 那么的维基 | laMDWiki
 - 基 | Ki
 - 管理员 | Administrator
-- 微博 | Weibo
 - 修改 | Edit
-- 只复制 | Copy only
+- 复制链接 | Copy Link
+- 复制编号 | Copy ID
 - 引用 | Ref
 - 标记 | Mark
 - 关闭 | Close
@@ -156,7 +156,8 @@
 - 帖子 | Post
 - 差异 | Differences
 - 选择的版本 | Selected version
-- 下一个版本 | Next version
+- 上一个版本 | Previous version
+- 没有更旧的版本 | No older version
 - 正以过去的日期浏览 | Wayback Mode
 - 退出 | Exit
 - 查看 | View
@@ -165,6 +166,11 @@
 - 以过去日期浏览时不能发帖。 | Can't send new post in Wayback mode.
 - 合并帖子 | Merge posts
 - 合并话题 | Merge topic
+- 将合并 | Will merge
+- 合并到话题 | Merge to
 - 以过去的日期浏览 | Goto Wayback Mode
 - 工具 | Tools
+- 并入这里 | merged here
+- 个帖子 | Posts
+- 前往该版本时间 | Wayback to this version
 

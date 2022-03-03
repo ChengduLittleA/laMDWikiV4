@@ -49,6 +49,7 @@ class LA{
     
     protected $Posts;
     protected $Threads; // [ keys: first last displayed count]
+    protected $WaybackThreads;
     protected $Images;
     protected $Galleries;
     protected $Anchors;
@@ -78,6 +79,7 @@ class LA{
     
     public $PageType;
     public $CurrentPostID;
+    public $ActualPostID;
     public $TagID;
     
     function ReadableTime($id){
@@ -304,6 +306,7 @@ class LA{
         $this->YearBegin = $this->YearEnd = 2000;
         $this->DoneReadPosts = $this->DoneReadImages = $this->DoneReadArchive = false;
         $this->NeedWritePosts= $this->NeedWriteImages= $this->NeedWriteArchive= false;
+        $this->UsePosts = &$this->Posts;
     }
     
     function DoLogout(){
@@ -415,13 +418,13 @@ thead{box-shadow:inset 0 -1px 0 0px %black%;position:sticky;top:2rem;background-
 .interesting_tbody td>*{display:table-cell;}
 .interesting_tbody .post_access{padding-top:0;}
 .interesting_tbody .post_menu_button{top:0;opacity:0;}
-.interesting_tbody td>img{position:absolute;left:1.4em;z-index:-1;height:1em;width:20em;
-display:block;top:0.2em;object-fit:cover;max-width:calc(100% - 1.4em) !important;}
-.interesting_tbody .p_row{display:flex;position:absolute;left:1.4em;top:0;z-index:-1;flex-wrap:nowrap;max-width:calc(100% - 1.4em);}
+.interesting_tbody td>img,.interesting_tbody td>.imd{position:absolute;left:1.4em;z-index:-1;height:1em;width:20em;
+display:block;top:0.2em;object-fit:cover;max-width:calc(100% - 1.4em) !important;overflow:hidden;}
+.interesting_tbody .p_row{display:flex;position:absolute;left:1.4em;top:0.25em;z-index:-1;flex-wrap:nowrap;max-width:calc(100% - 1.4em);}
 .interesting_tbody .p_thumb{height:1em;}
 .interesting_tbody .p_thumb img{max-height:10rem !important;max-width:20rem !important;}
 tr:hover .post_menu_button{opacity:1;}
-.post_current_row{background-color:%graybkg%;}
+.post_current_row{background-color:%graybkg%;mix-blend-mode:screen;text-shadow:0px 0px 0.1em %white%;}
 .align_right{text-align:right;}
 .left{display:inline-block;vertical-align:top;width:25%;max-height:calc(100vh - 2.6em);top:2em;
 position:sticky;overflow:auto;padding-right:0.2em;padding-bottom:4rem;}
@@ -437,12 +440,13 @@ box-shadow:0px 0px 2em 1em %white%;margin-top:2em;margin-bottom:2em;}
 padding-left:0.5em;max-height:calc(100vh - 2.6em);overflow:auto;padding-bottom:4rem;}
 textarea,input[type=text],input[type=password]{width:100%;display:block;font-family:inherit;max-height:60vh;font-size:inherit;}
 select,textarea,input[type=text],input[type=password]{background:none;border:none;border-bottom:1px solid %black%;color:%black%;}
+.text_highlight input{border-bottom:1px solid %white%;color:%white%;}
 .button{background:none;border:none;font-family:inherit;color:%black%;font-size:inherit;font-weight:bold;}
 .post{position:relative;scroll-margin:3.5em;border-radius:0.3em;}
 .center_exp .post{padding-left:0;padding-right:0;padding-top:0;padding-bottom:0;border-radius:0;}
 .post_width li,.post_width_big li,.footer_additional li,.footer_additional li,.post_dummy li
-{display:list-item;margin-left:1em;list-style:'+ ';}
-.post_width li li,.post_width_big li li,.footer_additional li li,.footer_additional li li,.post_dummy li li{list-style:'- ';}
+{display:list-item;margin-left:1em;list-style:disc;}
+.post_width li li,.post_width_big li li,.footer_additional li li,.footer_additional li li,.post_dummy li li{list-style:circle;}
 .post_width > *,.post_width_big > *,.post_dummy > *,.post_ref > *{margin:0;margin-bottom:0.5rem}
 .post_dummy > *{width:60%;margin:0 auto;margin-bottom:0.5rem}
 .post_dummy > p img{display:block;width:100%;margin:0 auto;}
@@ -509,7 +513,7 @@ h1,h2,h3,h4,h5{scroll-margin:2.5em;}
 .file_thumb{width:4em;height:4em;display:inline-block;line-height:0;vertical-align:middle;overflow:hidden;}
 .p_row{display:flex;flex-wrap:wrap;width:calc(100% + 0.25rem);}
 .p_thumb{display:flex;flex-grow:1;height:6rem;margin-right:0.25rem;margin-bottom:0.25rem;overflow:hidden;position:relative;}
-.p_thumb img{object-fit:cover;max-height:100%;min-width:100%;}
+.p_thumb img{object-fit:cover;max-height:100%;min-width:100%;}.p_thumb a{display:contents;}
 .ref_count,.p_thumb .post_menu_button{text-shadow: 0px 0px 10px rgb(0, 0, 0);}
 .p_thumb:hover .post_menu_button{display:block;}
 .p_thumb_selected{color:%black% !important;}
@@ -582,21 +586,21 @@ animation:anim_loading 1s linear infinite;}
 .comment li{display:list-item;list-style:'→';padding-left:0.3em;}
 .comment ul{padding-left:1em;}
 .comment ul li *{margin-bottom:0.5em;}
-.history li{display:list-item;list-style:'+ ';padding-left:0.3em;}
+.history li{display:list-item;list-style:disc;padding-left:0.3em;}
+.history li li{list-style:circle;}
 .history ul{padding-left:1em;}
 .history a{text-decoration:underline;}
 .history .list{overflow:auto;white-space:nowrap;}
 .diff_table{table-layout:fixed;}
 .diff_table thead{font-size:0.9em;text-align:center;}
-.diff_table tbody pre{font-size:0.9rem;}
-.diff_table tbody pre{font-size:0.9rem;}
+.diff_table tbody pre{font-size:0.9rem;white-space:pre-line;}
 .diff_table td{vertical-align:top;}
 .omittable_title{display:block;width:100%;text-overflow:ellipsis;overflow:hidden;white-space:nowrap;}
 .wayback_close{float:right;}
 .wayback_expand{display:inline;}
 .post_selecting .post *{pointer-events:none;}
 .post_selected{background-color:%graybkg%;}
-.small_pad{padding-left:0.2em;padding-right:0.2em;}
+.small_pad{padding:0.2em;padding-top:0.1em;padding-bottom:0.1em;}
 .wscroll{scroll-margin:3.5em;padding-left:0.3em;display:none;font-weight:bold;font-size:0.75em;box-shadow: 13em 0em 4em -8em inset %gray%;color:%white%;}
 .wscroll:target{display:block;}
 .wayback_link{display:inline;}
@@ -683,7 +687,7 @@ table img{max-width:30vw !important;}
 body,footer,header,.small_footer,a,.clean_a,.invert_a,.clean_a a,.invert_a a{background:none;color:black;}
 .post *,.post_dummy *{margin-bottom:0em}
 .p_row,.post table,.post_width>img,.post_width_big>img,.post_ref>img,.post_ref>.original_img,
-.post_width>.original_img,.post_width_big>.original_img,.post pre{margin-top:0.7rem;margin-bottom:0.7rem;text-indent:0;}
+.post_width>.original_img,.post_width_big>.original_img,.post pre{margin-top:0.5rem;margin-bottom:0.5rem;text-indent:0;}
 .post p{line-height:1.3;text-indent:2em;}
 table img{margin:0 !important;}
 .post h1+p,.post h2+p,.post img+p,.post table+p,.post p:first-child{text-indent:0;}
@@ -691,7 +695,7 @@ table img{margin:0 !important;}
 table{border-bottom:2px solid black;border-top:2px solid black;}
 table img{max-width:5em;max-width:8em !important;max-height:8em !important;}
 thead{box-shadow:inset 0 -1px 0 0px black;background:none;}
-.post_width,.post_width_big{overflow:hidden;left:0;width:100%;padding-left:0em;}
+.post_width,.post_width_big{overflow:clip;left:0;width:100%;padding-left:0em;}
 .post h1,{margin-top:0.5rem;}
 .post h2{font-size:1.8em;margin:2.5em auto 0;}.list h2,.opt_compact h2,.ref_compact h2{margin:0 !important;}
 .post h3{font-size:1.5em;margin:1.5em auto 0;}.list h3,.opt_compact h3,.ref_compact h4{margin:0 !important;}
@@ -729,6 +733,7 @@ blockquote{border-left:2px solid black;}
 .center_wide .p_row{display:block;}
 .interesting_tbody{background:none;}
 .interesting_tbody img{display:none !important;}
+.imd{margin-top:0.5em;margin-bottom:0.5em;line-height:0px;}
 }
 ";
         $this->style=preg_replace('/%white%/','#231a0d',$this->style);
@@ -820,6 +825,7 @@ blockquote{border-left:2px solid black;}
     }
     
     function WriteImages(){
+        if(isset($this->WayBack)) return;
         $path = 'images/list.md';
         $f = fopen($path,'w');
         if(isset($this->Galleries[0]))foreach($this->Galleries as &$g){
@@ -1012,11 +1018,21 @@ blockquote{border-left:2px solid black;}
                 if(preg_match('/VER\s+([0-9]{14})\s*;/u', $m[2], $n)) $post['version'] = $n[1];
                 if(preg_match('/FROM\s*([^;]+);/u', $m[2], $ma)){
                     $entries = []; if(preg_match_all('/([0-9]{14})/u',$ma[1],$links,PREG_SET_ORDER)){ 
-                        foreach($links as $l){ $entries[] = $l[1]; } $post['merged_from'] = $entries;
-                    }
-                }
+                        foreach($links as $l){ $entries[] = $l[1]; } $post['merged_from'] = $entries; } }
+                if(preg_match('/HASP\s*([^;]+);/u', $m[2], $ma)){
+                    $entries = []; if(preg_match_all('/([0-9]{14})/u',$ma[1],$links,PREG_SET_ORDER)){ 
+                        foreach($links as $l){ $entries[] = $l[1]; } $post['hasp'] = $entries; } }
+                if(preg_match('/HASI\s*([^;]+);/u', $m[2], $ma)){
+                    $entries = []; if(preg_match_all('/([0-9]{14}\.(jpg|jpeg|png|gif))/u',$ma[1],$links,PREG_SET_ORDER)){ 
+                        foreach($links as $l){ $entries[] = $l[1]; } $post['hasi'] = $entries; } }
                 if(preg_match('/INTO\s*([0-9]{14})\s*V\s*([0-9]{14})\s*;/u', $m[2], $n)){
                     $post['merged_into'] = [trim($n[1]),trim($n[2])];
+                }
+                if(preg_match('/MTHREAD\s*([^;|]+)\s*\|\s*([^;]+);/u', $m[2], $ma)){
+                    $entries = []; if(preg_match_all('/([0-9]{14})/u',$ma[1],$links,PREG_SET_ORDER)){ 
+                        foreach($links as $l){ $entries[] = $l[1]; } $post['merged_thread'][0] = $entries; }
+                    $entries = []; if(preg_match_all('/([0-9]{14})/u',$ma[2],$links,PREG_SET_ORDER)){ 
+                        foreach($links as $l){ $entries[] = $l[1]; } $post['merged_thread'][1] = $entries; }
                 }
                 $this->InsertArchivePost($post);
             }
@@ -1037,7 +1053,10 @@ blockquote{border-left:2px solid black;}
             usort($this->ArchiveHandles,$cmpac);
             foreach($this->ArchiveHandles as &$a){
                 if(isset($a['list'])){ usort($a['list'],$cmpap);
-                    foreach($a['list'] as &$ver){ $ver['archive']= &$a; } }
+                    $last_valid=NULL;
+                    foreach($a['list'] as &$ver){ $ver['archive']= &$a;
+                        if(isset($ver['merged_thread'])){ $ver['content']=$last_valid; }
+                        else{ $last_valid = $ver['content']; } } }
                 if(($p = &$this->GetPost($a['id'],true))!=NULL){
                     $p['archive'] = &$a;
                 }
@@ -1069,17 +1088,25 @@ blockquote{border-left:2px solid black;}
                 if(preg_match('/MVAL\s*([^;]+);/u', $m[2], $n))        $post['mark_value'] = trim($n[1]);
                 if(preg_match('/REFS\s*([^;]+);/u', $m[2], $ma)){
                     $entries = []; if(preg_match_all('/([0-9]{14})/u',$ma[1],$links,PREG_SET_ORDER)){ 
-                        foreach($links as $l){ $entries[] = $l[1]; } $post['refs'] = $entries;
-                    }
-                }
+                        foreach($links as $l){ $entries[] = $l[1]; } $post['refs'] = $entries; } }
+                if(preg_match('/HASP\s*([^;]+);/u', $m[2], $ma)){
+                    $entries = []; if(preg_match_all('/([0-9]{14})/u',$ma[1],$links,PREG_SET_ORDER)){ 
+                        foreach($links as $l){ $entries[] = $l[1]; } $post['hasp'] = $entries; } }
+                if(preg_match('/HASI\s*([^;]+);/u', $m[2], $ma)){
+                    $entries = []; if(preg_match_all('/([0-9]{14}\.(jpg|jpeg|png|gif))/u',$ma[1],$links,PREG_SET_ORDER)){ 
+                        foreach($links as $l){ $entries[] = $l[1]; } $post['hasi'] = $entries; } }
                 if(preg_match('/FROM\s*([^;]+);/u', $m[2], $ma)){
                     $entries = []; if(preg_match_all('/([0-9]{14})/u',$ma[1],$links,PREG_SET_ORDER)){ 
-                        foreach($links as $l){ $entries[] = $l[1]; } $post['merged_from'] = $entries;
-                    }
-                }
-                if(preg_match('/INTO\s*([0-9]{14})\s*V\s*([0-9]{14})\s*;/u', $m[2], $n))
-                    $post['merged_into'] = [trim($n[1]),trim($n[2])];
+                        foreach($links as $l){ $entries[] = $l[1]; } $post['merged_from'] = $entries; } }
+                if(preg_match('/INTO\s*([0-9]{14})\s*V\s*([0-9]{14})\s*;/u', $m[2], $n)){
+                    $post['merged_into'] = [trim($n[1]),trim($n[2])]; }
                 
+                if(preg_match('/MTHREAD\s*([^;|]+)\s*\|\s*([^;]+);/u', $m[2], $ma)){
+                    $entries = []; if(preg_match_all('/([0-9]{14})/u',$ma[1],$links,PREG_SET_ORDER)){ 
+                        foreach($links as $l){ $entries[] = $l[1]; } $post['merged_thread'][0] = $entries; }
+                    $entries = []; if(preg_match_all('/([0-9]{14})/u',$ma[2],$links,PREG_SET_ORDER)){ 
+                        foreach($links as $l){ $entries[] = $l[1]; } $post['merged_thread'][1] = $entries; }
+                }
                 if(isset($post['mark_value']) && $post['mark_value']==5){
                     $post['product']=[];
                 }
@@ -1094,12 +1121,14 @@ blockquote{border-left:2px solid black;}
         }
     }
     
-    function SortPosts(){
+    function SortPosts($wayback=false){
         $cmpp = function($a, $b){ if ($a['id'] == $b['id']) return 0; return (($a['id'] > $b['id']) ? 1 : -1); };
-        if(isset($this->Posts[0])){
-            usort($this->Posts,$cmpp);
-            $this->YearEnd = substr($this->Posts[sizeof($this->Posts)-1]['id'],0,4);
-            $this->YearBegin = substr($this->Posts[0]['id'],0,4);
+        $sortlist = &$this->Posts;
+        if($wayback) $sortlist = &$this->WaybackPosts;
+        if(isset($sortlist[0])){
+            usort($sortlist,$cmpp);
+            $this->YearEnd = substr($this->TIME_STRING,0,4);
+            $this->YearBegin = substr($sortlist[0]['id'],0,4);
         }
     }
     
@@ -1128,6 +1157,27 @@ blockquote{border-left:2px solid black;}
         $this->DoneReadPosts=1;
     }
     
+    function UpdatePostRefsForWayback(){
+        if(!isset($this->WayBack)) return;
+        if(isset($this->Images[0])) foreach($this->Images as &$i){ unset($i['refs']); }
+        if(!isset($this->WaybackPosts[0])) return;
+        foreach($this->WaybackPosts as &$p){ unset($p['refs']); }
+        foreach($this->WaybackPosts as &$p){
+            if(isset($p['hasp']) && isset($p['hasp'][0])) foreach($p['hasp'] as $r){
+                $pr = &$this->GetPost($r); if(isset($pr)){
+                    if(!isset($pr['refs'])) $pr['refs']=[];
+                    if(!in_array($p['id'],$pr['refs'])){ $pr['refs'][] = $p['id']; }
+                }
+            }
+            if(isset($p['hasi']) && isset($p['hasi'][0])) foreach($p['hasi'] as $r){
+                $ir = &$this->FindImage($r); if(isset($ir)){
+                    if(!isset($ir['refs'])) $ir['refs']=[];
+                    if(!in_array($p['id'],$ir['refs'])){ $ir['refs'][] = $p['id'];}
+                }
+            }
+        }
+    }
+    
     function ReadArchive(){
         if (!is_dir('archive') || is_readable('archive') == false){ $this->Install(); }
         if ($this->DoneReadArchive) return;
@@ -1144,6 +1194,7 @@ blockquote{border-left:2px solid black;}
         $this->SortArchive();
         $this->DoneReadArchive=1;
         $this->UpdateThreadForWayback();
+        $this->UpdatePostRefsForWayback();
     }
     
     function GetThreadForPost(&$post){
@@ -1190,32 +1241,57 @@ blockquote{border-left:2px solid black;}
     }
     
     function ThreadMakeWayback(&$th){
-        /* TODO: Make before-merge thread array here. */
+        if(!isset($th['arr'][0])) return;
+        if(isset($this->WayBack)){
+            $remlist = []; $po = &$this->GetPost($th['arr'][0]['id'],true);
+            if(isset($po['merged_thread']) && isset($po['version']) && $po['version']>$this->WayBack){
+                $remlist = array_merge($remlist,$po['merged_thread'][0]);
+            }
+            $ah = &$this->GetArchiveHandle($po['id']);
+            if(isset($ah)) foreach($ah['list'] as &$ver){
+                if(!isset($ver['merged_thread'])) continue;
+                if((isset($ver['version']) && $ver['version'] > $this->WayBack) ||
+                    (!isset($ver['version']) && $ver['id'] > $this->WayBack)){
+                    $remlist = array_merge($remlist,$ver['merged_thread'][0]);
+                }
+            }
+            if(isset($remlist[0]) && isset($th['arr'][0])){
+                foreach($th['arr'] as $key => $pr){
+                    foreach($remlist as $rem){ if($pr['id'] == $rem) { unset($th['arr'][$key]); break; } } }
+                $new_th = []; $new_arr = [];
+                foreach($remlist as $rem){ $np=&$this->GetPost($rem); if(isset($np)){$new_arr[]=&$np;} }
+                $new_th['arr'] = &$new_arr;
+                $this->WaybackThreads[] = &$new_th;
+                $this->ThreadMakeWayback($new_th);
+            }
+        }
     }
     function AddMergedPosts(&$p, &$array){
         if(isset($p['archive']) && isset($p['archive']['list'])){
-            foreach($p['archive']['list'] as &$ver){
+            foreach($p['archive']['list'] as &$ver){ 
                 if(isset($ver['merged_from'])&&isset($ver['merged_from'][0])) foreach($ver['merged_from'] as $po){
-                    $mp=&$this->GetPost($po); if(isset($mp)){ $array[]=&$mp; $this->AddMergedPosts($mp, $array); } }
+                    $mp=&$this->GetPost($po); if(isset($mp)){ $array[]=&$mp; $this->WaybackPosts[]=&$mp; $this->AddMergedPosts($mp, $array); } }
             }
         }
         if(isset($p['merged_from'])&&isset($p['merged_from'][0])) foreach($p['merged_from'] as $po){
-            $mp=&$this->GetPost($po); if(isset($mp)){ $array[]=&$mp; $this->AddMergedPosts($mp, $array); } }
+            $mp=&$this->GetPost($po); if(isset($mp)){ $array[]=&$mp; $this->WaybackPosts[]=&$mp; $this->AddMergedPosts($mp, $array); } }
     }
     function FinalizeThread(&$th, $relink_posts=false, $now){
         $nextp=NULL; $arr=[]; $lasttime=NULL;
         if(!isset($th['arr'])){
             for($p = &$th['first']; $p!=$this->NULL_POST; $p = &$this->GetPost(isset($p['next'])?$p['next']:NULL,true)){
                 $arr[]=&$p;
-            }
+            } $th['arr'] = &$arr;
             if(isset($this->WayBack) && $this->DoneReadArchive){ $new_arr=[];
-                foreach($arr as &$p){ $pa = &$this->GetPost($p['id']); if(isset($pa)) $new_arr[]=&$pa; } 
-                foreach($arr as &$p){ $this->AddMergedPosts($p,$new_arr); } $arr=&$new_arr; }
-            $cmppt = function($a, $b){ if ($a['id'] == $b['id']) return 0; return (($a['id'] > $b['id']) ? 1 : -1); };
-            if(isset($arr[0])){ usort($arr,$cmppt); } $th['arr']=&$arr;
-            $th['count'] = sizeof($th['arr']);
+                foreach($arr as &$p){ $pa = &$this->GetPost($p['id']); if(isset($pa)) {$new_arr[]=&$pa;$this->WaybackPosts[]=&$pa;} }
+                foreach($arr as &$p){ $this->AddMergedPosts($p,$new_arr); }
+                $arr=&$new_arr; $th['arr']=&$new_arr; 
+                $this->ThreadMakeWayback($th); }
         }
+        $cmppt = function($a, $b){ if ($a['id'] == $b['id']) return 0; return (($a['id'] > $b['id']) ? 1 : -1); };
+        if(isset($th['arr'][0])){ usort($th['arr'],$cmppt); } $th['count'] = sizeof($th['arr']);
         if($relink_posts){ $count = $th['count'];
+            $arr = &$th['arr'];
             for($i=0; $i<$count; $i++){ if($i>0) $arr[$i]['prev'] = $arr[$i-1]['id']; if($i<$count-1) $arr[$i]['next'] = $arr[$i+1]['id']; 
                 $arr[$i]['tid']=&$th;}
             $th['first'] = &$arr[0]; $th['last'] = &$arr[$count-1]; unset($arr[0]['prev']); unset($arr[$count-1]['next']);
@@ -1247,14 +1323,24 @@ blockquote{border-left:2px solid black;}
         foreach($this->Threads as &$t){
             $this->FinalizeThread($t,false,$now);
         }
-        $this->SortThreads();
-    }
-    function UpdateThreadForWayback(){
-        if(!isset($this->WayBack) || !$this->DoneReadArchive){ return; }
-        foreach($this->Threads as &$t){
-            unset($t['arr']); $this->FinalizeThread($t,true,$this->WayBack);
+        if(isset($this->WaybackThreads[0])) foreach($this->WaybackThreads as &$th){
+            $this->FinalizeThread($th,false,$now);
+            $this->Threads[] = &$th;
         }
         $this->SortThreads();
+    }
+    function UpdateThreadForWayback(){$now = date_timestamp_get(date_create());
+        if(!isset($this->WayBack) || !$this->DoneReadArchive){ return; }
+        foreach($this->Threads as &$t){
+            unset($t['arr']); $this->FinalizeThread($t,true,$now);
+        }
+        if(isset($this->WaybackThreads[0])) foreach($this->WaybackThreads as &$th){
+            $this->FinalizeThread($th,true,$now);
+            $this->Threads[] = &$th;
+        }
+        $this->SortThreads();
+        $this->SortPosts(true);
+        $this->UsePosts = &$this->WaybackPosts;
     }
     
     function &GetMergedPost($id){
@@ -1320,19 +1406,40 @@ blockquote{border-left:2px solid black;}
     function &GetArchiveVersion(&$ah, $version, &$next_ver, &$last_ver){
         if(!isset($ah)) return $this->NULL_POST;
         $found = NULL; $last_verp=NULL;
+        
         if(isset($ah['list'][0])) foreach($ah['list'] as &$p){
-            if(isset($found)){ $next_ver = &$p; $last_ver = &$last_verp; return $found; }
+            if(isset($found)){ $next_ver = $p; $last_ver = $last_verp; return $found; }
             if($p && $p['version'] == $version) { $found = &$p; continue; }
             $last_verp = &$p;
         }
-        if(isset($found)) { $next_ver=NULL; $last_ver = &$last_verp; return $found; }
+        if(isset($found)) { $next_ver=NULL; $last_ver = $last_verp; return $found; }
         return $this->NULL_POST;
     }
     
+    function CacheArchiveOwnLinks(){
+        if(isset($this->WayBack)) return;
+        if(isset($this->Archive[0])) foreach($this->Archive as &$p){
+            $this->ConvertPost($p);
+            if(preg_match_all('/<a[^>]*href=[\'\"]\?post=([0-9]{14})[\'\"][^>]*>.*?<\/a>/u',$p['html'],$matches,PREG_SET_ORDER)){
+                foreach($matches as $m){
+                    if(!isset($p['hasp']))$p['hasp']=[];
+                    if(!in_array($m[1],$p['hasp'])){ $p['hasp'][]=$m[1]; }
+                }
+            }
+            if(preg_match_all('/!\[([^\]]*)\]\(images\/([0-9]{14,}\.(jpg|jpeg|png|gif))\)/u', $p['content'],$matches,PREG_SET_ORDER)){
+                foreach($matches as $m){
+                    if(!isset($p['hasi']))$p['hasi']=[];
+                    if(!in_array($m[2],$p['hasi'])){ $p['hasi'][]=$m[2]; }
+                }
+            }
+        }
+    }
     function WriteArchive(){
+        if(isset($this->WayBack)) return;
         $cf = NULL;$opened =NULL;
         $this->SortArchive();
-        foreach($this->Archive as $p){
+        $this->CacheArchiveOwnLinks();
+        if(isset($this->Archive[0])) foreach($this->Archive as $p){
             $nid = substr($p['id'], 0,6);
             if($cf != $nid){
                 if($opened){
@@ -1344,18 +1451,25 @@ blockquote{border-left:2px solid black;}
             }
             $info = "[LAMDWIKIPOST {$p['id']}; ".
                     "VER {$p['version']}; ".
+                    ((isset($p['merged_thread']) && isset($p['merged_thread'][0]))?
+                        ("MTHREAD ".implode(" ",$p['merged_thread'][0])." | ".implode(" ",$p['merged_thread'][1]).";"):"").
                     ((isset($p['merged_from']) && isset($p['merged_from'][0]))?("FROM ".implode(" ",$p['merged_from'])."; "):"").
                     ((isset($p['merged_into']) && isset($p['merged_into'][0]))?("INTO {$p['merged_into'][0]}V{$p['merged_into'][1]}; "):"").
+                    ((isset($p['hasp']) && isset($p['hasp'][0]))?("HASP ".implode(" ",$p['hasp'])."; "):"").
+                    ((isset($p['hasi']) && isset($p['hasi'][0]))?("HASI ".implode(" ",$p['hasi'])."; "):"").
                     ']';
                     
+            if(isset($p['merged_thread'])){ $p['content']=""; }
+            
             fwrite($opened, $info.PHP_EOL.PHP_EOL.$p['content'].PHP_EOL.PHP_EOL);
         }
     }
     
     function WritePosts(){
+        if(isset($this->WayBack)) return;
         $cf = NULL;$opened =NULL;
         $this->SortPosts();
-        foreach($this->Posts as $p){
+        if(isset($this->Posts[0])) foreach($this->Posts as $p){
             $nid = substr($p['id'], 0,6);
             if($cf != $nid){
                 if($opened){
@@ -1369,6 +1483,8 @@ blockquote{border-left:2px solid black;}
                     ((isset($p['version']) && $p['version'])?"VER {$p['version']}; ":"").
                     ((isset($p['merged_from']) && isset($p['merged_from'][0]))?("FROM ".implode(" ",$p['merged_from'])."; "):"").
                     ((isset($p['merged_into']) && isset($p['merged_into'][0]))?("INTO {$p['merged_into'][0]}V{$p['merged_into'][1]}; "):"").
+                    ((isset($p['merged_thread']) && isset($p['merged_thread'][0]))?
+                        ("MTHREAD ".implode(" ",$p['merged_thread'][0])." | ".implode(" ",$p['merged_thread'][1])."; "):"").
                     ((isset($p['comment_to']) && $p['comment_to'])?"COMMENT {$p['comment_to']}; ":"").
                     ((isset($p['email']) && $p['email'])?"EMAIL {$p['email']}; ":"").
                     ((isset($p['name']) && $p['name'])?"NAME {$p['name']}; ":"").
@@ -1379,6 +1495,8 @@ blockquote{border-left:2px solid black;}
                     ((isset($p['next']) && $p['next'])?"NEXT {$p['next']}; ":"").
                     ((isset($p['prev']) && $p['prev'])?"PREV {$p['prev']}; ":"").
                     ((isset($p['refs']) && isset($p['refs'][0]))?("REFS ".implode(" ",$p['refs'])."; "):"").
+                    ((isset($p['hasp']) && isset($p['hasp'][0]))?("HASP ".implode(" ",$p['hasp'])."; "):"").
+                    ((isset($p['hasi']) && isset($p['hasi'][0]))?("HASI ".implode(" ",$p['hasi'])."; "):"").
                     ']';
                     
             fwrite($opened, $info.PHP_EOL.PHP_EOL.$p['real_content'].PHP_EOL.PHP_EOL);
@@ -1388,7 +1506,7 @@ blockquote{border-left:2px solid black;}
     function CachePostLinks(){
         if(isset($this->Posts) && isset($this->Posts[0]))foreach ($this->Posts as &$post){
             $this->ConvertPost($post);
-            unset($post['refs']);
+            unset($post['refs']);unset($post['hasp']);unset($post['hasi']);
         }else return;
         if(isset($this->Images) && isset($this->Images[0])) foreach ($this->Images as &$im){
             unset($im['refs']);
@@ -1398,17 +1516,17 @@ blockquote{border-left:2px solid black;}
                 foreach($matches as $m){
                     $ref = &$this->GetPost($m[1],true);
                     if($ref!=NULL){
-                        if(!isset($ref['refs']))$ref['refs']=[];
-                        if(!in_array($post['id'],$ref['refs'])){ $ref['refs'][]=$post['id']; }
+                        if(!isset($ref['refs']))$ref['refs']=[]; if(!in_array($post['id'],$ref['refs']))$ref['refs'][]=$post['id'];
                     }
+                    if(!isset($post['hasp']))$post['hasp']=[]; if(!in_array($m[1],$post['hasp']))$post['hasp'][]=$m[1];
                 }
             }
             if(preg_match_all('/!\[([^\]]*)\]\(images\/([0-9]{14,}\.(jpg|jpeg|png|gif))\)/u', $post['content'],$matches,PREG_SET_ORDER)){
                 foreach($matches as $m){  
                     if(($im = &$this->FindImage($m[2]))!=NULL){
-                        if(!isset($im['refs'])){$im['refs']=[];}
-                        if(!in_array($post['id'], $im['refs']))$im['refs'][] = $post['id'];
+                        if(!isset($im['refs']))$im['refs']=[]; if(!in_array($post['id'], $im['refs']))$im['refs'][] = $post['id'];
                     }
+                    if(!isset($post['hasi']))$post['hasi']=[]; if(!in_array($m[2],$post['hasi']))$post['hasi'][]=$m[2];
                 }
             }
         }
@@ -1451,6 +1569,7 @@ blockquote{border-left:2px solid black;}
         $ap['version'] = isset($post['version'])?$post['version']:$ap['id'];
         if(isset($post['merged_from'])) { $ap['merged_from'] = $post['merged_from']; unset($post['merged_from']); }
         if(isset($post['merged_into'])) { $ap['merged_into'] = $post['merged_into']; unset($post['merged_into']); }
+        if(isset($post['merged_thread'])) { $ap['merged_thread'] = $post['merged_thread']; unset($post['merged_thread']); }
         $post['version'] = $optime_id;
         if($mode==1){
             $this->InsertArchivePost($ap);
@@ -1463,7 +1582,37 @@ blockquote{border-left:2px solid black;}
             if(isset($post['tid']) && $post['tid']['first']!=$post['tid']['last'] && $post!=$post['tid']['first']){
                 $this->DetachPost($post['tid'], $post);
             }
+        }else if($mode==4){
+            $post['merged_thread'] = $info;
+            $this->InsertArchivePost($ap);
         }
+    }
+    
+    function &MergeThreads($post_id, $post_into_id){
+        $this->ReadPosts();
+        $po = &$this->GetPost($post_id, true); $pt = &$this->GetPost($post_into_id, true);
+        if (!isset($po) || !isset($pt) || !isset($po['tid']) || !isset($pt['tid']) ||
+            !isset($po['tid']['arr'][0]) || !isset($pt['tid']['arr'][0])){ return $this->NULL_POST; }
+        $po = &$po['tid']['arr'][0]; $pt = &$pt['tid']['arr'][0];
+        $th = &$po['tid']; $tt = &$pt['tid']; $info=[[],[]];
+        if($po['id'] < $pt['id']){ $temp = &$th; $th=&$tt; $tt=&$temp; $temp = &$po; $po=&$pt; $pt=&$temp; }
+        
+        foreach($th['arr'] as &$p){ $info[0][]=$p['id']; }
+        foreach($tt['arr'] as &$p){ $info[1][]=$p['id']; }
+        $this->EditPost($pt['id'], NULL, NULL, NULL, false, NULL, NULL, 4, $info);
+        
+        $arr_combined = array_merge($tt['arr'],$th['arr']);
+        
+        $cmppmt = function($a, $b){ if ($a['id'] == $b['id']) return 0; return (($a['id'] > $b['id']) ? 1 : -1); };
+        if(isset($arr_combined[0])){ usort($arr_combined,$cmppmt); } $tt['arr']=&$arr_combined;
+        $tt['count'] = sizeof($tt['arr']);
+        $this->FinalizeThread($tt, true, $this->TIME_STRING);
+        
+        $first_post = &$this->NULL_POST;
+        if(isset($tt['arr'][0])) $first_post= &$tt['arr'][0];
+        $this->NeedWritePosts=1;
+        $this->NeedWriteArchive=1;
+        return $first_post;
     }
     
     function &MergePosts($ids_string){
@@ -1643,6 +1792,8 @@ blockquote{border-left:2px solid black;}
             else if(isset($_GET['history'])) $str.='&history='.$_GET['history'];
         if(isset($args['version'])) $str.='&version='.$args['version'];
             else if(isset($_GET['version'])) $str.='&version='.$_GET['version'];
+        if(isset($args['search'])) $str.='&search='.$args['search'];
+            else if(isset($_GET['search'])) $str.='&search='.$_GET['search'];
         return $str;
     }
     
@@ -1693,6 +1844,7 @@ blockquote{border-left:2px solid black;}
             $m=$_GET['image_info'];
             $this->ReadImages();
             $this->ReadPosts();
+            $this->SwitchWayBackMode(); if(isset($this->WayBack)){$this->ReadArchive();echo"a";}
             $im = &$this->FindImage($m);
             if($im==NULL || !isset($im['refs']) || !isset($im['refs'][0])){ echo "not_found"; exit; }
             echo "<ref>".sizeof($im['refs'])."</ref>";
@@ -1762,12 +1914,12 @@ blockquote{border-left:2px solid black;}
             }
             if(isset($_GET['mark_delete']) && isset($_GET['target'])){
                 $this->EditPost($_GET['target'],NULL,$_GET['mark_delete']=='true',NULL,false,NULL,NULL,false,NULL);
-                if(isset($_GET['post'])) $redirect='?post='.$_GET['target']; else $redirect='index.php';
+                if(isset($_GET['post'])) $redirect='?post='.$_GET['target']; else $redirect=$this->GetRedirect();
                 return 0;
             }
             if(isset($_GET['set_mark']) && isset($_GET['target'])){
                 $this->EditPost($_GET['target'],NULL,NULL,NULL,NULL,$_GET['set_mark'],NULL,false,NULL);
-                if(isset($_GET['post'])) $redirect='?post='.$_GET['target']; else $redirect='index.php';
+                if(isset($_GET['post'])) $redirect='?post='.$_GET['target']; else $redirect=$this->GetRedirect();
                 return 0;
             }
             if(isset($_POST['post_button']) && isset($_POST['post_content'])){
@@ -1786,6 +1938,11 @@ blockquote{border-left:2px solid black;}
                 if(($edited =$this->EditPost($_GET['rename_post'],NULL,NULL,NULL,NULL,NULL,$_POST['post_rename_name'],false,NULL))!=NULL){
                     $redirect='?post='.$edited['id']; return 0;
                 };
+            }
+            if(isset($_GET['merge_threads'])&&$_GET['merge_threads']!=""){
+                if(preg_match('/([0-9]{14})\s+([0-9]{14})/u',$_GET['merge_threads'],$m)){
+                    if(($pe = &$this->MergeThreads($m[1],$m[2]))!=$this->NULL_POST){ $redirect='?post='.$pe['id']; return 0; }
+                }
             }
             if(isset($_GET['merge_posts'])&&$_GET['merge_posts']!=""){
                 if(($pe = &$this->MergePosts($_GET['merge_posts']))!=$this->NULL_POST){
@@ -1874,10 +2031,10 @@ blockquote{border-left:2px solid black;}
                 $this->NeedWriteImages = 1;
                 if($do_image_redirect) return 0;
             }
-            if(isset($_GET['rewrite_styles'])){
+            //if(isset($_GET['rewrite_styles'])){
                 $this->WriteStyles();
-                $redirect='?extras=true'; return 0;
-            }
+            //    $redirect='?extras=true'; return 0;
+            //}
             if(isset($_GET['regenerate_thumbnails'])){
                 $this->RegenerateThumbnails();
                 $redirect='?extras=true'; return 0;
@@ -1920,9 +2077,10 @@ blockquote{border-left:2px solid black;}
                                         $m[2].$orig_src.$m[7]."></a>";
                             return $click;
                         }else{
-                            $click = $m[2].($original?$orig_src:$src).$m[7]." data-imgsrc='".$m[5]."'".
+                            $click = "<div class='imd'><a href='$orig_src' target='_blank' onclick='event.preventDefault();'>".
+                                $m[2].($original?$orig_src:$src).$m[7]." data-imgsrc='".$m[5]."'".
                                 (isset($im['product'])?" data-product='".$im['product']."'":"").
-                                ($original?" class='original_img'":"").">";
+                                ($original?" class='original_img'":"")."></a></div>";
                             $images_noclick[]=$m[2].$src.$m[7].">";
                             $ret = "";
                             if($keep) { $ret = $click; }
@@ -1933,7 +2091,7 @@ blockquote{border-left:2px solid black;}
                     },$html,-1,$count);
         $html = preg_replace('/<p>\s*<\/p>/u',"", $html); if($html==""){$html="<p>&nbsp;</p>";}
         if(sizeof($images)){
-            if(sizeof($images)==1){$html.="<div>".$images[0]."</div>";}
+            if(sizeof($images)==1){$html.= $images[0];}
             else{
                 $html.="<div class='p_row'>";
                 foreach($images as $img){
@@ -2128,22 +2286,17 @@ blockquote{border-left:2px solid black;}
         <div id='post_menu' style='display:none;' class='pop_menu clean_a'>
             <ul>
             <li><span id='_time_hook' class='smaller'>时间</span>&nbsp;&nbsp;<a href='javascript:HidePopMenu();'>×</a></li>
-            <li>
-                <a id='share_copy'>⧉</a>
-                <a id='share_pin' target='_blank'>Pin</a>
-                <a id='share_twitter' target='_blank'>Twitter</a>
-                <a id='share_weibo' target='_blank'><?=$this->T('微博')?></a>
-            </li>
+            <li><a id='share_copy'>⎘<?=$this->T('复制链接')?></a></li>
             <hr />
             <?php if($this->LoggedIn){ ?>
                 <li><a id='menu_history'><?=$this->T('历史')?></a>
-                    <?php if(!isset($this->WayBack)){ ?>
-                        <a id='menu_edit'><?=$this->T('修改')?></a><?php } ?></li>
+                    <?php if(!isset($this->WayBack) && $this->PageType!='search'){ ?>
+                        | <a id='menu_edit'><?=$this->T('修改')?></a><?php } ?></li>
                 <?php if(!isset($this->WayBack)){ ?><li>
-                    <a id='menu_refer_copy'><?=$this->T('只复制')?></a>
-                    <a id='menu_refer'><?=$this->T('引用')?></a><br class='hidden_on_desktop' />
+                    <a id='menu_refer_copy'><?=$this->T('复制编号')?></a><?php if($this->PageType!='search'){ ?> 
+                    | <a id='menu_refer'><?=$this->T('引用')?></a><?php } ?><br class='hidden_on_desktop' />
                 </li>
-                <li><a id='menu_mark' href='javascript:ToggleRenameDetails()'><?=$this->T('改名')?></a>
+                <li><a id='menu_mark' href='javascript:ToggleRenameDetails()'><?=$this->T('改名')?></a> |
                     <a id='menu_mark' href='javascript:ToggleMarkDetails()'><?=$this->T('标记')?></a></li>
                 <li id='mark_details' style='display:none;'><b>
                     <a id='mark_set_clear' href='javascript:SetMark(-1);'>_</a>
@@ -2350,12 +2503,12 @@ blockquote{border-left:2px solid black;}
             <?=$this->TranslatePostParts(
                $this->GenerateSinglePost($post, false, false, true, false, $big_table, false)); ?>
         </li>
-        <?php if($big_table!==$this->NULL_POST) echo "</ul></li><div class='table_top'>".$big_table.'</div>';?>
+        <?php if($big_table!=$this->NULL_POST) echo "</ul></li><div class='table_top'>".$big_table.'</div>';?>
     <?php
     }
     function MakeSinglePost(&$post, $show_link=false, $side=false, $extra_class_string=NULL,
                                     $strip_tags=false, $show_thread_link=false, $show_reply_count=false, $generate_anchor=false,
-                                    $generate_thumb = false, $is_top = false){
+                                    $generate_thumb = false, $is_top = false, $force_hide_long=false){
         $is_deleted = (isset($post['mark_delete'])&&$post['mark_delete']);
         $mark_value = isset($post['mark_value'])?$this->Markers[$post['mark_value']]:-1;
         $ref_count = isset($post['refs'])?sizeof($post['refs']):0;
@@ -2391,7 +2544,7 @@ blockquote{border-left:2px solid black;}
                         echo "<div class='product_ref clean_a'><a href='?post={$post['id']}'>";} ?>
                     <?=$this->TranslatePostParts(
                            $this->GenerateSinglePost($post, $strip_tags, $generate_anchor, true,
-                                                     $generate_thumb,$big_table,$show_thread_link||$side)); ?>
+                                                     $generate_thumb,$big_table,($show_thread_link||$side||$force_hide_long))); ?>
                     <?php if($is_product&&!$generate_anchor){echo "</a></div>";} ?>
             </div>
             <?=$side?"</a>":""?> <?php
@@ -2427,11 +2580,10 @@ blockquote{border-left:2px solid black;}
             <span class='gray'><i><?=$this->T('以过去日期浏览时不能发帖。')?></i></span>
         <?php return; } ?>
         <form action="<?=$_SERVER['REQUEST_URI']?>" method="post" style='display:none;' id='post_form'></form>
-        <div class='smaller' style='display:<?=$show_hint?"block":"none"?>;'>
-            <span id='post_hint_text'><?=$this->T('继续补充该话题：')?></span>
+        <div class='smaller'><div style='display:<?=$show_hint?"block":"none"?>;'>
+            <span id='post_hint_text'><?=$this->T('继续补充该话题：')?></span></div>
             <div id='post_hint_modify' style='display:none;'>
                 <input type="checkbox" name="post_record_edit" value="1" form='post_form' checked> <?=$this->T('新增历史记录');?></div></div>
-        
         <textarea id="post_content" name="post_content" rows="4" form='post_form'
                   onfocus="if (value =='<?=$this->T('有什么想说的')?>'){value ='';}la_auto_grow(this);"
                   onblur="if (value ==''){value='<?=$this->T('有什么想说的')?>';la_auto_grow(this);}"    
@@ -2503,14 +2655,14 @@ blockquote{border-left:2px solid black;}
                     if(!isset($search_term) && !isset($category) &&
                        (isset($this->SpecialPinned) && ($p = &$this->GetPost($this->SpecialPinned))!=NULL && !$this->CurrentOffset) &&
                        $this->CanShowPost($p)){
-                        $this->MakeSinglePost($p, true, false, false, false, true, false, false, false, true);
+                        $this->MakeSinglePost($p, true, false, false, false, true, false, false, false, true, false);
                     }
                     $i = 0;
-                    foreach(array_reverse($this->Posts) as &$p){
+                    if(isset($this->UsePosts[0])) foreach(array_reverse($this->UsePosts) as &$p){
                         if(!$this->CanShowPost($p) || $this->SkipProduct($p)) continue;
                         if(isset($p['tid'])){ /* Should always be set. */
                             $th = &$p['tid']; if($p['tid']['count']==0) continue;
-                            $p = &$th['last']; 
+                            if(!isset($search_term)) { $p = &$th['last']; }
                         }
                         if(isset($search_term)){
                             if ($search_term=='' || !preg_match("/".preg_quote($search_term)."/iu", $p['content'])) continue;
@@ -2526,7 +2678,7 @@ blockquote{border-left:2px solid black;}
                             if(isset($p['tid'])){ if(isset($p['tid']['displayed'])) continue; $p['tid']['displayed'] = True; }
                         }
                         if($i < $this->PostsPerPage * $this->CurrentOffset) {$i++; continue;}
-                        $this->MakeSinglePost($p, true, false, NULL, false, true, false, false, false, false);
+                        $this->MakeSinglePost($p, true, false, NULL, false, !isset($search_term), false, false, false, false, isset($search_term));
                         $i++;
                         if($i >= $this->PostsPerPage * (1+$this->CurrentOffset)) {break;}
                     }?>
@@ -2557,7 +2709,7 @@ blockquote{border-left:2px solid black;}
                         if(!isset($th['first']) || $th['count']==0){ continue; }
                         if(!$this->CanShowPost($th['first'])) continue;
                         if($i>=$this->HotPostCount) break;
-                        $this->MakeSinglePost($th['first'], false, true, "post_preview", true, false, true, false, true, false);
+                        $this->MakeSinglePost($th['first'], false, true, "post_preview", true, false, true, false, true, false, false);
                         $i++;
                     } ?>
             </ul>
@@ -2577,7 +2729,7 @@ blockquote{border-left:2px solid black;}
                 foreach(array_reverse($p['refs']) as &$pr){
                     $po = $this->GetPost($pr); if(isset($post['mark_value']) && $po['mark_value']==5){ $count_product++; continue; }
                     if(!$this->CanShowPost($po)){ continue; }
-                    $this->MakeSinglePost($po, false, true, "post_preview", true, false, false, false, true, false);
+                    $this->MakeSinglePost($po, false, true, "post_preview", true, false, false, false, true, false, false);
                 } 
                 ?></ul>
             <?php if($count_product){ ?> <span class='smaller'><?=$this->T('和').' '.$count_product.' '.$this->T('个商品')?></span> <?php }
@@ -2611,7 +2763,9 @@ blockquote{border-left:2px solid black;}
     }
     
     function MakePostHistoryList(&$ah, &$post,$version=NULL, $show_latest=true){
-        $title = NULL; if(!isset($ah)) { $title=$this->T($this->GetPostTitle($post, false)); }
+        $latest_ver=isset($post['version'])?$post['version']:$post['id'];
+        $can_show=1; if(isset($this->WayBack) && $latest_ver>$this->WayBack) $can_show=0;
+        $title = NULL; if(!isset($ah) || ($show_latest && $can_show)) { $title=$this->T($this->GetPostTitle($post, false)); }
         else{ $ver = &$ah['list'][sizeof($ah['list'])-1]; $title= $this->GetPostTitle($ver); }
         if(!isset($title)) $title=$this->T('未命名');
         if(!isset($ah)){ ?>
@@ -2621,9 +2775,7 @@ blockquote{border-left:2px solid black;}
             <h2><?=$this->T('历史记录')?></h2>
             <span class='omittable_title smaller'><?=$this->T('帖子')?> <a href='?post=<?=$ah['id']?>'><?=$title?></a></span><br />
             <div class='list'><ul>
-            <?php $latest_ver=isset($post['version'])?$post['version']:$post['id'];
-            $can_show=1; if(isset($this->WayBack) && $latest_ver>$this->WayBack) $can_show=0;
-            if($show_latest && $can_show){  $post['history_displayed']=1; ?>
+            <?php if($show_latest && $can_show){  $post['history_displayed']=1; ?>
             <li class='<?=isset($version)&&$version==$latest_ver?" post_current_row bold":""?>' style='list-style:"";'>
                 <a href='?post=<?=$this->CurrentPostID?>&history=1&version=<?=$latest_ver?>'><?=$this->ReadableTime($latest_ver)?></a>
                 <span class='smaller gray'><?=$this->T('长度').' '.strlen($post['content'])?></span>
@@ -2634,21 +2786,31 @@ blockquote{border-left:2px solid black;}
                             <?=$this->GetPostTitle($ver);?></a>
                         <span class='smaller gray'><?=$this->T('长度').' '.strlen($ver['content'])?></span></li>
                 <?php } ?></ul><?php } ?>
+                <?php if(isset($post['merged_thread'][0][0])){ $pm=$post['merged_thread'][0][0];
+                    $mah = &$this->GetArchiveHandle($pm); 
+                    $mver = &$this->GetPost($pm); if(!isset($mver) && isset($mah)) $mver = &$mah['list'][sizeof($mah['list'])-1]; ?>
+                    <ul><li><?=$this->T('话题')?> <a href='?post=<?=$mver['id']?>&history=1'><?=$this->GetPostTitle($mver);?></a> <?=$this->T('并入这里')?>
+                        <span class='smaller gray'><?=sizeof($post['merged_thread'][0]);?> <?=$this->T('个帖子')?></span></li></ul>
+                <? } ?>
             </li><?php } ?>
             <?php if(isset($ah['list'][0])) foreach(array_reverse($ah['list']) as &$ver){ 
                 if(isset($this->WayBack) && $ver['version']>$this->WayBack) continue;
                 if(isset($ver['history_displayed']) && $ver['history_displayed']) continue; ?>
                 <li<?=isset($version)&&$version==$ver['version']?" class='post_current_row bold'":""?>>
-                    <a href='?post=<?=$this->CurrentPostID?>&history=1&version=<?=$ver['version']?>'>
-                        <?=$this->ReadableTime($ver['version'])?></a>
-                    <span class='smaller gray'><?=$this->T('长度').' '.strlen($ver['content'])?></span></li>
-                    <?php if(isset($ver['merged_from'][0])){ ?><ul><?php foreach($ver['merged_from'] as $from){ 
+                    <a href='?post=<?=$this->CurrentPostID?>&history=1&version=<?=$ver['version']?>'><?=$this->ReadableTime($ver['version'])?></a>
+                    <span class='smaller gray'> <?=$this->T('长度').' '.strlen($ver['content'])?></span>
+                    <?php if(isset($ver['merged_thread'][0][0])){ $pm=$ver['merged_thread'][0][0];
+                        $mah = &$this->GetArchiveHandle($pm); $mver = &$this->GetPost($pm);
+                        if(!isset($mver) && isset($mah)) $mver = &$mah['list'][sizeof($mah['list'])-1]; ?>
+                        <ul><li><?=$this->T('话题')?> <a href='?post=<?=$mver['id']?>&history=1'><?=$this->GetPostTitle($mver);?></a> <?=$this->T('并入这里')?>
+                            <span class='smaller gray'> <?=sizeof($ver['merged_thread'][0]);?> <?=$this->T('个帖子')?> </span></li></ul>
+                    <? } if(isset($ver['merged_from'][0])){ ?><ul><?php foreach($ver['merged_from'] as $from){ 
                         $fromah = &$this->GetArchiveHandle($from); if(!isset($fromah)) continue;
                         $ver = &$fromah['list'][sizeof($fromah['list'])-1];?>
                         <li><a href='?post=<?=$ver['id']?>&history=1'>
                                 <?=$this->GetPostTitle($ver);?></a>
                             <span class='smaller gray'><?=$this->T('长度').' '.strlen($ver['content'])?></span></li>
-                    <?php } ?></ul><?php } ?>
+                    <?php } ?></ul></li><?php } ?>
             <?php } ?></ul></div>
         <?php } ?>
     <?php
@@ -2657,16 +2819,24 @@ blockquote{border-left:2px solid black;}
     function MakePostDiff(&$this_ver, &$last_ver){
         if(!isset($this_ver)){ ?>
             <h2 class='gray'><?=$this->T('版本不存在')?></h2>
-        <?php }else{ ?>
+        <?php }else{ ?>    
             <h2><?=$this->T('差异')?></h2>
-            <table class='diff_table'><thead>
-                <tr><td><?php if(!isset($last_ver)){ ?><?=$this->T('没有更旧的版本')?><?php }else{ ?>
-                    <?=$this->T('上一个版本')?><br /><?=$this->ReadableTime($last_ver['version'])?><?php } ?></td>
-                    <td class='text_highlight bold'><?=$this->T('选择的版本')?><br /><?=$this->ReadableTime($this_ver['version'])?></td></tr>
-            </thead><tbody>
-                <tr><td><pre><?=isset($last_ver)?$last_ver['content']:""?></pre></td><td><pre><?=$this_ver['content']?></pre></td></tr>
-            </tbody>
-            </table>
+            <?php if(isset($this_ver['merged_thread']) && isset($this_ver['merged_thread'][0][0])){
+                $pm=$this_ver['merged_thread'][0][0]; $mah = &$this->GetArchiveHandle($pm); 
+                $mver = &$this->GetPost($pm); if(!isset($mver) && isset($mah)) $mver = &$mah['list'][sizeof($mah['list'])-1]; ?>
+                <p><?=$this->T('话题')?> <a href='?post=<?=$mver['id']?>&history=1'><?=$this->GetPostTitle($mver)?></a> <?=$this->T('并入这里')?>
+                    <br /><span class='smaller gray'> <?=sizeof($this_ver['merged_thread'][0]);?> <?=$this->T('个帖子')?> </span></p>
+            <? }else{ ?>
+                <table class='diff_table'><thead>
+                    <tr><td><?php if(!isset($last_ver)){ ?><?=$this->T('没有更旧的版本')?><?php }else{ ?>
+                        <?=$this->T('上一个版本')?><br /><?=$this->ReadableTime($last_ver['version'])?><?php } ?></td>
+                        <td class='text_highlight bold'><?=$this->T('选择的版本')?><br /><?=$this->ReadableTime($this_ver['version'])?></td></tr>
+                </thead><tbody>
+                    <tr><td><pre><?=isset($last_ver)?$last_ver['content']:""?></pre></td><td><pre><?=$this_ver['content']?></pre></td></tr>
+                </tbody>
+                </table>
+            <?php } ?>
+            <br /><a class='smaller' href='?post=<?=$this_ver['id']?>&set_wayback=<?=isset($this_ver['version'])?$this_ver['version']:$this_ver['id']?>'><?=$this->T('前往该版本时间')?> ←</a>
         <?php } ?>
     <?php
     }
@@ -2777,6 +2947,7 @@ blockquote{border-left:2px solid black;}
         ?>
         <script>function ClickImage(post_access){im=post_access.querySelector('img');if(im){im.click();}}</script>
         <div class='center_full' id='div_center'>
+            <?php $this->MakePostTools(); ?>
             <h2 class='hidden_on_print'><?=$this->T('有趣')?>
                 <a class='gray clean_a' href='?post=<?=$th['first']['id']?>'>→</a></h2>
             <ul><li class='post post_width_big' data-post-id='<?=$th['first']['id']?>'>
@@ -2827,6 +2998,28 @@ blockquote{border-left:2px solid black;}
     function CssNumberID($id){
         return "#\\3".substr($id,0,1)." ".substr($id,1);
     }
+    function MakePostTools(){
+        if($this->LoggedIn && !isset($this->WayBack)){ ?><div class='smaller gray hidden_on_print clean_a'>
+            <a id='merge_cancel' href='javascript:{TogglePostSelectMode(false,true);ToggleThreadMerge(false,true);}'>
+                <?=$this->T('工具')?></a>:<div class='hidden_on_mobile' style='display:inline'>
+                <span id='merge_post_btn'><a href='javascript:TogglePostSelectMode()'><?=$this->T('合并帖子')?></a></span>
+                | <span id='merge_thread_btn'><a href='javascript:ToggleThreadMerge()'><?=$this->T('合并话题')?></a></span>
+            </div>
+            <select class='hidden_on_desktop' id='merge_select'
+                onchange="if(this.selectedIndex==1){TogglePostSelectMode(true);}else if(this.selectedIndex==2){ToggleThreadMerge(true);}">
+                <option value='-1' selected>--</option>
+                <option value='1'><?=$this->T('合并帖子')?></option>
+                <option value='2'><?=$this->T('合并话题')?></option></select>
+            <div style='display:none;' id='merge_post_dialog' class='text_highlight small_pad align_right'>
+                <div style='display:inline;'><?=$this->T('将合并');?> <span id='merge_post_count'></span> <?=$this->T('个帖子');?></div>
+            <span class='clean_a bold align_right'><a id='merge_post'>&nbsp;<?=$this->T('执行');?></a></span></div>
+            <div style='display:none;overflow:auto' id='merge_thread_dialog' class='text_highlight small_pad align_right'>
+                <div style='display:inline;'><?=$this->T('合并到话题');?></div>
+                <input id="merge_thread_target" type="text" style="width:9em;display:inline" onChange='ThreadMergeInput(this);' onInput='ThreadMergeInput(this);'>
+                <span class='clean_a bold align_right'><a id='merge_thread'>&nbsp;<?=$this->T('执行');?></a></span></div>
+            </div><div class='spacer'></div><?php
+        }
+    }
     function MakePostSection(&$post){
         $this->Anchors = [];
         if(isset($this->TagID)){ ?><style><?=$this->CssNumberID($this->TagID);?>{display:block;}</style><?php } ?>
@@ -2838,21 +3031,7 @@ blockquote{border-left:2px solid black;}
             <?php $cat = NULL; 
             if($is_thread) { if(isset($th['categories']) && isset($th['categories'][0])){ $cat = $th['categories']; } }
             else { if(isset($post['categories']) && isset($post['categories'][0])) { $cat = $post['categories']; } }
-            if($this->LoggedIn && !isset($this->WayBack)){ ?><div class='smaller gray hidden_on_print clean_a'>
-                <a id='merge_cancel' href='javascript:TogglePostSelectMode(false,true);'>
-                    <?=$this->T('工具')?></a>:<div class='hidden_on_mobile' style='display:inline'>
-                    <span id='merge_post_btn'><a href='javascript:TogglePostSelectMode()'><?=$this->T('合并帖子')?></a></span>
-                    | <span id='merge_thread_btn'><a><?=$this->T('合并话题')?></a></span>
-                </div>
-                <select class='hidden_on_desktop' id='merge_select'
-                    onchange="if(this.selectedIndex==1){TogglePostSelectMode(true);}">
-                    <option value='-1' selected>--</option>
-                    <option value='1'><?=$this->T('合并帖子')?></option>
-                    <option value='2'><?=$this->T('合并话题')?></option></select>
-                <div style='display:none;' id='merge_post_dialog' class='text_highlight small_pad'>
-                    <div style='display:inline;'><?=$this->T('将合并');?> <span id='merge_post_count'></span> <?=$this->T('个帖子');?></div>
-                <span class='clean_a bold align_right'><a id='merge_post'>&nbsp;<?=$this->T('执行');?></a></span></div>
-            </div><div class='spacer'></div><?php }
+            $this->MakePostTools();
             if($cat){ ?>
                 <p><b><?=$this->T('分类')?></b> | <?php foreach($cat as $c){ 
                     echo "<a href='?category=".$c."'>".($c=='none'?$this->T('未分类'):$this->T($c))."</a> "; } ?></p>
@@ -3185,6 +3364,7 @@ blockquote{border-left:2px solid black;}
         if(!$this->LoggedIn && isset($im['galleries']) && isset($im['galleries'][0])) foreach($im['galleries'] as $ga){
             if(($g=$this->GetGallery($ga)) && isset($g['experimental']) && $g['experimental']) return false;
         }
+        if(isset($this->WayBack) && substr($im['name'],0,14)>$this->WayBack) return false;
         return true;
     }
     
@@ -3304,8 +3484,8 @@ blockquote{border-left:2px solid black;}
                         <?php if($this->LoggedIn){ ?>
                             <div class="post_menu_button _select_hook white" onclick='ToggleSelectImage(this, "<?=$im["name"]?>")'>●</div>
                         <?php } ?>
-                        <img src='<?=$im['thumb']?>' data-imgsrc='<?=$im["name"]?>'<?=isset($im['product'])?
-                            'data-product="'.$im["product"].'"':""?>/>
+                        <a href='<?=$im['file']?>' target='_blank' onclick='event.preventDefault();'><img src='<?=$im['thumb']?>' data-imgsrc='<?=$im["name"]?>'<?=isset($im['product'])?
+                            'data-product="'.$im["product"].'"':""?>/></a>
                     </div>
                 <?php } ?>
                 <div class='p_thumb' style='flex-grow:10000;box-shadow:none;height:0;'></div>
@@ -3635,12 +3815,7 @@ blockquote{border-left:2px solid black;}
                         <?php } ?><hr class='hidden_on_desktop block_on_mobile' />
                     </div>
                     <div id='big_image_share' class='clean_a' onclick="event.stopPropagation();">
-                        <li>
-                            <a id='big_share_copy'>⧉</a>
-                            <a id='big_share_pin' target='_blank'>Pin</a>
-                            <a id='big_share_twitter' target='_blank'>Twitter</a>
-                            <a id='big_share_weibo' target='_blank'><?=$this->T('微博')?></a>
-                        </li>
+                        <li><a id='big_share_copy'>⎘ <?=$this->T('复制链接')?></a></li>
                         <hr />
                     </div>
                     <div id='big_image_info' onclick="event.stopPropagation();"></div>
@@ -3695,12 +3870,16 @@ blockquote{border-left:2px solid black;}
                     var Smerge_post_btn = Scenter.querySelector('#merge_post_btn');
                     var Smerge_cancel = Scenter.querySelector('#merge_cancel');
                     var Smerge_select = Scenter.querySelector('#merge_select');
-                    var select_mode = false; var selected_posts = null;
+                    var Smerge_thread_dialog = Scenter.querySelector('#merge_thread_dialog');
+                    var Smerge_thread = Scenter.querySelector('#merge_thread');
+                    var Smerge_thread_target = Scenter.querySelector('#merge_thread_target');
+                    var Smerge_thread_btn = Scenter.querySelector('#merge_thread_btn');
+                    var select_mode = false; var merge_mode = false; var selected_posts = null;
                     function TogglePostSelectMode(force_on=false,force_off=false){
                         Scenter.classList.add('post_selecting');
-                        if((!select_mode || force_on) && !force_off){ select_mode = 1; Scenter.classList.add('post_selecting');
+                        if((!select_mode || force_on) && !force_off){ ToggleThreadMerge(false,true); Scenter.classList.add('post_selecting');
                             Smerge_post_dialog.style.display="block";Smerge_post_btn.classList.add('text_highlight');
-                            Smerge_cancel.innerText='<?=$this->T("取消")?>';}
+                            Smerge_cancel.innerText='<?=$this->T("取消")?>'; select_mode = 1;}
                         else{ select_mode = 0; Scenter.classList.remove('post_selecting');
                             Smerge_post_dialog.style.display="none";Smerge_post_btn.classList.remove('text_highlight');
                             Smerge_cancel.innerText='<?=$this->T("工具")?>';Smerge_select.selectedIndex='0'; }
@@ -3717,6 +3896,20 @@ blockquote{border-left:2px solid black;}
                             selected_posts.push(Sposts[i].dataset.postId); } }
                         Smerge_post.href="?merge_posts="+selected_posts.join(" ");
                         Smerge_post_count.innerText=selected_posts.length;
+                    }
+                    function ThreadMergeInput(elem){
+                        if(elem.value.match(/[0-9]{14}/)) { Smerge_thread.href="?merge_threads=<?=$this->ActualPostID?> "+elem.value; }
+                        else{ Smerge_thread.href="#"; }
+                    }
+                    function ToggleThreadMerge(force_on=false,force_off=false){
+                        if((!merge_mode || force_on) && !force_off){ TogglePostSelectMode(false,true);
+                            Smerge_thread_dialog.style.display="block";Smerge_thread_btn.classList.add('text_highlight');
+                            Smerge_cancel.innerText='<?=$this->T("取消")?>'; merge_mode = 1;}
+                        else{ merge_mode = 0;
+                            Smerge_thread_dialog.style.display="none";Smerge_thread_btn.classList.remove('text_highlight');
+                            Smerge_cancel.innerText='<?=$this->T("工具")?>';Smerge_select.selectedIndex='0'; }
+                        Smerge_thread.href="#";
+                        Smerge_thread_target.value='';
                     }
                 <?php } ?>
                 function ShowSideUploader(){
@@ -3798,12 +3991,12 @@ blockquote{border-left:2px solid black;}
                     p = document.querySelector('[data-post-id="'+id+'"]');
                     op = p.dataset.markDelete?"false":"true";
                     window.location.href=
-                        "index.php?<?=isset($_GET['post'])?('post='.$_GET['post']):""?>&mark_delete="+op+'&target='+id.toString();
+                        "index.php?<?=$this->GetRedirect()?>&mark_delete="+op+'&target='+id.toString();
                 }
                 function SetMark(mark){
                     menu = document.getElementById('post_menu');
                     window.location.href=
-                        "index.php?<?=isset($_GET['post'])?('post='.$_GET['post']):""?>&target="+
+                        "index.php?<?=$this->GetRedirect()?>&target="+
                         menu.parentNode.dataset.postId+"&set_mark="+mark;
                 }
                 function ToggleMarkDetails(){
@@ -3832,7 +4025,9 @@ blockquote{border-left:2px solid black;}
                 hs.href='?post='+id+'&history=1';
                 <?php if($this->LoggedIn && !isset($this->WayBack)){ ?>
                     menu.querySelector('#menu_refer').href='javascript:MakeRefer(id)';
-                    menu.querySelector('#menu_refer_copy').href='javascript:CopyRefer(id)';
+                    ref = menu.querySelector('#menu_refer_copy')
+                    ref.innerHTML='<?=$this->T("复制编号")?>';
+                    ref.href='javascript:CopyRefer(id)';
                     ed = menu.querySelector('#menu_edit')
                     ed.href='javascript:MakeEdit(id)'; ed.innerHTML="<?=$this->T('修改')?>";
                     d = menu.querySelector('#menu_delete');
@@ -3846,24 +4041,13 @@ blockquote{border-left:2px solid black;}
                 
                 title = document.title;
                 copy = document.getElementById('share_copy');
-                copy.innerHTML='⧉&#xfe0e;';
+                copy.innerHTML='⎘ <?=$this->T("复制链接")?>';
                 copy.addEventListener("click", function(){
                     url = window.location
                     path = location.pathname
                     copy_text(url.protocol+"//"+url.host+path+"?post="+id);
-                    this.innerHTML='⧉&#xfe0e;&#10003;&#xfe0e;';
+                    this.innerHTML='&#10003;&#xfe0e; <?=$this->T("复制链接")?>';
                 });
-                document.getElementById('share_pin').href='https://www.pinterest.com/pin/create/button/?url='+
-                    encodeURIComponent(window.location.href)+
-                    //'&media='+abs_img+
-                    '&description='+encodeURIComponent(title);
-                document.getElementById('share_twitter').href='http://twitter.com/share?text='+
-                    encodeURIComponent(title)+
-                    '&url='+window.location.href+
-                    "&hashtags="
-                document.getElementById('share_weibo').href='https://service.weibo.com/share/share.php?title='+
-                    encodeURIComponent(title)+
-                    ': '+window.location.href
             }
             function HidePopMenu(){
                 var menus = document.querySelectorAll('.pop_menu');
@@ -3986,17 +4170,11 @@ blockquote{border-left:2px solid black;}
                 
                 title = encodeURIComponent(document.title);
                 copy = document.getElementById('big_share_copy');
-                copy.innerHTML='⧉&#xfe0e;';
+                copy.innerHTML='⎘ <?=$this->T("复制链接")?>';
                 copy.addEventListener("click", function(){
                     copy_text(window.location.href);
-                    this.innerHTML='⧉&#xfe0e;&#10003;&#xfe0e;';
+                    this.innerHTML='&#10003;&#xfe0e; <?=$this->T("复制链接")?>';
                 });
-                document.getElementById('big_share_pin').href='https://www.pinterest.com/pin/create/button/?url='+
-                    page_url+'&media='+window.location.host+'/'+src+'&description='+title;
-                document.getElementById('big_share_twitter').href='http://twitter.com/share?text='+
-                    title+'&url='+page_url+"&hashtags=";
-                document.getElementById('big_share_weibo').href='https://service.weibo.com/share/share.php?title='+
-                    title+': '+page_url;
                 
                 o = document.querySelector('#big_image_overlay');
                 info = document.querySelector('#big_image_info');
@@ -4204,6 +4382,8 @@ if(!isset($p)){
 
 if(isset($p) && !$la->CanShowPost($p)) $p=NULL;
 else{ $la->DoExperimentalTopLink($p); }
+
+if(isset($p)){ $la->ActualPostID = $p['id']; }
 
 $la->MakeHeader($p);
 $la->MakeMainBegin();
