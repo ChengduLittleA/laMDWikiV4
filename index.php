@@ -452,7 +452,7 @@ select,textarea,input[type=text],input[type=password]{background:none;border:non
 .post_dummy > p img{display:block;width:100%;margin:0 auto;}
 .gallery_left li{display:list-item;margin-left:1em;list-style:none;}
 .gallery_left .selected{list-style:'→';}
-.focused_post{font-size:1.2em;margin-top:0.1em;margin-bottom:0.1em;padding:0.5rem !important;border:2px dashed #ac7843;}
+.focused_post{font-size:1.1em;margin-top:0.1em;margin-bottom:0.1em;padding:0.5rem !important;border:2px dashed #ac7843;}
 .post_width{position:relative;left:1.4rem;width:calc(100% - 1.7rem);padding-left:0.2em;overflow:visible;}
 .post_width_big{position:relative;left:0;width:100%;overflow:visible;}
 .post_menu_button{position:absolute;display:none;right:0rem;width:1.5rem;
@@ -602,7 +602,7 @@ animation:anim_loading 1s linear infinite;}
 .post_selected{background-color:%graybkg%;}
 .small_pad{padding:0.2em;padding-top:0.1em;padding-bottom:0.1em;}
 .wscroll{scroll-margin:3.5em;padding-left:0.3em;display:none;font-weight:bold;font-size:0.75em;box-shadow: 13em 0em 4em -8em inset %gray%;color:%white%;}
-.wscroll:target{display:block;}
+.wscroll:target{display:block;} .post_ref .wscroll{display:none !important;}
 .wayback_link{display:inline;}
 
 @media screen and (max-width:1000px){
@@ -688,7 +688,7 @@ body,footer,header,.small_footer,a,.clean_a,.invert_a,.clean_a a,.invert_a a{bac
 .post *,.post_dummy *{margin-bottom:0em}
 .p_row,.post table,.post_width>img,.post_width_big>img,.post_ref>img,.post_ref>.original_img,
 .post_width>.original_img,.post_width_big>.original_img,.post pre{margin-top:0.5rem;margin-bottom:0.5rem;text-indent:0;}
-.post p{line-height:1.3;text-indent:2em;}
+.post p{line-height:1.3;text-indent:2em;} .product_ref p {text-indent:0;}
 table img{margin:0 !important;}
 .post h1+p,.post h2+p,.post img+p,.post table+p,.post p:first-child{text-indent:0;}
 .post ul,.post ol{margin:1rem;margin-left:1.4rem;margin-right: 0rem;}
@@ -1025,6 +1025,9 @@ blockquote{border-left:2px solid black;}
                 if(preg_match('/HASI\s*([^;]+);/u', $m[2], $ma)){
                     $entries = []; if(preg_match_all('/([0-9]{14}\.(jpg|jpeg|png|gif))/u',$ma[1],$links,PREG_SET_ORDER)){ 
                         foreach($links as $l){ $entries[] = $l[1]; } $post['hasi'] = $entries; } }
+                if(preg_match('/HASTAG\s*([^;]+);/u', $m[2], $ma)){
+                    $entries = []; if(preg_match_all('/([0-9]{14})/u',$ma[1],$links,PREG_SET_ORDER)){ 
+                        foreach($links as $l){ $entries[] = $l[1]; } $post['hastag'] = $entries; } }
                 if(preg_match('/INTO\s*([0-9]{14})\s*V\s*([0-9]{14})\s*;/u', $m[2], $n)){
                     $post['merged_into'] = [trim($n[1]),trim($n[2])];
                 }
@@ -1095,6 +1098,9 @@ blockquote{border-left:2px solid black;}
                 if(preg_match('/HASI\s*([^;]+);/u', $m[2], $ma)){
                     $entries = []; if(preg_match_all('/([0-9]{14}\.(jpg|jpeg|png|gif))/u',$ma[1],$links,PREG_SET_ORDER)){ 
                         foreach($links as $l){ $entries[] = $l[1]; } $post['hasi'] = $entries; } }
+                if(preg_match('/HASTAG\s*([^;]+);/u', $m[2], $ma)){
+                    $entries = []; if(preg_match_all('/([0-9]{14})/u',$ma[1],$links,PREG_SET_ORDER)){ 
+                        foreach($links as $l){ $entries[] = $l[1]; } $post['hastag'] = $entries; } }
                 if(preg_match('/FROM\s*([^;]+);/u', $m[2], $ma)){
                     $entries = []; if(preg_match_all('/([0-9]{14})/u',$ma[1],$links,PREG_SET_ORDER)){ 
                         foreach($links as $l){ $entries[] = $l[1]; } $post['merged_from'] = $entries; } }
@@ -1240,22 +1246,37 @@ blockquote{border-left:2px solid black;}
         return false;
     }
     
+    function GiveAllMergedPosts(&$po,&$arr){
+        if(isset($po['merged_from'])&&isset($po['merged_from'][0])) foreach($po['merged_from'] as $pm){
+            $mp=&$this->GetPost($pm); if(isset($mp)){ if(!in_array($mp['id'],$arr)) $arr[]=$mp['id']; $this->GiveAllMergedPosts($mp,$arr);}
+        }
+        if(isset($po['archive']) && isset($po['archive']['list'])){
+            foreach($po['archive']['list'] as &$ver){
+                if(isset($ver['merged_from'])&&isset($ver['merged_from'][0])) foreach($ver['merged_from'] as $pm){
+                    $mp=&$this->GetPost($pm); if(isset($mp)){ if(!in_array($mp['id'],$arr)) $arr[]=$mp['id']; $this->GiveAllMergedPosts($mp,$arr); } }
+            }
+        }
+    }
     function ThreadMakeWayback(&$th){
         if(!isset($th['arr'][0])) return;
         if(isset($this->WayBack)){
-            $remlist = []; $po = &$this->GetPost($th['arr'][0]['id'],true);
-            if(isset($po['merged_thread']) && isset($po['version']) && $po['version']>$this->WayBack){
-                $remlist = array_merge($remlist,$po['merged_thread'][0]);
-            }
-            $ah = &$this->GetArchiveHandle($po['id']);
-            if(isset($ah)) foreach($ah['list'] as &$ver){
-                if(!isset($ver['merged_thread'])) continue;
-                if((isset($ver['version']) && $ver['version'] > $this->WayBack) ||
-                    (!isset($ver['version']) && $ver['id'] > $this->WayBack)){
-                    $remlist = array_merge($remlist,$ver['merged_thread'][0]);
+            $remlist = [];
+            foreach($th['arr'] as &$pi){
+                $po = &$this->GetPost($pi['id'],true);
+                if(isset($po['merged_thread']) && isset($po['version']) && $po['version']>$this->WayBack){
+                    $remlist = array_unique(array_merge($remlist,$po['merged_thread'][0]));
+                }
+                $ah = &$this->GetArchiveHandle($po['id']);
+                if(isset($ah)) foreach(array_reverse($ah['list']) as &$ver){
+                    if(!isset($ver['merged_thread'])) continue;
+                    if((isset($ver['version']) && $ver['version'] > $this->WayBack) ||
+                        (!isset($ver['version']) && $ver['id'] > $this->WayBack)){
+                        $remlist = array_unique(array_merge($remlist,$ver['merged_thread'][0]));
+                    }
                 }
             }
             if(isset($remlist[0]) && isset($th['arr'][0])){
+                foreach($remlist as $rem){ $this->GiveAllMergedPosts($this->GetPost($rem,true),$remlist); }
                 foreach($th['arr'] as $key => $pr){
                     foreach($remlist as $rem){ if($pr['id'] == $rem) { unset($th['arr'][$key]); break; } } }
                 $new_th = []; $new_arr = [];
@@ -1268,7 +1289,7 @@ blockquote{border-left:2px solid black;}
     }
     function AddMergedPosts(&$p, &$array){
         if(isset($p['archive']) && isset($p['archive']['list'])){
-            foreach($p['archive']['list'] as &$ver){ 
+            foreach($p['archive']['list'] as &$ver){
                 if(isset($ver['merged_from'])&&isset($ver['merged_from'][0])) foreach($ver['merged_from'] as $po){
                     $mp=&$this->GetPost($po); if(isset($mp)){ $array[]=&$mp; $this->WaybackPosts[]=&$mp; $this->AddMergedPosts($mp, $array); } }
             }
@@ -1357,11 +1378,12 @@ blockquote{border-left:2px solid black;}
         return $this->GetMergedPost($tp);
     }
     
-    function &GetPost($id, $latest_only=false){
+    function &GetPost($id, $latest_only=false, $find_merged=false){
         if(!isset($id)) return $this->NULL_POST;
         $found=&$this->NULL_POST;
         if(isset($this->Posts[0])) foreach($this->Posts as &$p){
             if($p&& $p['id'] == $id) { $found = &$p; break; }
+            if($find_merged && isset($p['hastag'][0]) && in_array($id, $p['hastag'])){ $found = &$p; break; }
         }
         if($latest_only || !isset($this->WayBack)){ return $found; }
         else{
@@ -1382,7 +1404,8 @@ blockquote{border-left:2px solid black;}
                     $last_ver = &$ver;
                 } if(!isset($last_ver['merged_into'])) return $last_ver; else{
                     [$tp, $tver] = $last_ver['merged_into'];
-                    if($tver <= $this->WayBack) return $this->NULL_POST;
+                    if($tver <= $this->WayBack) {
+                        if($find_merged && $tp!=$id) return $this->GetPost($tp); return $this->NULL_POST; }
                     return $last_ver;
                 }
             }
@@ -1419,17 +1442,20 @@ blockquote{border-left:2px solid black;}
     function CacheArchiveOwnLinks(){
         if(isset($this->WayBack)) return;
         if(isset($this->Archive[0])) foreach($this->Archive as &$p){
-            $this->ConvertPost($p);
+            $this->ConvertPost($p); unset($p['hasp']); unset($p['hasi']); unset($p['hastag']);
             if(preg_match_all('/<a[^>]*href=[\'\"]\?post=([0-9]{14})[\'\"][^>]*>.*?<\/a>/u',$p['html'],$matches,PREG_SET_ORDER)){
                 foreach($matches as $m){
-                    if(!isset($p['hasp']))$p['hasp']=[];
-                    if(!in_array($m[1],$p['hasp'])){ $p['hasp'][]=$m[1]; }
+                    if(!isset($p['hasp']))$p['hasp']=[]; if(!in_array($m[1],$p['hasp'])){ $p['hasp'][]=$m[1]; }
+                }
+            }
+            if(preg_match_all('/\/\/([0-9]{14})/u', $p['content'],$matches,PREG_SET_ORDER)){
+                foreach($matches as $m){
+                    if(!isset($p['hastag']))$p['hastag']=[]; if(!in_array($m[2],$p['hastag'])){ $p['hastag'][]=$m[1]; }
                 }
             }
             if(preg_match_all('/!\[([^\]]*)\]\(images\/([0-9]{14,}\.(jpg|jpeg|png|gif))\)/u', $p['content'],$matches,PREG_SET_ORDER)){
                 foreach($matches as $m){
-                    if(!isset($p['hasi']))$p['hasi']=[];
-                    if(!in_array($m[2],$p['hasi'])){ $p['hasi'][]=$m[2]; }
+                    if(!isset($p['hasi']))$p['hasi']=[]; if(!in_array($m[2],$p['hasi'])){ $p['hasi'][]=$m[2]; }
                 }
             }
         }
@@ -1457,6 +1483,7 @@ blockquote{border-left:2px solid black;}
                     ((isset($p['merged_into']) && isset($p['merged_into'][0]))?("INTO {$p['merged_into'][0]}V{$p['merged_into'][1]}; "):"").
                     ((isset($p['hasp']) && isset($p['hasp'][0]))?("HASP ".implode(" ",$p['hasp'])."; "):"").
                     ((isset($p['hasi']) && isset($p['hasi'][0]))?("HASI ".implode(" ",$p['hasi'])."; "):"").
+                    ((isset($p['hastag']) && isset($p['hastag'][0]))?("HASTAG ".implode(" ",$p['hastag'])."; "):"").
                     ']';
                     
             if(isset($p['merged_thread'])){ $p['content']=""; }
@@ -1496,6 +1523,7 @@ blockquote{border-left:2px solid black;}
                     ((isset($p['prev']) && $p['prev'])?"PREV {$p['prev']}; ":"").
                     ((isset($p['refs']) && isset($p['refs'][0]))?("REFS ".implode(" ",$p['refs'])."; "):"").
                     ((isset($p['hasp']) && isset($p['hasp'][0]))?("HASP ".implode(" ",$p['hasp'])."; "):"").
+                    ((isset($p['hastag']) && isset($p['hastag'][0]))?("HASTAG ".implode(" ",$p['hastag'])."; "):"").
                     ((isset($p['hasi']) && isset($p['hasi'][0]))?("HASI ".implode(" ",$p['hasi'])."; "):"").
                     ']';
                     
@@ -1506,7 +1534,7 @@ blockquote{border-left:2px solid black;}
     function CachePostLinks(){
         if(isset($this->Posts) && isset($this->Posts[0]))foreach ($this->Posts as &$post){
             $this->ConvertPost($post);
-            unset($post['refs']);unset($post['hasp']);unset($post['hasi']);
+            unset($post['refs']);unset($post['hasp']);unset($post['hasi']);unset($post['hastag']);
         }else return;
         if(isset($this->Images) && isset($this->Images[0])) foreach ($this->Images as &$im){
             unset($im['refs']);
@@ -1519,6 +1547,11 @@ blockquote{border-left:2px solid black;}
                         if(!isset($ref['refs']))$ref['refs']=[]; if(!in_array($post['id'],$ref['refs']))$ref['refs'][]=$post['id'];
                     }
                     if(!isset($post['hasp']))$post['hasp']=[]; if(!in_array($m[1],$post['hasp']))$post['hasp'][]=$m[1];
+                }
+            }
+            if(preg_match_all('/\/\/([0-9]{14})/u', $post['content'],$matches,PREG_SET_ORDER)){
+                foreach($matches as $m){
+                    if(!isset($post['hastag']))$post['hastag']=[]; if(!in_array($m[1],$post['hastag']))$post['hastag'][]=$m[1];
                 }
             }
             if(preg_match_all('/!\[([^\]]*)\]\(images\/([0-9]{14,}\.(jpg|jpeg|png|gif))\)/u', $post['content'],$matches,PREG_SET_ORDER)){
@@ -1733,6 +1766,7 @@ blockquote{border-left:2px solid black;}
         $replacement = preg_replace("/{支付宝(\s+[^}]*?)?}/u","<span class='special_alipay'>支付宝$1</span>",$replacement);
         $replacement = preg_replace("/{PayPal(\s+[^}]*?)?}/ui",
             "<span class='special_paypal'>Pay<span class='special_paypal_inner'>Pal</span>$1</span>",$replacement);
+        $replacement = preg_replace("/\/\/([0-9]{14})/imu","<p class='wscroll' id='$1'>".$this->T("链接位置")."</p>",$replacement);
         $replacement = preg_replace_callback("/(```|`)([^`]*)(?1)/U",
                     function($matches){
                         $rep = preg_replace('/-@>/','->',$matches[0]);
@@ -2031,10 +2065,10 @@ blockquote{border-left:2px solid black;}
                 $this->NeedWriteImages = 1;
                 if($do_image_redirect) return 0;
             }
-            //if(isset($_GET['rewrite_styles'])){
+            if(isset($_GET['rewrite_styles'])){
                 $this->WriteStyles();
-            //    $redirect='?extras=true'; return 0;
-            //}
+                $redirect='?extras=true'; return 0;
+            }
             if(isset($_GET['regenerate_thumbnails'])){
                 $this->RegenerateThumbnails();
                 $redirect='?extras=true'; return 0;
@@ -2058,7 +2092,6 @@ blockquote{border-left:2px solid black;}
                              "$1$2$4 target='_blank'$5$6<sup>↗</sup>$7",$html);
         $html = preg_replace("/<p>\s*\@.*?<\/p>/mu","",$html);
         $html = preg_replace("/<p>\s*\{\s*INTERESTING\s+(.*?)\}\s*<\/p>/imu","",$html);
-        $html = preg_replace("/\/\/([0-9]{14})/imu","<span class='wscroll' id='$1'>".$this->T("链接位置")."</span>",$html);
         $images = [];
         $images_noclick = [];
         $html = preg_replace_callback(
@@ -2228,8 +2261,12 @@ blockquote{border-left:2px solid black;}
                 HideBackdrop();
             }
             function ToggleLeftSide(){if(in_center)ShowLeftSide();else ShowCenterSide();}
+            
+            function CssNumberID(id){ return "#\\3"+id.substr(0,1)+" "+id.substr(1); }
             function ScrollToPost(id){
-                if(!(post = document.querySelector("[data-post-id='"+id+"']"))) return;
+                post=null;
+                if(!(post = document.querySelector("[data-post-id='"+id+"']"))){
+                    if(!(post = document.querySelector(CssNumberID(id)))) return; } 
                 post.scrollIntoView({ behavior: 'smooth', block: 'start'});
             }
         <?php } ?>
@@ -2392,7 +2429,7 @@ blockquote{border-left:2px solid black;}
                     <a class='invert_a' href='<?=$this->GetRedirect().'&set_language=zh'?>' onclick='ShowWaitingBar()'>
                         汉语/<b>English</b></a>
                     <br class='hidden_on_desktop' />
-                    <span class='text_highlight'><a id='translate_button' target='_blank'>&nbsp;Google Translate&nbsp;</a></span></li>
+                    <a id='translate_button' target='_blank'>&nbsp;[Google Translate]&nbsp;</a></li>
             <?php } ?>
         </ul>
         </div>
@@ -2421,7 +2458,7 @@ blockquote{border-left:2px solid black;}
     function GenerateLinkedPosts($ht){
         $ht = preg_replace_callback('/<p>[\s]*<a[^>]*href=[\'\"]\?post=([0-9]{14})[\'\"][^>]*>(.*)<\/a>[\s]*<\/p>/u',
             function($m){
-                $rp = &$this->GetPost($m[1]);
+                $rp = &$this->GetPost($m[1], false, true);
                 $s="<div class='smaller block post ref_compact gray'>".
                     "<a href='?post=".$m[1]."' class='post_access invert_a smaller' onclick='ShowWaitingBar()'>→</a>".
                     "<div class='post_ref'><div class='smaller'>".$m[2]."</div>".
@@ -2434,7 +2471,7 @@ blockquote{border-left:2px solid black;}
         );
         $ht = preg_replace_callback('/<li>[\s]*<a[^>]*href=[\'\"]\?post=([0-9]{14})[\'\"][^>]*>PRODUCT\s+(.*)<\/a>[\s]*<\/li>/u',
             function($m){
-                $rp = &$this->GetPost($m[1]);
+                $rp = &$this->GetPost($m[1], false, true);
                 $s="<div class='product_ref block post ref_compact'><a href='?post=".$m[1]."' class='clean_a' onclick='ShowWaitingBar()'>".
                     (($rp!==NULL && $this->CanShowPost($rp))?$this->TranslatePostParts(
                                 $this->GenerateSinglePost($rp,true,false,false,true,$this->NULL_POST,true)):$this->T("未找到该引用。")).
@@ -2791,7 +2828,7 @@ blockquote{border-left:2px solid black;}
                     $mver = &$this->GetPost($pm); if(!isset($mver) && isset($mah)) $mver = &$mah['list'][sizeof($mah['list'])-1]; ?>
                     <ul><li><?=$this->T('话题')?> <a href='?post=<?=$mver['id']?>&history=1'><?=$this->GetPostTitle($mver);?></a> <?=$this->T('并入这里')?>
                         <span class='smaller gray'><?=sizeof($post['merged_thread'][0]);?> <?=$this->T('个帖子')?></span></li></ul>
-                <? } ?>
+                <?php } ?>
             </li><?php } ?>
             <?php if(isset($ah['list'][0])) foreach(array_reverse($ah['list']) as &$ver){ 
                 if(isset($this->WayBack) && $ver['version']>$this->WayBack) continue;
@@ -2804,7 +2841,7 @@ blockquote{border-left:2px solid black;}
                         if(!isset($mver) && isset($mah)) $mver = &$mah['list'][sizeof($mah['list'])-1]; ?>
                         <ul><li><?=$this->T('话题')?> <a href='?post=<?=$mver['id']?>&history=1'><?=$this->GetPostTitle($mver);?></a> <?=$this->T('并入这里')?>
                             <span class='smaller gray'> <?=sizeof($ver['merged_thread'][0]);?> <?=$this->T('个帖子')?> </span></li></ul>
-                    <? } if(isset($ver['merged_from'][0])){ ?><ul><?php foreach($ver['merged_from'] as $from){ 
+                    <?php } if(isset($ver['merged_from'][0])){ ?><ul><?php foreach($ver['merged_from'] as $from){ 
                         $fromah = &$this->GetArchiveHandle($from); if(!isset($fromah)) continue;
                         $ver = &$fromah['list'][sizeof($fromah['list'])-1];?>
                         <li><a href='?post=<?=$ver['id']?>&history=1'>
@@ -2826,7 +2863,7 @@ blockquote{border-left:2px solid black;}
                 $mver = &$this->GetPost($pm); if(!isset($mver) && isset($mah)) $mver = &$mah['list'][sizeof($mah['list'])-1]; ?>
                 <p><?=$this->T('话题')?> <a href='?post=<?=$mver['id']?>&history=1'><?=$this->GetPostTitle($mver)?></a> <?=$this->T('并入这里')?>
                     <br /><span class='smaller gray'> <?=sizeof($this_ver['merged_thread'][0]);?> <?=$this->T('个帖子')?> </span></p>
-            <? }else{ ?>
+            <?php }else{ ?>
                 <table class='diff_table'><thead>
                     <tr><td><?php if(!isset($last_ver)){ ?><?=$this->T('没有更旧的版本')?><?php }else{ ?>
                         <?=$this->T('上一个版本')?><br /><?=$this->ReadableTime($last_ver['version'])?><?php } ?></td>
@@ -3404,22 +3441,22 @@ blockquote{border-left:2px solid black;}
                 <div>
                     <?php if(isset($name)){ ?>
                         <div style='text-align:right;position:absolute;right:0;top:0;width:100%;' class='invert_a smaller hidden_on_print'>
-                            <a href='javascript:ShowDeleteMenu();'  class='smaller'><?=$this->T('删除相册')?></a><br />
+                            <a href='javascript:ShowDeleteMenu();'><?=$this->T('删除相册')?></a><br />
                             <?php if(isset($gal['featured']) && $gal['featured']!=false){ ?>
-                                <a href='?gallery=<?=$_GET['gallery']?>&gallery_set_featured=<?=$_GET['gallery']?>&value=false'
-                                    class='smaller'><?=$this->T('取消精选')?></a>
+                                <a href='?gallery=<?=$_GET['gallery']?>&gallery_set_featured=<?=$_GET['gallery']?>&value=false'>
+                                    <?=$this->T('取消精选')?></a>
                             <?php }else{ ?>
-                                <a href='?gallery=<?=$_GET['gallery']?>&gallery_set_featured=<?=$_GET['gallery']?>&value=true'
-                                    class='smaller'><?=$this->T('设为精选')?></a>
+                                <a href='?gallery=<?=$_GET['gallery']?>&gallery_set_featured=<?=$_GET['gallery']?>&value=true'>
+                                    <?=$this->T('设为精选')?></a>
                             <?php } ?><br />
                             <?php if(isset($gal['experimental']) && $gal['experimental']!=false){ ?>
-                                <a href='?gallery=<?=$_GET['gallery']?>&gallery_set_experimental=<?=$_GET['gallery']?>&value=false'
-                                    class='smaller'><?=$this->T('取消实验')?></a>
+                                <a href='?gallery=<?=$_GET['gallery']?>&gallery_set_experimental=<?=$_GET['gallery']?>&value=false'>
+                                    <?=$this->T('取消实验')?></a>
                             <?php }else{ ?>
-                                <a href='?gallery=<?=$_GET['gallery']?>&gallery_set_experimental=<?=$_GET['gallery']?>&value=true'
-                                    class='smaller'><?=$this->T('设为实验')?></a>
+                                <a href='?gallery=<?=$_GET['gallery']?>&gallery_set_experimental=<?=$_GET['gallery']?>&value=true'>
+                                    <?=$this->T('设为实验')?></a>
                             <?php } ?>
-                            <div class='pop_menu smaller invert_a' id='gallery_delete_menu' style='display:none;'>
+                            <div class='pop_menu invert_a' id='gallery_delete_menu' style='display:none;'>
                                 <div style='float:left;' class='gray'><?=$this->T('该操作不删除图片。')?></div>
                                 <a href='javascript:HidePopMenu();'>×</a>
                                 <hr />
@@ -3434,14 +3471,13 @@ blockquote{border-left:2px solid black;}
                             <a href='javascript:ShowGalleryEditMenu("<?=$name?>")'><?=$this->T('改名')?></a>
                         <?php } ?>
                             <a href='javascript:ShowGalleryEditMenu(null)'><?=$this->T('添加')?></a>
-                            <div class='pop_menu smaller invert_a' id='gallery_edit_menu' style='display:none;max-width:90%;'>
+                            <div class='pop_menu invert_a' id='gallery_edit_menu' style='display:none;max-width:90%;'>
                                 <form action="<?=$_SERVER['REQUEST_URI']?>&edit_gallery=true"
                                     method="post" style='display:none;' id='gallery_edit_form'></form>
                                 <a style='float:left;'><?=$this->T('相册名字：')?></a>
                                 <a href='javascript:HidePopMenu();'>×</a>
-                                <input type='text' form='gallery_edit_form' name='gallery_edit_new_name' id='gallery_edit_new_name'>
-                                <input type='text' form='gallery_edit_form' name='gallery_edit_old_name'
-                                    id='gallery_edit_old_name' style='display:none'>
+                                <input type='text' form='gallery_edit_form' name='gallery_edit_new_name' id='gallery_edit_new_name' style='width:10em;'>
+                                <input type='text' form='gallery_edit_form' name='gallery_edit_old_name' id='gallery_edit_old_name' style='display:none'>
                                 <input class='button' type='submit' form='gallery_edit_form'
                                     name='gallery_edit_confirm' id='gallery_edit_confirm' value='<?=$this->T('确认')?>'>
                             </div>
@@ -3472,14 +3508,13 @@ blockquote{border-left:2px solid black;}
             <p>&nbsp;</p>
             <div>
                 <?php $opened=0; $prev_year=""; if(isset($this->Images[0])) foreach($this->Images as $im){
+                    if(!$this->CanShowImage($im)){ continue; } 
+                    if($_GET['gallery']=='trash') $name='trash';
+                    if($_GET['gallery']!='main'){ if(!isset($im['galleries']) || !in_array($name, $im['galleries'])) continue;}
                     $year = substr($im['name'], 0, 4);
                     if($year!=$prev_year){
                         if($opened) { ?><div class='p_thumb' style='flex-grow:10000;box-shadow:none;height:0;'></div></div></div><?php } ?>
-                        <div><h2 class='sticky_title'><?=$year;?></h2><div class='p_row'><?php $prev_year=$year; $opened=1;
-                    }
-                    if($_GET['gallery']=='trash') $name='trash';
-                    if($_GET['gallery']!='main'){ if(!isset($im['galleries']) || !in_array($name, $im['galleries'])) continue;}
-                    if(!$this->CanShowImage($im)){ continue; } ?>
+                        <div><h2 class='sticky_title'><?=$year;?></h2><div class='p_row'><?php $prev_year=$year; $opened=1; } ?>
                     <div class='p_thumb'>
                         <?php if($this->LoggedIn){ ?>
                             <div class="post_menu_button _select_hook white" onclick='ToggleSelectImage(this, "<?=$im["name"]?>")'>●</div>
@@ -3487,9 +3522,8 @@ blockquote{border-left:2px solid black;}
                         <a href='<?=$im['file']?>' target='_blank' onclick='event.preventDefault();'><img src='<?=$im['thumb']?>' data-imgsrc='<?=$im["name"]?>'<?=isset($im['product'])?
                             'data-product="'.$im["product"].'"':""?>/></a>
                     </div>
-                <?php } ?>
-                <div class='p_thumb' style='flex-grow:10000;box-shadow:none;height:0;'></div>
-                </div>
+                <?php } if($opened) { ?>
+                <div class='p_thumb' style='flex-grow:10000;box-shadow:none;height:0;'></div></div><?php } ?>
             </div>
         </div>
         <?php if($this->LoggedIn){ ?>
@@ -3527,8 +3561,9 @@ blockquote{border-left:2px solid black;}
             function ShowGalleryEditMenu(old_name){
                 m = document.querySelector('#gallery_edit_menu');
                 old = document.querySelector('#gallery_edit_old_name');
+                newname = document.querySelector('#gallery_edit_new_name');
                 m.style.display='block';
-                if(old_name!=''){ old.value=old_name; }else{ old.value=''; }
+                if(old_name!=''){ old.value=old_name; newname.value=old.value; }else{ old.value=''; }
             }
             function ShowDeleteMenu(){
                 m=document.querySelector('#gallery_delete_menu');
