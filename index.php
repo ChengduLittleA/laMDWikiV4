@@ -465,7 +465,7 @@ box-shadow:0px 0px 10px rgb(0, 0, 0);}
 .pop_menu li{list-style:none;margin-left:0;}
 .pop_menu hr{border:2px solid rgba(0,0,0,0.1);}
 .toc{left:60%;width:40%;top:0;position:absolute;}
-.post_access{width:1.4rem;top:0;position:absolute;height:100%;text-align:center;font-weight:bold;border-right:2px solid transparent;}
+.post_access{width:1.4rem;top:0;position:absolute;height:100%;text-align:center;font-weight:bold;border-right:2px solid transparent;user-select:none;}
 .post_access:hover{background-color:%lightopbkg%;border-top-left-radius:0.3em;border-bottom-left-radius:0.3em;
 border-right:2px solid %black% !important;}
 .paa{width:1.4rem;min-width:1.4rem;}
@@ -1059,7 +1059,11 @@ blockquote{border-left:2px solid black;}
                     $last_valid=NULL;
                     foreach($a['list'] as &$ver){ $ver['archive']= &$a;
                         if(isset($ver['merged_thread'])){ $ver['content']=$last_valid; }
-                        else{ $last_valid = $ver['content']; } } }
+                        else{ $last_valid = $ver['content']; } } 
+                    if(isset($a['list'][0]['version'])&&$a['list'][0]['version']>$a['list'][0]['id']){ /* if early versions missing. */
+                        $origin=$a['list'][0]; $origin['version']=$origin['id']; array_unshift($a['list'], $origin);
+                    }
+                }
                 if(($p = &$this->GetPost($a['id'],true))!=NULL){
                     $p['archive'] = &$a;
                 }
@@ -1141,7 +1145,7 @@ blockquote{border-left:2px solid black;}
     function ReadPosts(){
         if ((!file_exists('la_config.md') || is_readable('la_config.md') == false) ||
             (!is_dir('posts') || is_readable('posts') == false) ||
-            (!is_dir('history') || is_readable('history') == false) ||
+            (!is_dir('archive') || is_readable('archive') == false) ||
             (!is_dir('images') || is_readable('images') == false) ||
             (!is_dir('styles') || is_readable('styles') == false)){
             $this->Install();
@@ -1180,6 +1184,10 @@ blockquote{border-left:2px solid black;}
                     if(!isset($ir['refs'])) $ir['refs']=[];
                     if(!in_array($p['id'],$ir['refs'])){ $ir['refs'][] = $p['id'];}
                 }
+            }
+            if(isset($p['hasp']) && isset($p['hasp'][0])) foreach($p['hasp'] as $t){ if(!preg_match("/[0-9]{14}/u",$t)) continue;
+                $pt=&$this->GetPost($t,false,true); if(isset($pt) && isset($pt['hastag']) && isset($pt['hastag'][0]) && in_array($t,$pt['hastag'])){
+                    if(!isset($pt['refs']))$pt['refs']=[];  $pt['refs'][]=$p['id']; }
             }
         }
     }
@@ -1561,6 +1569,11 @@ blockquote{border-left:2px solid black;}
                     }
                     if(!isset($post['hasi']))$post['hasi']=[]; if(!in_array($m[2],$post['hasi']))$post['hasi'][]=$m[2];
                 }
+            }
+        }foreach($this->Posts as &$post){
+            if(isset($post['hasp']) && isset($post['hasp'][0])) foreach($post['hasp'] as $t){ if(!preg_match("/[0-9]{14}/u",$t)) continue;
+                $pt=&$this->GetPost($t,false,true); if(isset($pt) && isset($pt['hastag']) && isset($pt['hastag'][0]) && in_array($t,$pt['hastag'])){
+                    if(!isset($pt['refs']))$pt['refs']=[]; $pt['refs'][]=$post['id']; }
             }
         }
     }
