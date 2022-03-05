@@ -174,4 +174,8 @@
 - 个帖子 | Posts
 - 前往该版本时间 | Wayback to this version
 - 链接位置 | Link position
+- 切换字体 | Toggle Font
+- 本地 | Local
+- 远程 | Remote
+- 回到当前日期 | Back to current time
 

@@ -46,6 +46,7 @@ class LA{
     protected $LoginTokens;
     protected $InExperimentalMode;
     protected $LanguageAppendix;
+    protected $UseRemoteFont;
     
     protected $Posts;
     protected $Threads; // [ keys: first last displayed count]
@@ -99,7 +100,7 @@ class LA{
         }
         return $str;
     }
-    function SwitchLanguage(){        
+    function SwitchLanguageAndFont(){        
         if(isset($_COOKIE['la_language'])){
             $this->LanguageAppendix = $_COOKIE['la_language'];
         }else{
@@ -109,6 +110,9 @@ class LA{
                 if(preg_match("/zh/i",$lang))$this->LanguageAppendix = 'zh';
                 else $this->LanguageAppendix = 'en';
             }
+        }
+        if(isset($_COOKIE['la_font'])){
+            $this->UseRemoteFont = ($_COOKIE['la_font']!='local');
         }
     }
     function SwitchWayBackMode(){        
@@ -385,7 +389,9 @@ select{font-size:inherit;}
 a,button,::file-selector-button{text-decoration:underline;color:%black%;}
 a:hover,.button:hover,::file-selector-button:hover{text-decoration:none;color:%gray%;}
 .button:disabled{background-color:%gray%;pointer-events:none;}
-header{position:sticky;top:0;background-color:%white%;z-index:10;padding-top:0.5em;max-height:100vh;overflow:auto;z-index:30;}
+header{position:sticky;top:0;background-color:%white%;z-index:10;padding-top:0.5em;max-height:100vh;z-index:30;}
+header::before{content:'';position:absolute;left:0;right:0;top:0;height:1.95em;box-shadow:-2em 0em 1em -1em inset %white%;pointer-events:none;}
+header>div{overflow:auto;white-space:nowrap;}
 .header_nav{display:inline;}
 header a,.left a,.footer a,.clean_a,.clean_a a{text-decoration:none;}
 header a:hover,.button:hover{color:%gray% !important;}
@@ -511,7 +517,7 @@ h1,h2,h3,h4,h5{scroll-margin:2.5em;}
 .ref_thumb .file_thumb{width:3em;height:3em;}
 .side_thumb li{margin:0.4em;display:inline-block;}
 .file_thumb{width:4em;height:4em;display:inline-block;line-height:0;vertical-align:middle;overflow:hidden;}
-.p_row{display:flex;flex-wrap:wrap;width:calc(100% + 0.25rem);}
+.p_row{display:flex;flex-wrap:wrap;width:100%;}
 .p_thumb{display:flex;flex-grow:1;height:6rem;margin-right:0.25rem;margin-bottom:0.25rem;overflow:hidden;position:relative;}
 .p_thumb img{object-fit:cover;max-height:100%;min-width:100%;}.p_thumb a{display:contents;}
 .ref_count,.p_thumb .post_menu_button{text-shadow: 0px 0px 10px rgb(0, 0, 0);}
@@ -543,7 +549,9 @@ no_pop{cursor:unset;}
 p{min-height:0.8em;}
 .bold,.bold *{font-weight:bold;}
 .footer_additional{display:inline-block;width:50%;vertical-align:text-top;white-space:normal;}
-.small_footer{background-color:%white%;padding-bottom:0.5em;overflow:auto;white-space:nowrap;position:sticky;bottom:0px;}
+.small_footer{background-color:%white%;padding-bottom:0.5em;position:sticky;bottom:0px;z-index:10;}
+.small_footer>div{overflow:auto;white-space:nowrap;}
+.small_footer::before{content:'';position:absolute;left:0;right:0;bottom:0;height:1.95em;box-shadow:-2em 0em 1em -1em inset %white%;pointer-events:none;}
 .top_post_hint{margin-left:1.5em;font-weight:bold;}
 .white{color:%white%;}
 .full_box{border:1px solid %black% !important;padding:0.3rem;overflow:auto;}
@@ -636,6 +644,8 @@ html{font-size:16px;}
 header ul{display:block;}
 header li{display:block;}
 header li::before{content:''}
+header::before{box-shadow:none;display:none;}
+.small_footer::before{box-shadow:none;display:none;}
 .left{position:relative;width:100%;position:relative;top:unset;height:unset;min-height:80vh;padding-right:0;display:block;}
 .center,.center_wide,.center_full{position:relative;left:0;top:0;width:100%;padding-left:0;display:block;}
 .center_wide .p_thumb{height:6rem;}
@@ -1540,9 +1550,12 @@ blockquote{border-left:2px solid black;}
     }
     
     function CachePostLinks(){
+        if(isset($this->WayBack)) return;
         if(isset($this->Posts) && isset($this->Posts[0]))foreach ($this->Posts as &$post){
             $this->ConvertPost($post);
             unset($post['refs']);unset($post['hasp']);unset($post['hasi']);unset($post['hastag']);
+            //discard lost old version
+            //if(!isset($post['archive']) && $this->DoneReadArchive && isset($post['version'])){ unset($post['version']); }
         }else return;
         if(isset($this->Images) && isset($this->Images[0])) foreach ($this->Images as &$im){
             unset($im['refs']);
@@ -1845,7 +1858,7 @@ blockquote{border-left:2px solid black;}
     }
     
     function WriteAsNecessary(){
-        if(!$this->LoggedIn){return;}
+        if(!$this->LoggedIn || isset($this->WayBack)){return;}
         if($this->NeedWritePosts){ $this->CachePostLinks(); $this->WritePosts(); }
         if($this->NeedWriteImages){ $this->WriteImages(); }
         if($this->NeedWriteArchive){ $this->WriteArchive(); }
@@ -1860,10 +1873,21 @@ blockquote{border-left:2px solid black;}
             setcookie('la_language',$_GET['set_language'],time()+3600*24*7); $_COOKIE['la_language'] = $_GET['set_language'];
             $redirect=$this->GetRedirect(); return 0;
         }
+        if(isset($_GET['toggle_font'])){ $use_font='local';
+            if(!isset($_COOKIE['la_font']) || $_COOKIE['la_font']!='remote') $use_font='remote';
+            setcookie('la_font',$use_font,time()+3600*24*7); $_COOKIE['la_font'] = $use_font;
+            $redirect=$this->GetRedirect(); return 0;
+        }
         if(isset($_GET['set_wayback'])){
             if($_GET['set_wayback']!='false'){
-                $wayback=$wayback = date('YmdHis');
-                if(preg_match('/[0-9]{14}/u', $_GET['set_wayback'])) $wayback = $_GET['set_wayback'];
+                $wayback= date('YmdHis');
+                if($_GET['set_wayback']=='post'){
+                    if(isset($_POST['wayback_year'])) $wayback=substr_replace($wayback,str_pad($_POST['wayback_year'],4,"0",STR_PAD_LEFT),0,4);
+                    if(isset($_POST['wayback_month'])) $wayback=substr_replace($wayback,str_pad($_POST['wayback_month'],2,"0",STR_PAD_LEFT),4,2);
+                    if(isset($_POST['wayback_day'])) $wayback=substr_replace($wayback,str_pad($_POST['wayback_day'],2,"0",STR_PAD_LEFT),6,2);
+                    if(isset($_POST['wayback_hour'])) $wayback=substr_replace($wayback,str_pad($_POST['wayback_hour'],2,"0",STR_PAD_LEFT),8,2);
+                    if(isset($_POST['wayback_minute'])) $wayback=substr_replace($wayback,str_pad($_POST['wayback_minute'],2,"0",STR_PAD_LEFT),10,2);
+                }else{ if(preg_match('/[0-9]{14}/u', $_GET['set_wayback'])) $wayback = $_GET['set_wayback']; }
                 setcookie('la_wayback',$wayback); $_COOKIE['la_wayback'] = $wayback;
             }else{
                 setcookie('la_wayback', null, -1); unset($_COOKIE['la_wayback']);
@@ -1887,21 +1911,35 @@ blockquote{border-left:2px solid black;}
         if(isset($_POST['search_content'])){
             $redirect='index.php?search='.$_POST['search_content'];return 0;
         }
-        if(isset($_GET['image_info'])){
-            $m=$_GET['image_info'];
+        if(isset($_GET['image_info']) || isset($_GET['show_image'])){
+            $m=isset($_GET['image_info'])?$_GET['image_info']:$_GET['show_image'];
+            $direct_return = !isset($_GET['show_image']);
             $this->ReadImages();
             $this->ReadPosts();
-            $this->SwitchWayBackMode(); if(isset($this->WayBack)){$this->ReadArchive();echo"a";}
+            $this->SwitchWayBackMode(); if(isset($this->WayBack)){$this->ReadArchive();}
             $im = &$this->FindImage($m);
             if($im==NULL || !isset($im['refs']) || !isset($im['refs'][0])){ echo "not_found"; exit; }
-            echo "<ref>".sizeof($im['refs'])."</ref>";
-            echo "<insert><ul>";
+            if($direct_return){
+                echo "<ref>".sizeof($im['refs'])."</ref>";
+                echo "<insert><ul>";
+            }else{ ob_start(); }
             foreach(array_reverse($im['refs']) as $ref){
                 $p = $this->GetPost($ref);
                 if(!$p || !$this->CanShowPost($p)) continue;
                 $this->MakeSinglePost($p, false, true, "post_preview", true, false, false, false, true);"</li>";
             }
-            echo "</ul></insert>";
+            if($direct_return){
+                echo "</ul></insert>";
+            }else{
+                $str = ob_get_clean();
+                $this->MakePageBegin();
+                $side = "";
+                if(isset($im['refs'])&&isset($im['refs'][0])){
+                    $side.="<span class='small'>".$this->T('该图片出现在')." ".sizeof($im['refs'])." ".$this->T('个帖子中')."</span>";
+                }else{$side.="<span class='smaller gray'>".$this->T('该图片未被引用')."</span>";}
+                $this->MakeImageOverlay($side."<ul>".$str."</ul>",$im['file']);
+                $this->MakePageEnd();
+            }
             exit;
         }
         if(isset($_GET['confirm_enter']) && $_GET['confirm_enter']!=false){
@@ -2078,10 +2116,10 @@ blockquote{border-left:2px solid black;}
                 $this->NeedWriteImages = 1;
                 if($do_image_redirect) return 0;
             }
-            if(isset($_GET['rewrite_styles'])){
+            //if(isset($_GET['rewrite_styles'])){
                 $this->WriteStyles();
-                $redirect='?extras=true'; return 0;
-            }
+            //    $redirect='?extras=true'; return 0;
+            //}
             if(isset($_GET['regenerate_thumbnails'])){
                 $this->RegenerateThumbnails();
                 $redirect='?extras=true'; return 0;
@@ -2119,14 +2157,14 @@ blockquote{border-left:2px solid black;}
                             $src = $im['thumb']; $orig_src=$im['file'];
                         }
                         if($this->InExperimentalMode){
-                            $click = "<a href='".$orig_src."' class='original_img' target='_blank'>".
+                            $click = "<a href='?show_image=".$im['name']."' class='original_img' target='_blank'>".
                                         $m[2].$orig_src.$m[7]."></a>";
                             return $click;
                         }else{
-                            $click = "<div class='imd'><a href='$orig_src' target='_blank' onclick='event.preventDefault();'>".
+                            $click = "<a href='?show_image={$im['name']}' target='_blank' onclick='event.preventDefault();'>".
                                 $m[2].($original?$orig_src:$src).$m[7]." data-imgsrc='".$m[5]."'".
                                 (isset($im['product'])?" data-product='".$im['product']."'":"").
-                                ($original?" class='original_img'":"")."></a></div>";
+                                ($original?" class='original_img'":"")."></a>";
                             $images_noclick[]=$m[2].$src.$m[7].">";
                             $ret = "";
                             if($keep) { $ret = $click; }
@@ -2137,7 +2175,7 @@ blockquote{border-left:2px solid black;}
                     },$html,-1,$count);
         $html = preg_replace('/<p>\s*<\/p>/u',"", $html); if($html==""){$html="<p>&nbsp;</p>";}
         if(sizeof($images)){
-            if(sizeof($images)==1){$html.= $images[0];}
+            if(sizeof($images)==1){$html.= "<div class='imd'>".$images[0]."</div>";}
             else{
                 $html.="<div class='p_row'>";
                 foreach($images as $img){
@@ -2202,15 +2240,22 @@ blockquote{border-left:2px solid black;}
         else $this->PageType = "main";
     }
     
-    function MakeHeader(&$p){?>
+    function MakePageBegin(){ ?>
         <!DOCTYPE html><html lang='zh-Hans-CN'>
         <head>
         <meta charset='utf-8'>
         <meta content="width=device-width, initial-scale=1" name="viewport">
         <title><?=$this->InExperimentalMode?$this->T($this->ExpTitle):$this->T($this->Title)?></title>
+        <?php if($this->UseRemoteFont){ ?><style>
+@font-face{font-family: "Noto Serif CJK SC";src:url("fonts/NotoSerifSC-Regular.otf") format("opentype");font-weight:normal;}
+@font-face{font-family: "Noto Serif CJK SC";src:url("fonts/NotoSerifSC-Bold.otf") format("opentype");font-weight:bold;}
+</style><?php } ?>
         <link href='styles/main.css' rel='stylesheet' type="text/css">
         </head>
         <div class='page'>
+    <?php }
+    function MakeHeader(&$p){ 
+        $this->MakePageBegin() ?>
         <script type='text/javascript'>
             function toggle_mobile_show(a){a.classList.toggle('hidden_on_mobile')}
             function ShowWaitingBar(){
@@ -2284,7 +2329,7 @@ blockquote{border-left:2px solid black;}
             }
         <?php } ?>
         </script>
-        <header>
+        <header><div>
         <?php if($this->InExperimentalMode){
             $this->MakeExpNavButtons($p);
         }else{
@@ -2299,37 +2344,24 @@ blockquote{border-left:2px solid black;}
                 <div class='wayback_close' onclick='event.stopPropagation()'><a href='<?=$this->GetRedirect()?>&set_wayback=false'>
                     <span class='hidden_on_mobile'><?=$this->T('退出')?></span>×&nbsp;</a></div>
                 <?=$this->T('正以过去的日期浏览')?></b><div id='wayback_config' class='wayback_expand hidden_on_mobile'>
-                    <select id="wayback_year" onchange="UpdateWayback()"><?php for($y=$this->YearBegin;$y<=$this->YearEnd;$y++){ ?>
+                    <select id="wayback_year" name="wayback_year" form="wayback_form"><?php for($y=$this->YearBegin;$y<=$this->YearEnd;$y++){ ?>
                         <option value="<?=$y?>"<?=$y==$year?" selected":""?>><?=$y?></option><?php } ?></select>
                     <br class='hidden_on_desktop' />
-                    <select id="wayback_month" onchange="UpdateWayback()"><?php for($y=1;$y<=12;$y++){ ?>
+                    <select id="wayback_month" name="wayback_month" form="wayback_form"><?php for($y=1;$y<=12;$y++){ ?>
                         <option value="<?=$y?>"<?=$y==$month?" selected":""?>><?=$y?></option><?php } ?></select>
-                    <select id="wayback_day" onchange="UpdateWayback()"><?php for($y=1;$y<=31;$y++){ ?>
+                    <select id="wayback_day" name="wayback_day" form="wayback_form"><?php for($y=1;$y<=31;$y++){ ?>
                         <option value="<?=$y?>"<?=$y==$day?" selected":""?>><?=$y?></option><?php } ?></select>
                     <br class='hidden_on_desktop' />
-                    <select id="wayback_hour" onchange="UpdateWayback()"><?php for($y=0;$y<=23;$y++){ ?>
+                    <select id="wayback_hour" name="wayback_hour" form="wayback_form"><?php for($y=0;$y<=23;$y++){ ?>
                         <option value="<?=$y?>"<?=$y==$hour?" selected":""?>><?=$y?></option><?php } ?></select>:
-                    <select id="wayback_minute" onchange="UpdateWayback()"><?php for($y=0;$y<=59;$y++){ ?>
+                    <select id="wayback_minute" name="wayback_minute" form="wayback_form"><?php for($y=0;$y<=59;$y++){ ?>
                         <option value="<?=$y?>"<?=$y==$minute?" selected":""?>><?=$y?></option><?php } ?></select>
                     <br class='hidden_on_desktop' />
-                    <a id='wayback_see' href='#'><?=$this->T('查看')?> →</a>
-            </div><script>
-            var wbyear=document.querySelector('#wayback_year');
-            var wbmonth=document.querySelector('#wayback_month');
-            var wbday=document.querySelector('#wayback_day');
-            var wbhour=document.querySelector('#wayback_hour');
-            var wbminute=document.querySelector('#wayback_minute');
-            var wbsee=document.querySelector('#wayback_see');
-            getCookie = function(name) { var match = document.cookie.match(new RegExp('(^| )' + name + '=([^;]+)'));
-              if (match) return match[2]; }
-            function UpdateWayback(){
-                str=getCookie("la_wayback");if(!str.match(/[0-9]{14}/g)){str="".padStart(14,"0");}
-                str = ""+wbyear.value.padStart(2,"0")+wbmonth.value.padStart(2,"0")+wbday.value.padStart(2,"0")
-                        +wbhour.value.padStart(2,"0")+wbminute.value.padStart(2,"0")+str.substr(12);
-                wbsee.href='<?=$this->GetRedirect()?>&set_wayback='+str;
-            }
-        </script></div><?php } ?>
-        </header>
+                    <form action="<?=$this->GetRedirect()?>&set_wayback=post" method="post" style='display:none;' id='wayback_form'></form>
+                    <input type='submit' style='font-weight:normal;border-bottom:none;' class='button clean_a' form='wayback_form'
+                        id='wayback_see' name='wayback_see' value="<?=$this->T('查看')?> →">
+            </div></div><?php } ?>
+        </div></header>
         <div id='waiting_bar' style='display:none;'></div>
         <script>ShowWaitingBar();window.addEventListener('load',(event) =>{HideWaitingBar();}); </script>
     <?php if(!$this->InExperimentalMode){ ?>
@@ -3532,7 +3564,7 @@ blockquote{border-left:2px solid black;}
                         <?php if($this->LoggedIn){ ?>
                             <div class="post_menu_button _select_hook white" onclick='ToggleSelectImage(this, "<?=$im["name"]?>")'>●</div>
                         <?php } ?>
-                        <a href='<?=$im['file']?>' target='_blank' onclick='event.preventDefault();'><img src='<?=$im['thumb']?>' data-imgsrc='<?=$im["name"]?>'<?=isset($im['product'])?
+                        <a href='?show_image=<?=$im['name']?>' target='_blank' onclick='event.preventDefault();'><img src='<?=$im['thumb']?>' data-imgsrc='<?=$im["name"]?>'<?=isset($im['product'])?
                             'data-product="'.$im["product"].'"':""?>/></a>
                     </div>
                 <?php } if($opened) { ?>
@@ -3810,16 +3842,75 @@ blockquote{border-left:2px solid black;}
     <?php    
     }
     
+    function MakeImageOverlay($side_info=null,$static_image=null){
+        $static=isset($side_info); ?>
+        <div id='big_image_overlay' <?=$static?"":"style='display:none'";?>>
+            <div class='big_image_box clean_a' onclick='HideBigImage(1)'>
+                <div style='display:flex;align-items:center;height:100%;justify-content:center;width:100%;'><?=$this->T('请稍候')?></div>
+                <img id='big_image' onload="HideWaitingBar();" <?=isset($static_image)?("src='".$static_image."'"):""?>/>
+            </div>
+            <div class='big_side_box' onclick='HideBigImage(1);'>
+            <?php if(!$static){ ?>
+            <div class='big_image_box clean_a image_nav' onclick='HideBigImage(1)'>
+                <div ><a id='prev_image' class='image_nav_prev img_btn_hidden' onclick="event.stopPropagation();">
+                    <div class='lr_buttons'>←</div></a></div>
+                <div ><a id='next_image' class='image_nav_next img_btn_hidden' onclick="event.stopPropagation();">
+                    <div class='lr_buttons'>→</div></a></div>
+            </div><?php } ?>
+                <div class='side_box_mobile_inner'>
+                    <?php if(!$static){ ?>
+                    <div class='inquiry_buttons img_btn_hidden' id='inquiry_buttons' onclick="event.stopPropagation();">
+                        <span style='display:none;' id='image_purchase' class='clean_a'>
+                            <b><a id='image_purchase_button' target="_blank">￥<?=$this->T('购买印刷品')?></a></b>
+                            <br class='hidden_on_desktop block_on_mobile' /></span>
+                        <b><a class='clean_a' id='image_download'><span id='download_processing'>↓</span><?=$this->T('下载')?></a></b>
+                        <?php if(isset($this->EMail) && $this->EMail!=""){ ?>
+                            &nbsp;<a class='clean_a' id='image_inquiry'>
+                            <b>@</b><?=$this->T('咨询')?></a>
+                        <?php } ?><hr class='hidden_on_desktop block_on_mobile' />
+                    </div>
+                    <div id='big_image_share' class='clean_a' onclick="event.stopPropagation();">
+                        <li><a id='big_share_copy'>⎘ <?=$this->T('复制链接')?></a></li>
+                        <hr />
+                    </div><?php } //static ?>
+                    <div id='big_image_info' onclick="event.stopPropagation();"><?=$static?$side_info:""?></div>
+                    <?php if($this->LoggedIn && !$static){ ?><div id='big_image_ops' onclick="event.stopPropagation();">
+                        <br /><?=$this->T('印刷品链接')?>
+                        <form action="" method="post" style='display:none;' id='image_ops_form'></form>
+                        <input type='text' id='image_ops_product_link' name='image_ops_product_link' form="image_ops_form" >
+                        <?=$this->T('重命名')?>
+                        <input type='text' id='image_edit_new_name' name='image_edit_new_name' form="image_ops_form" >
+                        <input class='button' form="image_ops_form" type="submit" name='image_button' value=<?=$this->T('保存')?> />
+                        <br /><br /><?=$this->T('替换图像')?>
+                        <form action="" method="post" style='display:none;' id='image_edit_form' enctype="multipart/form-data"></form>
+                        <input type="file" form='image_edit_form'
+                            id='big_image_upload' name='upload_file_name' accept="image/x-png,image/png,image/gif,image/jpeg"/><br />
+                        <input class='button' form="image_edit_form" type="submit" name='image_replace_button'
+                            value=<?=$this->T('执行')?> />
+                    </div><?php } ?>
+                </div>
+            </div>
+        </div>
+    <?php }
+    
+    function MakePageEnd(){?>
+        </div><!-- page -->
+        </body>
+        </html>
+    <?php }
     function MakeFooter(){?>
-        <div class='small_footer'>
+        <div class='small_footer'><div>
             <hr />
             <b><?=$this->T($this->Title)?></b>
             <span onclick='event.stopPropagation()'
                 ondblclick='javascript:window.location.href="index.php?settings=true"'>©</span><?=$this->T($this->DisplayName)?>
-            <?php if(!isset($this->WayBack)){ ?><div class='wayback_link clean_a invert_a'>
-                <a class='hidden_on_print' href='<?=$this->GetRedirect()?>&set_wayback=true'><?=$this->T('以过去的日期浏览')?></a></div>
-            <?php } ?>
-        </div>
+            <div class='wayback_link clean_a invert_a hidden_on_print'><?php if(!isset($this->WayBack)){ ?>
+                - <a href='<?=$this->GetRedirect()?>&set_wayback=true'><?=$this->T('以过去的日期浏览')?></a>
+            <?php }else{ ?><a href='<?=$this->GetRedirect()?>&set_wayback=false'><?=$this->T('回到当前日期')?></a><?php } ?>
+            <br class='hidden_on_desktop' /> - <a href='<?=$this->GetRedirect()?>&toggle_font=true'>
+                <?=$this->T('切换字体')?>: <?=$this->T($this->UseRemoteFont?"远程":"本地");?></a>
+            </div>
+        </div></div>
         <div class='footer'>
             <div style='white-space:nowrap;'>
                 <div class='footer_additional'>
@@ -3839,55 +3930,7 @@ blockquote{border-left:2px solid black;}
             ondrop="_dropHandler(event);" ondragover="_dragOverHandler(event);">
             <h2 style='width:100%;'><?=$this->T('上传到这里')?></h2>
         </div>
-        <div id='big_image_overlay' style='display:none'>
-            <div class='big_image_box clean_a' onclick='HideBigImage(1)'>
-                <div style='display:flex;align-items:center;height:100%;justify-content:center;width:100%;'><?=$this->T('请稍候')?></div>
-                <img id='big_image' onload="HideWaitingBar();"/>
-            </div>
-            <div class='big_side_box' onclick='HideBigImage(1);'>
-            <div class='big_image_box clean_a image_nav' onclick='HideBigImage(1)'>
-                <div ><a id='prev_image' class='image_nav_prev img_btn_hidden' onclick="event.stopPropagation();">
-                    <div class='lr_buttons'>←</div></a></div>
-                <div ><a id='next_image' class='image_nav_next img_btn_hidden' onclick="event.stopPropagation();">
-                    <div class='lr_buttons'>→</div></a></div>
-            </div>
-                <div class='side_box_mobile_inner'>
-                    <div class='inquiry_buttons img_btn_hidden' id='inquiry_buttons' onclick="event.stopPropagation();">
-                        <span style='display:none;' id='image_purchase' class='clean_a'>
-                            <b><a id='image_purchase_button' target="_blank">￥<?=$this->T('购买印刷品')?></a></b>
-                            <br class='hidden_on_desktop block_on_mobile' /></span>
-                        <b><a class='clean_a' id='image_download'><span id='download_processing'>↓</span><?=$this->T('下载')?></a></b>
-                        <?php if(isset($this->EMail) && $this->EMail!=""){ ?>
-                            &nbsp;<a class='clean_a' id='image_inquiry'>
-                            <b>@</b><?=$this->T('咨询')?></a>
-                        <?php } ?><hr class='hidden_on_desktop block_on_mobile' />
-                    </div>
-                    <div id='big_image_share' class='clean_a' onclick="event.stopPropagation();">
-                        <li><a id='big_share_copy'>⎘ <?=$this->T('复制链接')?></a></li>
-                        <hr />
-                    </div>
-                    <div id='big_image_info' onclick="event.stopPropagation();"></div>
-                    <?php if($this->LoggedIn){ ?><div id='big_image_ops' onclick="event.stopPropagation();">
-                        <br /><?=$this->T('印刷品链接')?>
-                        <form action="" method="post" style='display:none;' id='image_ops_form'></form>
-                        <input type='text' id='image_ops_product_link' name='image_ops_product_link' form="image_ops_form" >
-                        <?=$this->T('重命名')?>
-                        <input type='text' id='image_edit_new_name' name='image_edit_new_name' form="image_ops_form" >
-                        <input class='button' form="image_ops_form" type="submit" name='image_button' value=<?=$this->T('保存')?> />
-                        <br /><br /><?=$this->T('替换图像')?>
-                        <form action="" method="post" style='display:none;' id='image_edit_form' enctype="multipart/form-data"></form>
-                        <input type="file" form='image_edit_form'
-                            id='big_image_upload' name='upload_file_name' accept="image/x-png,image/png,image/gif,image/jpeg"/><br />
-                        <input class='button' form="image_edit_form" type="submit" name='image_replace_button'
-                            value=<?=$this->T('执行')?> />
-                    </div><?php } ?>
-                </div>
-            </div>
-        </div>
-        
-        </div><!-- page -->
-        </body>
-        </html>
+        <?php $this->MakeImageOverlay(); $this->MakePageEnd(); ?>
         <script>
             <?=$this->ExtraScripts?>
             if(back = document.getElementById('button_back')){
@@ -4401,7 +4444,7 @@ $la->WriteAsNecessary();
 
 $la->DoIdentiyExperimental();
 
-$la->SwitchLanguage();
+$la->SwitchLanguageAndFont();
 $la->SwitchWayBackMode();
 
 if($err){
