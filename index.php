@@ -425,7 +425,9 @@ thead{box-shadow:inset 0 -1px 0 0px %black%;position:sticky;top:2rem;background-
 .interesting_tbody .post_access{padding-top:0;}
 .interesting_tbody .post_menu_button{top:0;opacity:0;}
 .interesting_tbody td>img,.interesting_tbody td>.imd{position:absolute;left:1.4em;z-index:-1;height:1em;width:20em;
-display:block;top:0.2em;object-fit:cover;max-width:calc(100% - 1.4em) !important;overflow:hidden;}
+display:flex;top:0.2em;object-fit:cover;max-width:calc(100% - 1.4em) !important;overflow:hidden;}
+.interesting_tbody td>.imd>a{display:flex;}
+.interesting_tbody img{object-fit:cover;width:100%;}
 .interesting_tbody .p_row{display:flex;position:absolute;left:1.4em;top:0.25em;z-index:-1;flex-wrap:nowrap;max-width:calc(100% - 1.4em);}
 .interesting_tbody .p_thumb{height:1em;}
 .interesting_tbody .p_thumb img{max-height:10rem !important;max-width:20rem !important;}
@@ -535,7 +537,7 @@ background:linear-gradient(to right, rgba(0,0,0,0), rgb(1, 1, 1));transition:bac
 .big_side_box a:hover{color:%gray%;}
 #dropping_background{background-color:rgba(0,0,0,0.4);position:fixed;top:0;right:0;bottom:0;left:0;z-index:100;text-align:center;
 box-shadow:0px 0px 500px black inset;display:flex;align-items:center;}
-img{cursor:pointer;max-height:100%;max-width:100%;}
+img{cursor:pointer;max-height:100%;max-width:100%;vertical-align:middle;}
 .post img{max-height:min(70vh, 20rem);max-width:min(100%, 20rem);}
 .post > a > img{display:block;margin:0.3em auto;}
 .post .original_img{max-width:100%;display:inline-block;vertical-align:middle;
@@ -694,6 +696,8 @@ table img{max-width:30vw !important;}
 }
 
 @media print{
+header::before{box-shadow:none;display:none;}
+.small_footer::before{box-shadow:none;display:none;}
 body,footer,header,.small_footer,a,.clean_a,.invert_a,.clean_a a,.invert_a a{background:none;color:black;}
 .post *,.post_dummy *{margin-bottom:0em}
 .p_row,.post table,.post_width>img,.post_width_big>img,.post_ref>img,.post_ref>.original_img,
@@ -1468,7 +1472,7 @@ blockquote{border-left:2px solid black;}
             }
             if(preg_match_all('/\/\/([0-9]{14})/u', $p['content'],$matches,PREG_SET_ORDER)){
                 foreach($matches as $m){
-                    if(!isset($p['hastag']))$p['hastag']=[]; if(!in_array($m[2],$p['hastag'])){ $p['hastag'][]=$m[1]; }
+                    if(!isset($p['hastag']))$p['hastag']=[]; if(!in_array($m[1],$p['hastag'])){ $p['hastag'][]=$m[1]; }
                 }
             }
             if(preg_match_all('/!\[([^\]]*)\]\(images\/([0-9]{14,}\.(jpg|jpeg|png|gif))\)/u', $p['content'],$matches,PREG_SET_ORDER)){
@@ -2116,10 +2120,10 @@ blockquote{border-left:2px solid black;}
                 $this->NeedWriteImages = 1;
                 if($do_image_redirect) return 0;
             }
-            //if(isset($_GET['rewrite_styles'])){
+            if(isset($_GET['rewrite_styles'])){
                 $this->WriteStyles();
-            //    $redirect='?extras=true'; return 0;
-            //}
+                $redirect='?extras=true'; return 0;
+            }
             if(isset($_GET['regenerate_thumbnails'])){
                 $this->RegenerateThumbnails();
                 $redirect='?extras=true'; return 0;
@@ -2157,14 +2161,14 @@ blockquote{border-left:2px solid black;}
                             $src = $im['thumb']; $orig_src=$im['file'];
                         }
                         if($this->InExperimentalMode){
-                            $click = "<a href='?show_image=".$im['name']."' class='original_img' target='_blank'>".
-                                        $m[2].$orig_src.$m[7]."></a>";
+                            $click = "<div class='imd'><a href='?show_image=".$im['name']."' class='original_img' target='_blank'>".
+                                        $m[2].$orig_src.$m[7]."></a></div>";
                             return $click;
-                        }else{
-                            $click = "<a href='?show_image={$im['name']}' target='_blank' onclick='event.preventDefault();'>".
+                        }else{ $click =
+                             "<div class='imd'><a href='?show_image={$im['name']}' target='_blank' onclick='event.preventDefault();'>".
                                 $m[2].($original?$orig_src:$src).$m[7]." data-imgsrc='".$m[5]."'".
                                 (isset($im['product'])?" data-product='".$im['product']."'":"").
-                                ($original?" class='original_img'":"")."></a>";
+                                ($original?" class='original_img'":"")."></a></div>";
                             $images_noclick[]=$m[2].$src.$m[7].">";
                             $ret = "";
                             if($keep) { $ret = $click; }
@@ -2175,7 +2179,7 @@ blockquote{border-left:2px solid black;}
                     },$html,-1,$count);
         $html = preg_replace('/<p>\s*<\/p>/u',"", $html); if($html==""){$html="<p>&nbsp;</p>";}
         if(sizeof($images)){
-            if(sizeof($images)==1){$html.= "<div class='imd'>".$images[0]."</div>";}
+            if(sizeof($images)==1){$html.= $images[0]; }
             else{
                 $html.="<div class='p_row'>";
                 foreach($images as $img){
@@ -2429,20 +2433,20 @@ blockquote{border-left:2px solid black;}
         return $html;
     }
     
-    function MakeNavButtons(&$p){?>
+    function MakeNavButtons(&$p){ $interesting=$this->IsInterestingPost($p); ?>
         <a href='index.php' class='clean_a hidden_on_mobile' onclick='ShowWaitingBar()'><b><?=$this->T($this->Title)?></b></a>
         <b><a class='hidden_on_desktop'
             href='javascript:toggle_mobile_show(document.getElementById("mobile_nav"))'><?=$this->T($this->ShortTitle)?>...</a></b> 
         <div class='header_nav'>
         <?php if($this->PageType=='post'){ ?>
             <div style='float:right;' class='hidden_on_print'>
-                <?php if(isset($p) && isset($p['refs']) && isset($p['refs'][0])){ ?>
+                <?php if(!$interesting && isset($p) && isset($p['refs']) && isset($p['refs'][0])){ ?>
                     <span class='hidden_on_desktop'><a id='button_ref' href='javascript:ToggleLeftSide();'>
                         <?=$this->T('链接')?>(<?=sizeof($p['refs'])?>)</a></span>
-                <?php } ?>
+                <?php }  if(!$interesting){ ?>
                 <span class='hidden_on_wide hidden_on_print'>
-                    <a id='button_toc'
-                        href='javascript:ShowRightSide(true,document.querySelector("#div_right"));'><?=$this->T('目录')?></a></span></div>
+                    <a id='button_toc' href='javascript:ShowRightSide(true,document.querySelector("#div_right"));'>
+                    <?=$this->T('目录')?></a></span><?php } ?></div>
         <?php }else if($this->PageType=='history' && isset($_GET['version'])){ ?>
             <div style='float:right;' class='hidden_on_print'>
                     <span class='hidden_on_desktop'><a id='button_ref' href='javascript:ToggleLeftSide();'>
@@ -3034,6 +3038,14 @@ blockquote{border-left:2px solid black;}
                 <a class='gray clean_a' href='?post=<?=$th['first']['id']?>'>→</a></h2>
             <ul><li class='post post_width_big' data-post-id='<?=$th['first']['id']?>'>
                 <div class='post_menu_button _menu_hook' onclick='ShowPostMenu(this.parentNode);'>+</div><?=$this->TranslatePostParts($ht)?>
+                <?php if(isset($th['first']['refs'][0])){ ?><p class='smaller'><?=$this->T('引用')?>: </p><ul class='smaller'>
+                    <?php foreach($th['first']['refs'] as $ref){
+                        $po = $this->GetPost($ref);
+                        if(isset($post['mark_value']) && $post['mark_value']==5){ $count_product++; continue; }
+                        if(!$this->CanShowPost($po)){ continue; }
+                        echo "<li><a href='?post=".$po['id']."'>".$this->GetPostTitle($po)."</a></li>";
+                    } ?>
+                </ul><?php } ?>
                 <?php if($this->LoggedIn && (!$this->InExperimentalMode)){ ?>
                     <div class='post_width_big hidden_on_print'><br />
                         <?php $this->MakePostingFields($th['last']['id'], true);?><br />
@@ -3066,7 +3078,7 @@ blockquote{border-left:2px solid black;}
                             $po = $this->GetPost($ref);
                             if(isset($post['mark_value']) && $post['mark_value']==5){ $count_product++; continue; }
                             if(!$this->CanShowPost($po)){ continue; }
-                            echo "<li><a href='?post=".$po['id']."'>".$this->GetPostTitle($po)."</li>";
+                            echo "<li><a href='?post=".$po['id']."'>".$this->GetPostTitle($po)."</a></li>";
                         } ?>
                     </ul></td></tr><?php } ?>
                 <?php } ?>
@@ -3392,7 +3404,7 @@ blockquote{border-left:2px solid black;}
               bkg=document.querySelector('#dropping_background');
               bkg.style.display="none";
               console.log('File(s) dropped');
-              ev.preventDefault();
+              ev.preventDefault();ev.stopPropagation();
               if (ev.dataTransfer && ev.dataTransfer.items) {
                 for (var i = 0; i < ev.dataTransfer.items.length; i++) {
                   if (ev.dataTransfer.items[i].kind === 'file') {
@@ -4127,7 +4139,7 @@ blockquote{border-left:2px solid black;}
                     d.innerHTML = p.dataset.markDelete?"<?=$this->T('恢复')?>":"<?=$this->T('删除')?>";
                     menu.querySelector('#mark_details').dataset.id=id;
                     drename_input.value=id;
-                    drename_form.action="<?=$_SERVER['REQUEST_URI'];?>"+"&rename_post="+id;
+                    drename_form.action="<?=$this->GetRedirect()?>"+"&rename_post="+id;
                 <?php } ?>
                 
                 title = document.title;
