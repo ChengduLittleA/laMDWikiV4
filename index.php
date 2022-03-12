@@ -24,7 +24,8 @@ class LA{
     protected $SpecialFooter;
     protected $SpecialFooter2;
     protected $SpecialPinned;
-    protected $DefaultGallery; 
+    protected $DefaultGallery;
+    protected $SelfAuthPath;
     protected $ExpHost;
     protected $ExpTitle;
     protected $ExpShortTitle;
@@ -183,7 +184,8 @@ class LA{
     }
     
     function WriteTokens(){
-        $tf = fopen('la_tokens.md','w');
+        $tf = fopen('la_tokens.php','w');
+        fwrite($tf,'<?php header("Location:index.php"); exit; ?>'.PHP_EOL.PHP_EOL);
         if(isset($this->LoginTokens) && sizeof($this->LoginTokens)) {
              foreach($this->LoginTokens as $t){
                 fwrite($tf,'- '.$t.PHP_EOL);
@@ -198,7 +200,8 @@ class LA{
         if(!isset($this->Admin)) $this->Admin = 'admin';
         if(!isset($this->DisplayName)) $this->DisplayName = $this->T('管理员');
         if(!isset($this->Password)) $this->Password = password_hash('Admin', PASSWORD_DEFAULT).PHP_EOL;
-        $conf = fopen('la_config.md','w');
+        $conf = fopen('la_config.php','w');
+        fwrite($conf,'<?php header("Location:index.php"); exit; ?> '.PHP_EOL.PHP_EOL);
         fwrite($conf,'- Title = '.$this->Title.PHP_EOL);
         fwrite($conf,'- ShortTitle = '.$this->ShortTitle.PHP_EOL);
         fwrite($conf,'- Admin = '.$this->Admin.PHP_EOL);
@@ -210,6 +213,7 @@ class LA{
         fwrite($conf,'- SpecialFooter2 = '.$this->SpecialFooter2.PHP_EOL);
         fwrite($conf,'- SpecialPinned = '.$this->SpecialPinned.PHP_EOL);
         fwrite($conf,'- DefaultGallery = '.$this->DefaultGallery.PHP_EOL);
+        fwrite($conf,'- SelfAuthPath = '.$this->SelfAuthPath.PHP_EOL);
         fwrite($conf,'- CommentEnabled = '.($this->CommentEnabled?"True":"False").PHP_EOL);
         fwrite($conf,'- ExpHost = '.$this->ExpHost.PHP_EOL);
         fwrite($conf,'- ExpTitle = '.$this->ExpTitle.PHP_EOL);
@@ -226,7 +230,7 @@ class LA{
     }
     
     function Install(){
-        if(!file_exists('la_config.md')){
+        if(!file_exists('la_config.php')){
             $this->WriteConfig();
         }
         if(!is_dir('posts')) mkdir('posts');
@@ -239,34 +243,26 @@ class LA{
         $this->WriteHTACCESS();
     }
     
-    function ReadConfig(){
-        if(!file_exists('la_config.md')){
-            $this->Install();
+    function ReadFromExistingConfig(){
+        $f=null;
+        if(file_exists('la_config.php')) $f='la_config.php';
+        else if(file_exists('la_config.md')) $f='la_config.md';
+        if(!isset($f)) return;
+        $c = file_get_contents($f);
+        if(preg_match_all('/-\s*(\S+)\s*=\s*(\S+)\s*$/um', $c, $ma, PREG_SET_ORDER)) foreach($ma as $m){
+            $str = $m[1];
+            $this->$str = $m[2];
         }
-        $c = file_get_contents('la_config.md');
-        if(preg_match('/-\s*Title\s*=\s*(\S+)\s*$/um', $c, $m)) $this->Title = $m[1]; else $this->Title=$this->T("那么的维基");
-        if(preg_match('/-\s*ShortTitle\s*=\s*(\S+)\s*$/um', $c, $m)) $this->ShortTitle = $m[1]; else $this->ShortTitle=$this->T("基");
-        if(preg_match('/-\s*Admin\s*=\s*(\S+)\s*$/um', $c, $m)) $this->Admin = $m[1];
-        if(preg_match('/-\s*Password\s*=\s*(\S+)\s*$/um', $c, $m)) $this->Password = $m[1];
-        if(preg_match('/-\s*DisplayName\s*=\s*(\S+)\s*$/um', $c, $m)) $this->DisplayName = $m[1];
-        if(preg_match('/-\s*EMail\s*=\s*(\S+)\s*$/um', $c, $m)) $this->EMail = $m[1];
-        if(preg_match('/-\s*SpecialNavigation\s*=\s*(\S+)\s*$/um', $c, $m)) $this->SpecialNavigation = $m[1];
-        if(preg_match('/-\s*SpecialFooter\s*=\s*(\S+)\s*$/um', $c, $m)) $this->SpecialFooter = $m[1];
-        if(preg_match('/-\s*SpecialFooter2\s*=\s*(\S+)\s*$/um', $c, $m)) $this->SpecialFooter2 = $m[1];
-        if(preg_match('/-\s*SpecialPinned\s*=\s*(\S+)\s*$/um', $c, $m)) $this->SpecialPinned = $m[1];
-        if(preg_match('/-\s*DefaultGallery\s*=\s*(\S+)\s*$/um', $c, $m)) $this->DefaultGallery = $m[1];
-        if(preg_match('/-\s*CommentEnabled\s*=\s*(\S+)\s*$/um', $c, $m)) $this->CommentEnabled = ($m[1]=="True");
-        if(preg_match('/-\s*ExpHost\s*=\s*(\S+)\s*$/um', $c, $m)) $this->ExpHost = $m[1];
-        if(preg_match('/-\s*ExpTitle\s*=\s*(\S+)\s*$/um', $c, $m)) $this->ExpTitle = $m[1]; else $this->ExpTitle=$this->T("实验访问");
-        if(preg_match('/-\s*ExpShortTitle\s*=\s*(\S+)\s*$/um', $c, $m)) $this->ExpShortTitle = $m[1]; else 
-                                                                        $this->ExpShortTitle = $this->ExpTitle;
-        if(preg_match('/-\s*ExpCaution\s*=\s*(\S+)\s*$/um', $c, $m)) $this->ExpCaution = $m[1]; 
-        if(preg_match('/-\s*ExpIndex\s*=\s*(\S+)\s*$/um', $c, $m)) $this->ExpIndex = $m[1]; 
-        if(preg_match('/-\s*ExpNavigation\s*=\s*(\S+)\s*$/um', $c, $m)) $this->ExpNavigation = $m[1];
-        if(preg_match('/-\s*ExpFooter\s*=\s*(\S+)\s*$/um', $c, $m)) $this->ExpFooter = $m[1];
+    }
+    
+    function ReadConfig(){
+        $this->ReadFromExistingConfig();
         if(file_exists('la_redirect.md')){
             $c = file_get_contents('la_redirect.md');
             $this->BuildRedirectConfig($c);
+        }
+        if(!file_exists('la_config.php')){
+            $this->Install();
         }
         $this->Translations=[];
         if(file_exists("translations.md")){
@@ -284,8 +280,8 @@ class LA{
             }
         }
         $this->LoginTokens=[];
-        if(file_exists('la_tokens.md')){
-            $c = file_get_contents('la_tokens.md');
+        if(file_exists('la_tokens.php')){
+            $c = file_get_contents('la_tokens.php');
             if(preg_match_all('/-\s+(\S.*)\s*$/um',$c, $ma, PREG_SET_ORDER)) foreach($ma as $m){
                 $this->LoginTokens[] = $m[1];
             }
@@ -614,8 +610,10 @@ animation:anim_loading 1s linear infinite;}
 .wscroll{scroll-margin:3.5em;padding-left:0.3em;display:none;font-weight:bold;font-size:0.75em;box-shadow: 13em 0em 4em -8em inset %gray%;color:%white%;}
 .wscroll:target{display:block;} .post_ref .wscroll{display:none !important;}
 .wayback_link{display:inline;}
+.imd{object-fit:cover;width:100%;}
+.center_exp .imd{width:60%;}
 
-@media screen and (max-width:1000px){
+@media screen and (max-width:1000px) and (min-width:666px){
 .left{width:35%;}
 .center,.center_wide{width:65%;}
 .center_wide .p_thumb{height:8rem;}
@@ -633,9 +631,9 @@ animation:anim_loading 1s linear infinite;}
 .big_side_box{width:35%;}
 .big_image_box{width:65%;}
 .inquiry_buttons{right:35%;}
-.table_top{left:calc(-50% - 1.7em);width: calc(154% + 0.5em);}
-.center_exp{display:block;width:100%;margin:0 auto;overflow:none;padding-bottom:1em;}
-.center_exp .post{overflow:auto;}
+.table_top{left:calc(-50% - 1.7em);width:calc(154% + 0.5em);}
+.post_dummy > *{width:80%;max-width:55rem;}
+.center_exp .imd{width:80%;}
 }
 
 @media screen and (max-width:666px){
@@ -693,6 +691,9 @@ table img{max-width:30vw !important;}
 .interesting_tbody{background:linear-gradient(90deg, %white%ff, %white%88 10em);}
 .wayback_expand{display:block;text-align:center;}
 .wayback_link{display:block;}
+.center_exp{display:block;width:100%;margin:0 auto;padding-bottom:1em;}
+.center_exp .post{overflow:auto;}
+.center_exp .imd{width:100%;}
 }
 
 @media print{
@@ -710,7 +711,7 @@ table{border-bottom:2px solid black;border-top:2px solid black;}
 table img{max-width:5em;max-width:8em !important;max-height:8em !important;}
 thead{box-shadow:inset 0 -1px 0 0px black;background:none;}
 .post_width,.post_width_big{overflow:clip;left:0;width:100%;padding-left:0em;}
-.post h1,{margin-top:0.5rem;}
+.post h1{margin-top:0.5rem;}
 .post h2{font-size:1.8em;margin:2.5em auto 0;}.list h2,.opt_compact h2,.ref_compact h2{margin:0 !important;}
 .post h3{font-size:1.5em;margin:1.5em auto 0;}.list h3,.opt_compact h3,.ref_compact h4{margin:0 !important;}
 .post h4{font-size:1.1em;margin:0.5em auto 0;}.list h4,.opt_compact h3,.ref_compact h4{margin:0 !important;}
@@ -748,6 +749,7 @@ blockquote{border-left:2px solid black;}
 .interesting_tbody{background:none;}
 .interesting_tbody img{display:none !important;}
 .imd{margin-top:0.5em;margin-bottom:0.5em;line-height:0px;}
+.p_row .imd{margin-top:0em;margin-bottom:0em;}
 }
 ";
         $this->style=preg_replace('/%white%/','#231a0d',$this->style);
@@ -1158,6 +1160,7 @@ blockquote{border-left:2px solid black;}
     
     function ReadPosts(){
         if ((!file_exists('la_config.md') || is_readable('la_config.md') == false) ||
+            (!file_exists('la_config.php') || is_readable('la_config.php') == false) ||
             (!is_dir('posts') || is_readable('posts') == false) ||
             (!is_dir('archive') || is_readable('archive') == false) ||
             (!is_dir('images') || is_readable('images') == false) ||
@@ -1963,6 +1966,7 @@ blockquote{border-left:2px solid black;}
                 if(isset($_POST['settings_special_footer2'])) $this->SpecialFooter2=$_POST['settings_special_footer2'];
                 if(isset($_POST['settings_special_pinned'])) $this->SpecialPinned=$_POST['settings_special_pinned'];
                 if(isset($_POST['settings_default_gallery'])) $this->DefaultGallery=$_POST['settings_default_gallery'];
+                if(isset($_POST['settings_selfauth_path'])) $this->SelfAuthPath=$_POST['settings_selfauth_path'];
                 if(isset($_POST['settings_enable_comments'])) $this->CommentEnabled=True; else $this->CommentEnabled=False;
                 if(isset($_POST['settings_exp_host'])) $this->ExpHost=$_POST['settings_exp_host'];
                 if(isset($_POST['settings_exp_title'])) $this->ExpTitle=$_POST['settings_exp_title'];
@@ -2161,7 +2165,7 @@ blockquote{border-left:2px solid black;}
                             $src = $im['thumb']; $orig_src=$im['file'];
                         }
                         if($this->InExperimentalMode){
-                            $click = "<div class='imd'><a href='?show_image=".$im['name']."' class='original_img' target='_blank'>".
+                            $click = "<div class='imd'><a href='".$im['file']."' class='original_img' target='_blank'>".
                                         $m[2].$orig_src.$m[7]."></a></div>";
                             return $click;
                         }else{ $click =
@@ -2255,6 +2259,8 @@ blockquote{border-left:2px solid black;}
 @font-face{font-family: "Noto Serif CJK SC";src:url("fonts/NotoSerifSC-Bold.otf") format("opentype");font-weight:bold;}
 </style><?php } ?>
         <link href='styles/main.css' rel='stylesheet' type="text/css">
+        <?php if(isset($this->SelfAuthPath)&&$this->SelfAuthPath!=""){ ?>
+            <link rel="authorization_endpoint" href="<?=$this->SelfAuthPath?>" /><?php } ?>
         </head>
         <div class='page'>
     <?php }
@@ -3720,7 +3726,9 @@ blockquote{border-left:2px solid black;}
                     <tr><td><?=$this->T('默认相册')?></td>
                         <td><input type="text" form="settings_form" id='settings_default_gallery' name='settings_default_gallery'
                         value='<?=$this->DefaultGallery?>'/></td></tr>
-                    <tr><td><?=$this->T('启用评论')?></td>
+                    <tr><td><?=$this->T('SelfAuth 路径')?></td>
+                        <td><input type="text" form="settings_form" id='settings_selfauth_path' name='settings_selfauth_path'
+                        value='<?=$this->SelfAuthPath?>'/></td></tr>
                         <td><input type="checkbox" id="settings_enable_comments" name="settings_enable_comments"
                         form="settings_form" <?=$this->CommentEnabled?"checked":""?>/></td></tr>
                     <tr><td><?=$this->T('附加操作')?></td><td><a class='gray' href='index.php?extras=true'><?=$this->T('进入')?></a></td></tr>

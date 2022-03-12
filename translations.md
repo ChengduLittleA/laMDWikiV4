@@ -178,4 +178,5 @@
 - 本地 | Local
 - 远程 | Remote
 - 回到当前日期 | Back to current time
+- SelfAuth 路径 | SelfAuth Path
 
