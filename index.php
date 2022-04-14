@@ -418,6 +418,7 @@ thead{box-shadow:inset 0 -1px 0 0px %black%;position:sticky;top:2rem;background-
 .interesting_tbody td{display:contents;}
 .interesting_tbody tr{position:relative;scroll-margin:4.5em}
 .interesting_tbody td>*{display:table-cell;}
+.interesting_tbody td>.wscroll{display:none !important;}
 .interesting_tbody .post_access{padding-top:0;}
 .interesting_tbody .post_menu_button{top:0;opacity:0;}
 .interesting_tbody td>img,.interesting_tbody td>.imd{position:absolute;left:1.4em;z-index:-1;height:1em;width:20em;
@@ -517,6 +518,7 @@ h1,h2,h3,h4,h5{scroll-margin:2.5em;}
 .file_thumb{width:4em;height:4em;display:inline-block;line-height:0;vertical-align:middle;overflow:hidden;}
 .p_row{display:flex;flex-wrap:wrap;width:100%;}
 .p_thumb{display:flex;flex-grow:1;height:6rem;margin-right:0.25rem;margin-bottom:0.25rem;overflow:hidden;position:relative;}
+.p_thumb_narrow{width:1rem;}
 .p_thumb img{object-fit:cover;max-height:100%;min-width:100%;}.p_thumb a{display:contents;}
 .ref_count,.p_thumb .post_menu_button{text-shadow: 0px 0px 10px rgb(0, 0, 0);}
 .p_thumb:hover .post_menu_button{display:block;}
@@ -801,6 +803,9 @@ blockquote{border-left:2px solid black;}
             if(preg_match('/PRODUCT\s+([^;]*);/u',$m[2],$product)){
                 $item['product']=$product[1];
             }
+            if(preg_match('/PARENT\s+([^;]*);/u',$m[2],$parent)){
+                $item['parent']=$parent[1];
+            }
             $this->Images[] = $item;
         }
         
@@ -857,13 +862,14 @@ blockquote{border-left:2px solid black;}
             if(isset($im['refs']) && isset($im['refs'][0])){ fwrite($f, 'REFS '.implode(" ",$im['refs'])."; "); }
             if(isset($im['galleries']) && isset($im['galleries'][0])){ fwrite($f, 'GAL '.implode(" ",$im['galleries'])."; "); }
             if(isset($im['product']) && $im['product']!=''){ fwrite($f, 'PRODUCT '.$im['product']."; "); }
+            if(isset($im['parent']) && $im['parent']!=''){ fwrite($f, 'PARENT '.$im['parent']."; "); }
             fwrite($f, PHP_EOL);
         }
         fflush($f);
         fclose($f);
     }
     
-    function EditImage($name, $link_gallery, $do_remove = false, $product_link=NULL, $rename=NULL){
+    function EditImage($name, $link_gallery, $do_remove = false, $product_link=NULL, $rename=NULL, $parent=NULL){
         if(!($im = &$this->FindImage($name))) return;
         if(isset($link_gallery)){
             if($do_remove){
@@ -880,11 +886,15 @@ blockquote{border-left:2px solid black;}
             if($product_link!=''){$im['product']=$product_link;}
             else{unset($im['product']);}
         }
-        if(isset($rename)){
+        if(isset($rename) && $rename!=$im['name']){
             $ext=pathinfo($im['file'],PATHINFO_EXTENSION);
             rename($im['file'], 'images/'.$rename.'.'.$ext);
             if(isset($im['thumb'])) rename($im['thumb'], 'images/thumb/'.$rename.'.'.$ext);
             $im['name'] = $rename.'.'.$ext; 
+        }
+        if(isset($parent) && $parent!=$im['parent']){
+            if($parent==''){ unset($im['parent']); }
+            else{ $im['parent'] = $parent; }
         }
         $this->NeedWriteImages = 1;
     }
@@ -1254,6 +1264,7 @@ blockquote{border-left:2px solid black;}
     }
     
     function IdentifyThreadCategory(&$th,&$first_post){
+        unset($th['categories']);unset($th['interesting']);unset($th['reversed']);
         if(preg_match('/^\s*\@(.*?)$/mu',$first_post['content'],$m)){
             $first_post['categories']=[]; if(preg_match_all('/(\S+)(\s|$)/u',$m[1],$matches,PREG_SET_ORDER)){
                 foreach($matches as $ma){ $first_post['categories'][] = $ma[1]; }
@@ -1265,9 +1276,16 @@ blockquote{border-left:2px solid black;}
                 foreach($matches as $ma){ $th['interesting'][] = $ma[1]; }
             }
         }
+        if(isset($th) && preg_match('/\{\s*REVERSED\s*\}/imu',$first_post['content'],$m)){
+            $th['reversed'] = true;
+        }
     }
     function IsInterestingPost(&$p){
         if(isset($p['tid']) && isset($p['tid']['interesting']) && isset($p['tid']['interesting'][0])) return true;
+        return false;
+    }
+    function IsReversedThread(&$th){
+        if(isset($th['reversed']) && $th['reversed']) return true;
         return false;
     }
     
@@ -1719,7 +1737,7 @@ blockquote{border-left:2px solid black;}
             if(isset($push_version) && $push_version){
                 $this->PushPostVersion($post,$this->TIME_STRING,$push_version,$version_info);
             }
-            if(isset($content)) $post['real_content'] = $content;
+            if(isset($content)) $post['real_content'] = $content; $post['content'] = &$post['real_content'];
             if(isset($mark_delete)) $post['mark_delete'] = $mark_delete;
             if(isset($mark_value)) $post['mark_value'] = $mark_value;
             if(isset($rename) && preg_match('/^[0-9]{14}$/u',$rename)) $this->RenamePost($post,$rename);
@@ -1728,12 +1746,11 @@ blockquote{border-left:2px solid black;}
             if(!isset($content)) return $this->NULL_POST;
             $id = date('YmdHis');
             if($this->GetPost($id,true)!== $this->NULL_POST) return $this->NULL_POST;
-            $post = [];
-            $post['id'] = $id;
-            $post['real_content'] = $content;
+            $post = []; $post['id'] = $id;
+            $post['real_content'] = $content; $post['content'] = &$post['real_content'];
             if(isset($reply_to) && ($rep = &$this->GetPost($reply_to,true))!== $this->NULL_POST){
-                if(!(isset($rep['next']) && $rep['next'])){$rep['next'] = $id; $post['prev'] = $rep['id'];}
-                else $post['real_content'] = "[引用的文章]($reply_to)".$post['content'];
+                while($rep !== $this->NULL_POST && isset($rep['next']) && $rep['next']){ $rep = &$this->GetPost($rep['next'],true); }
+                if($rep !== $this->NULL_POST){ $rep['next'] = $id; $post['prev'] = $rep['id']; }
             }
             $this->Posts[] = $post;
             $p_success = &$this->Posts[count($this->Posts) - 1];
@@ -2077,7 +2094,7 @@ blockquote{border-left:2px solid black;}
                 if(preg_match('/^(REM|ADD)\s+(\S+)\s+(.*)$/u', $_POST['gallery_move_ops'], $ma)){
                     $this->ReadImages();
                     if(preg_match_all('/(\S+)/u', $ma[3], $files, PREG_SET_ORDER)) foreach($files as $name){
-                        $this->EditImage($name[1], $ma[2], ($ma[1]=='REM'), NULL, NULL);
+                        $this->EditImage($name[1], $ma[2], ($ma[1]=='REM'), NULL, NULL, NULL);
                     }
                 }
                 if(isset($_GET['gallery'])) $redirect='?gallery='.$_GET['gallery']; else $redirect='index.php';
@@ -2104,22 +2121,22 @@ blockquote{border-left:2px solid black;}
                 exit;
             }
             $do_image_redirect = 0;
-            if(isset($_POST['image_button'])){
-                $this->ReadImages();
+            if (isset($_POST['image_button']) && isset($_GET['pic']) &&
+                preg_match('/([0-9]{14,}\.(jpg|png|jpeg|gif))/u',$_GET['pic'],$ma)){
+                $this->ReadImages(); $pic = $ma[1]; $picext=$ma[2];
                 if(isset($_POST['image_ops_product_link'])){
-                    if(preg_match('/([0-9]{14,}\.(jpg|png|jpeg|gif))/u',$_SERVER['REQUEST_URI'],$ma)){
-                        $this->EditImage($ma[1], NULL, false, $_POST['image_ops_product_link'], NULL);
-                        $redirect=$_SERVER['REQUEST_URI'];
-                        $do_image_redirect = 1;
-                    }
+                    $this->EditImage($pic, NULL, false, $_POST['image_ops_product_link'], NULL, NULL);
+                    $redirect=$_SERVER['REQUEST_URI']; $do_image_redirect = 1;
                 }
-                if(isset($_GET['pic'])&&isset($_POST['image_edit_new_name'])){
-                    if (preg_match('/([0-9]{14,}\.(jpg|png|jpeg|gif))/u',$_GET['pic'],$ma) && 
-                        preg_match('/\s*([0-9]{14,})\s*/u',$_POST['image_edit_new_name'],$man)){
-                        $this->EditImage($ma[1], NULL, false, NULL, $man[1]);
-                        $redirect=$this->GetRedirect(['pic'=>'images/'.$man[1].'.'.$ma[2]]);
-                        $do_image_redirect = 1;
-                    }
+                if(isset($_POST['image_edit_new_name']) && preg_match('/\s*([0-9]{14,})\s*/u',$_POST['image_edit_new_name'],$man)){
+                    $this->EditImage($pic, NULL, false, NULL, $man[1], NULL);
+                    $redirect=$this->GetRedirect(['pic'=>'images/'.$man[1].'.'.$picext]);
+                    $do_image_redirect = 1;
+                }
+                if(isset($_POST['image_parent'])){ $parent="";
+                    if(preg_match('/\s*([0-9]{14,})\s*/u',$_POST['image_parent'],$man)){ $parent = $man[1]; }
+                    $this->EditImage($pic, NULL, false, NULL, NULL, $parent);
+                    $redirect=$_SERVER['REQUEST_URI']; $do_image_redirect = 1;
                 }
                 $this->NeedWriteImages = 1;
                 if($do_image_redirect) return 0;
@@ -2151,6 +2168,7 @@ blockquote{border-left:2px solid black;}
                              "$1$2$4 target='_blank'$5$6<sup>↗</sup>$7",$html);
         $html = preg_replace("/<p>\s*\@.*?<\/p>/mu","",$html);
         $html = preg_replace("/<p>\s*\{\s*INTERESTING\s+(.*?)\}\s*<\/p>/imu","",$html);
+        $html = preg_replace("/\{\s*REVERSED\s*\}/imu","",$html);
         $images = [];
         $images_noclick = [];
         $html = preg_replace_callback(
@@ -2172,6 +2190,7 @@ blockquote{border-left:2px solid black;}
                              "<div class='imd'><a href='?show_image={$im['name']}' target='_blank' onclick='event.preventDefault();'>".
                                 $m[2].($original?$orig_src:$src).$m[7]." data-imgsrc='".$m[5]."'".
                                 (isset($im['product'])?" data-product='".$im['product']."'":"").
+                                (isset($im['parent'])?" data-parent='".$im['parent']."'":"").
                                 ($original?" class='original_img'":"")."></a></div>";
                             $images_noclick[]=$m[2].$src.$m[7].">";
                             $ret = "";
@@ -2610,7 +2629,7 @@ blockquote{border-left:2px solid black;}
         ?>
         <?=$title?"<li class='print_title'><h1>".$title."</h1></li>":""?>
         <li class='post<?=isset($extra_class_string)?' '.$extra_class_string:''?><?=$side?" post_box":""?>'
-            data-post-id='<?=$post['id']?>' <?=$is_deleted?"data-mark-delete='true'":""?>>
+            <?=(!$side)?"data-post-id='".$post['id']."'":""?> <?=$is_deleted?"data-mark-delete='true'":""?>>
             <?php if($mark_value>=0 && !$show_link && $mark_value!='P'){?>
                 <div class='smaller <?=$is_deleted?"gray":""?>'><?=$mark_value?> <?=$this->T('标记')?></div>
             <?php } ?>
@@ -3137,9 +3156,11 @@ blockquote{border-left:2px solid black;}
                     echo "<a href='?category=".$c."'>".($c=='none'?$this->T('未分类'):$this->T($c))."</a> "; } ?></p>
             <?php } ?>
             <ul class='print_column'>
-            <?php
+            <?php $is_reversed=false;
                 if($is_thread){
-                    foreach($th['arr'] as &$p){
+                    $use_arr = $th['arr']; $is_reversed=$this->IsReversedThread($th); $hinted=false; if($is_reversed){
+                        $use_arr=array_reverse($th['arr']); $fp=array_pop($use_arr); array_unshift($use_arr,$fp); }
+                    foreach($use_arr as &$p){
                         $use_class = ($p == $post)?'focused_post':'';
                         $show_link = ($p == $post)?false:true;
                         $make_title = ($p == $post);
@@ -3148,7 +3169,14 @@ blockquote{border-left:2px solid black;}
                         <script>
                         document.title+=" | <?=addslashes(preg_replace('/\r|\n/u', ' ', mb_substr(strip_tags($p['html']),0,1000)))?>";
                         </script>
-                        <?php }
+                        <?php } if($is_reversed && !$hinted){ ?>
+                            <li class='gray smaller bold' style='text-align:center;'>
+                                <p>&nbsp;</p><hr><?=$this->T('该话题最新帖子在前')?><hr><p>&nbsp;</p></li>
+                        <?php $hinted = true; 
+                        if($this->LoggedIn && (!$this->InExperimentalMode)){ ?>
+                            <div class='post_width_big hidden_on_print'>
+                                <?php $this->MakePostingFields($is_thread?$th['last']['id']:$post['id'], true);?></div><br />
+                        <?php } }
                     }
                 }else{
                     $this->MakeSinglePost($post,false, false, 'focused_post',false, false, false, true, false, false);
@@ -3161,7 +3189,7 @@ blockquote{border-left:2px solid black;}
                     <br class='hidden_on_desktop' /><?=$this->ReadableTime(isset($post['tid']['last']['version'])?
                         $post['tid']['last']['version']:$post['tid']['last']['id']);?>
                 </div>
-                <?php if($this->LoggedIn && (!$this->InExperimentalMode)){ ?>
+                <?php if(!$is_reversed && ($this->LoggedIn && (!$this->InExperimentalMode))){ ?>
                     <div class='post_width_big hidden_on_print'>
                         <br /><?php $this->MakePostingFields($is_thread?$th['last']['id']:$post['id'], true);?>
                     </div>
@@ -3177,16 +3205,20 @@ blockquote{border-left:2px solid black;}
         ?>
         <div class='center_exp' id='div_center'>
             <ul>
-            <?php
-                if($is_thread){
-                    $th = &$post['tid'];
-                    foreach($th['arr'] as &$p){
+            <?php $is_reversed=false;
+                if($is_thread){ $th = &$post['tid'];$use_arr = $th['arr']; $is_reversed=$this->IsReversedThread($th);
+                    $hinted=false; if($is_reversed){
+                        $use_arr=array_reverse($th['arr']); $fp=array_pop($use_arr); array_unshift($use_arr,$fp); }
+                    foreach($use_arr as &$p){
                         $this->MakeSinglePostExp($p);
                         if($p == $th['first']){?>
                         <script>
                         document.title+=" | <?=addslashes(preg_replace('/\r|\n/u', ' ', mb_substr(strip_tags($p['html']),0,1000)))?>";
                         </script>
-                        <?php }
+                        <?php } if($is_reversed && !$hinted){ ?>
+                            <li class='gray smaller bold' style='text-align:center;'>
+                                <p>&nbsp;</p><hr><?=$this->T('该话题最新帖子在前')?><hr><p>&nbsp;</p></li>
+                        <?php $hinted = true; }
                     }
                 }else{
                     $this->MakeSinglePostExp($post);
@@ -3254,8 +3286,8 @@ blockquote{border-left:2px solid black;}
             </ul>
             <div class='smaller gray' id='upload_hint'><?=$this->T('就绪')?></div>
         </div>
-        <a id='upload_click' class='hidden_on_print'
-            href='javascript:UploadList()'<?=$is_side?" data-is-side='true'":""?>><?=$this->T('上传列表中的文件')?></a>
+        <a id='upload_click' class='hidden_on_print pointer' onclick='this.removeAttribute("onclick");UploadList();'
+            <?=$is_side?" data-is-side='true'":""?>><?=$this->T('上传列表中的文件')?></a>
         <script>
             function pastehandler(event){
                 var items = (event.clipboardData || event.originalEvent.clipboardData).items;
@@ -3270,7 +3302,7 @@ blockquote{border-left:2px solid black;}
                     }
                 }
             }
-            let _fd_list = [];  
+            let _fd_list = []; var uploading=0;
             let hint=document.querySelector('#upload_hint');
             function ToggleCompress(button){
                 li = button.parentNode;
@@ -3301,6 +3333,7 @@ blockquote{border-left:2px solid black;}
                     }
                 }
                 if(!unfinished){
+                    uploading=0;
                     hint.innerHTML="<?=$this->T('上传完成。')?>";
                     cl=document.querySelector('#upload_click');
                     if(!cl.dataset.isSide){
@@ -3313,13 +3346,15 @@ blockquote{border-left:2px solid black;}
                         list=document.querySelector('#upload_operation_area');
                         list.style.pointerEvents='';
                         list.style.opacity='';
+                        cl.onclick=function(){this.removeAttribute("onclick");UploadList();};
                         document.onpaste=pastehandler;
                         RefreshSideGallery();
                     }
                 }
             }
             function UploadList(){
-                if(!_fd_list.length) return;
+                if(!_fd_list.length || uploading) return;
+                uploading=1;
                 hint.innerHTML="<?=$this->T('正在上传...')?>";
                 list=document.querySelector('#upload_operation_area');
                 list.style.pointerEvents='none';
@@ -3578,12 +3613,14 @@ blockquote{border-left:2px solid black;}
                     if($year!=$prev_year){
                         if($opened) { ?><div class='p_thumb' style='flex-grow:10000;box-shadow:none;height:0;'></div></div></div><?php } ?>
                         <div><h2 class='sticky_title'><?=$year;?></h2><div class='p_row'><?php $prev_year=$year; $opened=1; } ?>
-                    <div class='p_thumb'>
+                    <div class='p_thumb<?=isset($im['parent'])?" p_thumb_narrow":""?>'>
                         <?php if($this->LoggedIn){ ?>
                             <div class="post_menu_button _select_hook white" onclick='ToggleSelectImage(this, "<?=$im["name"]?>")'>●</div>
                         <?php } ?>
-                        <a href='?show_image=<?=$im['name']?>' target='_blank' onclick='event.preventDefault();'><img src='<?=$im['thumb']?>' data-imgsrc='<?=$im["name"]?>'<?=isset($im['product'])?
-                            'data-product="'.$im["product"].'"':""?>/></a>
+                        <a href='?show_image=<?=$im['name']?>' target='_blank' onclick='event.preventDefault();'>
+                            <img src='<?=$im['thumb']?>' data-imgsrc='<?=$im["name"]?>'
+                                <?=isset($im['product'])?'data-product="'.$im["product"].'"':""?>
+                                <?=isset($im['parent'])?'data-parent="'.$im["parent"].'"':""?>/></a>
                     </div>
                 <?php } if($opened) { ?>
                 <div class='p_thumb' style='flex-grow:10000;box-shadow:none;height:0;'></div></div><?php } ?>
@@ -3900,6 +3937,8 @@ blockquote{border-left:2px solid black;}
                         <input type='text' id='image_ops_product_link' name='image_ops_product_link' form="image_ops_form" >
                         <?=$this->T('重命名')?>
                         <input type='text' id='image_edit_new_name' name='image_edit_new_name' form="image_ops_form" >
+                        <?=$this->T('主图')?>
+                        <input type='text' id='image_parent' name='image_parent' form="image_ops_form" >
                         <input class='button' form="image_ops_form" type="submit" name='image_button' value=<?=$this->T('保存')?> />
                         <br /><br /><?=$this->T('替换图像')?>
                         <form action="" method="post" style='display:none;' id='image_edit_form' enctype="multipart/form-data"></form>
@@ -4256,14 +4295,12 @@ blockquote{border-left:2px solid black;}
                     product_form = document.querySelector('#image_ops_form');
                     edit_form = document.querySelector('#image_edit_form');
                     edit_new_name = document.querySelector('#image_edit_new_name');
+                    edit_parent = document.querySelector('#image_parent');
                     product_form.action = window.location.href;
                     edit_form.action = window.location.href;
                     edit_new_name.value = imgsrc.split('.')[0];
-                    if(this_image.dataset.product){
-                        product_link.value = this_image.dataset.product;
-                    }else{
-                        product_link.value = "";
-                    }
+                    if(this_image.dataset.product){ product_link.value = this_image.dataset.product; }else{ product_link.value = ""; }
+                    if(this_image.dataset.parent){ edit_parent.value = this_image.dataset.parent; }else{ edit_parent.value = ""; }
                 <?php } ?>
                 if(this_image.dataset.product){
                     purchase.style.display='';
