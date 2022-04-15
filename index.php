@@ -34,6 +34,10 @@ class LA{
     protected $ExpNavigation;
     protected $ExpFooter;
     protected $CommentEnabled;
+    protected $MastodonToken;
+    protected $MastodonURL;
+    protected $MastodonBackURL;
+    
     
     protected $Redirect;
     protected $Translations;
@@ -70,6 +74,7 @@ class LA{
     
     protected $NULL_POST;
     protected $NULL_IMAGE;
+    protected $NULL_IMAGE_DUMMY;
     protected $NULL_Gallery;
     
     protected $DoneReadPosts;
@@ -222,6 +227,9 @@ class LA{
         fwrite($conf,'- ExpIndex = '.$this->ExpIndex.PHP_EOL);
         fwrite($conf,'- ExpNavigation = '.$this->ExpNavigation.PHP_EOL);
         fwrite($conf,'- ExpFooter = '.$this->ExpFooter.PHP_EOL);
+        fwrite($conf,'- MastodonToken = '.$this->MastodonToken.PHP_EOL);
+        fwrite($conf,'- MastodonURL = '.$this->MastodonURL.PHP_EOL);
+        fwrite($conf,'- MastodonBackURL = '.$this->MastodonBackURL.PHP_EOL);
         fflush($conf);fclose($conf);
         $conf = fopen('la_redirect.md','w');
         fwrite($conf,$this->DisplayRedirectConfig());fflush($conf);fclose($conf);
@@ -288,12 +296,79 @@ class LA{
         }
     }
     
+    function MastodonPostStatus($status){ return $this->MastodonCall('/api/v1/statuses', 'POST', $status); }
+    function MastodonPostMedia($media){ return $this->MastodonCall('/api/v1/media', 'POST', $media); }
+    function MastodonCall($endpoint, $method, $data){
+        $headers = [
+            'Authorization: Bearer '.$this->MastodonToken,
+            'Content-Type: multipart/form-data',
+        ];
+
+        $ch = curl_init();
+        curl_setopt($ch, CURLOPT_URL, $this->MastodonURL.$endpoint);
+        curl_setopt($ch, CURLOPT_CUSTOMREQUEST, $method);
+        curl_setopt($ch, CURLOPT_POSTFIELDS, $data);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
+        $reply = curl_exec($ch);
+
+        if (!$reply) {
+            return json_encode(['ok'=>false, 'curl_error_code' => curl_errno($ch_status), 'curl_error' => curl_error(ch_status)]);
+        }
+        curl_close($ch);
+
+        return json_decode($reply, true);
+    }
+    function MastodonSendPost(&$post, &$errmsg=NULL){
+        if(isset($post['mark_value']) && $post['mark_value']==7){ return NULL; }
+        
+        $this->ConvertPost($post);
+        $media_ids = NULL;
+        $mastodon_post_url = NULL;
+        
+        $imcount = 0;
+        if(isset($post['original_images']) && isset($post['original_images'][0])) foreach($post['original_images'] as $im){
+            $curl_file = curl_file_create($im, mime_content_type($im), basename($im));
+            $body = ['file' => $curl_file,]; $response = $this->MastodonPostMedia($body);
+            if(isset($response['id'])){ if(!isset($media_ids)){$media_ids=[];} $media_ids[]=$response['id']; }
+            else{ if(isset($response['error'])) $errmsg.=$response['error']."<br /><br />"; }
+            $imcount++; if($imcount>=4){ break; }
+        }
+        
+        $text = strip_tags(preg_replace('/<\/(p|blockquote|h[0-9])>/u',"\n\n",$post['html']));
+        if(isset($this->MastodonBackURL) && $this->MastodonBackURL!=""){
+            $text.=("\n\n".$this->T('来自').' '.$this->MastodonBackURL.'?post='.$post['id']);
+        }
+        
+        $vis = (isset($post['mark_value']) && $post['mark_value']==6)?"private":"public";
+        $status_data = [ 'status' => $text, 'visibility' => $vis, 'language' => $this->LanguageAppendix, ];
+        if(isset($post['prev']) && ($pp=&$this->GetPost($post['prev']))!=$this->NULL_POST){
+            if(isset($pp['mastodon_url'])){ $status_data['in_reply_to_id'] = basename($pp['mastodon_url']); 
+            }
+        }
+        if(isset($media_ids[0])){ $status_data['media_ids']=$media_ids; }
+        $status_data = preg_replace('/(media_ids%5B)[0-9]+(%5D)/','$1$2', http_build_query($status_data));
+        
+        $status_response = $this->MastodonPostStatus($status_data);
+        if(isset($status_response['url']) && $status_response['url']){
+            $mastodon_post_url = $status_response['url'];
+            $post['mastodon_url'] = $mastodon_post_url;
+            $this->NeedWritePosts = 1;
+        }
+        if(isset($status_response['error'])) { $errmsg .= $status_response['error']; }
+        
+        return $mastodon_post_url;
+    }
+    
     function __construct() {
         $this->ReadConfig();
         $this->PDE = new ParsedownExtra();
         $this->PDE->SetInterlinkPath('/');
         $this->Posts = [];
         $this->Threads = [];
+        
+        $this->NULL_IMAGE_DUMMY = [];
+        $this->NULL_IMAGE_DUMMY['name']=$this->NULL_IMAGE_DUMMY['file']=$this->NULL_IMAGE_DUMMY['thumb']="";
         
         $this->Markers=['●', '○', '✓', '×', '!', 'P', 'E', 'S'];
         
@@ -1042,6 +1117,7 @@ blockquote{border-left:2px solid black;}
                 $post['id'] = $m[1];
                 $post['content'] = trim($m[3]);
                 if(preg_match('/VER\s+([0-9]{14})\s*;/u', $m[2], $n)) $post['version'] = $n[1];
+                if(preg_match('/MSTDN\s+(\S+)\s*;/u', $m[2], $n)) $post['mastodon_url'] = $n[1];
                 if(preg_match('/FROM\s*([^;]+);/u', $m[2], $ma)){
                     $entries = []; if(preg_match_all('/([0-9]{14})/u',$ma[1],$links,PREG_SET_ORDER)){ 
                         foreach($links as $l){ $entries[] = $l[1]; } $post['merged_from'] = $entries; } }
@@ -1119,6 +1195,7 @@ blockquote{border-left:2px solid black;}
                 if(preg_match('/VER\s+([0-9]{14})\s*;/u', $m[2], $n))  $post['version'] = $n[1];
                 if(preg_match('/MDEL\s*;/u', $m[2]))                   $post['mark_delete'] = True;
                 if(preg_match('/MVAL\s*([^;]+);/u', $m[2], $n))        $post['mark_value'] = trim($n[1]);
+                if(preg_match('/MSTDN\s+(\S+)\s*;/u', $m[2], $n))      $post['mastodon_url'] = $n[1];
                 if(preg_match('/REFS\s*([^;]+);/u', $m[2], $ma)){
                     $entries = []; if(preg_match_all('/([0-9]{14})/u',$ma[1],$links,PREG_SET_ORDER)){ 
                         foreach($links as $l){ $entries[] = $l[1]; } $post['refs'] = $entries; } }
@@ -1568,6 +1645,7 @@ blockquote{border-left:2px solid black;}
                     ((isset($p['hasp']) && isset($p['hasp'][0]))?("HASP ".implode(" ",$p['hasp'])."; "):"").
                     ((isset($p['hastag']) && isset($p['hastag'][0]))?("HASTAG ".implode(" ",$p['hastag'])."; "):"").
                     ((isset($p['hasi']) && isset($p['hasi'][0]))?("HASI ".implode(" ",$p['hasi'])."; "):"").
+                    ((isset($p['mastodon_url']) && isset($p['mastodon_url']))?("MSTDN ".$p['mastodon_url']."; "):"").
                     ']';
                     
             fwrite($opened, $info.PHP_EOL.PHP_EOL.$p['real_content'].PHP_EOL.PHP_EOL);
@@ -1683,7 +1761,7 @@ blockquote{border-left:2px solid black;}
         
         foreach($th['arr'] as &$p){ $info[0][]=$p['id']; }
         foreach($tt['arr'] as &$p){ $info[1][]=$p['id']; }
-        $this->EditPost($pt['id'], NULL, NULL, NULL, false, NULL, NULL, 4, $info);
+        $this->EditPost($pt['id'], NULL, NULL, NULL, false, NULL, NULL, 4, $info,NULL);
         
         $arr_combined = array_merge($tt['arr'],$th['arr']);
         
@@ -1706,12 +1784,12 @@ blockquote{border-left:2px solid black;}
         foreach($ids as $id){
             if(!preg_match('/[0-9]{14}/u',$id) || $this->GetPost($id,true)==$this->NULL_POST) continue;
             if(!isset($first_id)) { $first_id = $id; } else { $combined_content.=PHP_EOL.PHP_EOL."//".$id.PHP_EOL; $child_list[]=$id; }
-            $combined_content.=$this->EditPost($id, NULL, NULL, NULL, true, NULL, NULL, false, NULL);
+            $combined_content.=$this->EditPost($id, NULL, NULL, NULL, true, NULL, NULL, false, NULL,NULL);
         }
         if(!isset($child_list[0])) return $this->NULL_POST;
-        $first_post = &$this->EditPost($first_id, $combined_content, NULL, NULL, false, NULL, NULL, 2, $child_list);
+        $first_post = &$this->EditPost($first_id, $combined_content, NULL, NULL, false, NULL, NULL, 2, $child_list,NULL);
         foreach($child_list as $id){
-            $this->EditPost($id, NULL, NULL, NULL, false, NULL, NULL, 3, [$first_id,$this->TIME_STRING]);
+            $this->EditPost($id, NULL, NULL, NULL, false, NULL, NULL, 3, [$first_id,$this->TIME_STRING],NULL);
         }
         $this->NeedWritePosts=1;
         $this->NeedWriteArchive=1;
@@ -1721,7 +1799,7 @@ blockquote{border-left:2px solid black;}
     /* push_version: 1 edit   2 post merged from ids list   3 post end into id-ver */
     function &EditPost($id_if_edit, $content, $mark_delete, $reply_to,
                        $get_original_only=false, $mark_value=NULL, $rename=NULL,
-                       $push_version=false, $version_info=NULL){
+                       $push_version=false, $version_info=NULL, $mastodon_url=NULL){
         $this->ReadImages();
         $this->ReadPosts();
         if(isset($push_version) && $push_version){
@@ -1741,6 +1819,7 @@ blockquote{border-left:2px solid black;}
             if(isset($mark_delete)) $post['mark_delete'] = $mark_delete;
             if(isset($mark_value)) $post['mark_value'] = $mark_value;
             if(isset($rename) && preg_match('/^[0-9]{14}$/u',$rename)) $this->RenamePost($post,$rename);
+            if(isset($mastodon_url)) { if($mastodon_url!='') $post['mastodon_url']=$mastodon_url; else unset($post['mastodon_url']); }
             $p_success = &$post;
         }else{
             if(!isset($content)) return $this->NULL_POST;
@@ -1938,8 +2017,7 @@ blockquote{border-left:2px solid black;}
         if(isset($_GET['image_info']) || isset($_GET['show_image'])){
             $m=isset($_GET['image_info'])?$_GET['image_info']:$_GET['show_image'];
             $direct_return = !isset($_GET['show_image']);
-            $this->ReadImages();
-            $this->ReadPosts();
+            $this->ReadImages(); $this->ReadPosts();
             $this->SwitchWayBackMode(); if(isset($this->WayBack)){$this->ReadArchive();}
             $im = &$this->FindImage($m);
             if($im==NULL || !isset($im['refs']) || !isset($im['refs'][0])){ echo "not_found"; exit; }
@@ -1992,6 +2070,9 @@ blockquote{border-left:2px solid black;}
                 if(isset($_POST['settings_exp_index'])) $this->ExpIndex=$_POST['settings_exp_index'];
                 if(isset($_POST['settings_exp_navigation'])) $this->ExpNavigation=$_POST['settings_exp_navigation'];
                 if(isset($_POST['settings_exp_footer'])) $this->ExpFooter=$_POST['settings_exp_footer'];
+                if(isset($_POST['settings_mastodon_token'])) $this->MastodonToken=$_POST['settings_mastodon_token'];
+                if(isset($_POST['settings_mastodon_url'])) $this->MastodonURL=$_POST['settings_mastodon_url'];
+                if(isset($_POST['settings_mastodon_back_url'])) $this->MastodonBackURL=$_POST['settings_mastodon_back_url'];
                 if(isset($_POST['settings_old_password'])&&password_verify($_POST['settings_old_password'], $this->Password)){
                     if(isset($_POST['settings_id'])) $this->Admin=$_POST['settings_id'];
                     if(isset($_POST['settings_new_password']) && isset($_POST['settings_new_password_redo']) && 
@@ -2018,17 +2099,17 @@ blockquote{border-left:2px solid black;}
             }
             if(isset($_GET['post'])){
                 if(isset($_GET['post_original'])){
-                    echo $this->EditPost($_GET['post'],NULL,false,NULL,true,NULL,NULL,false,NULL);
+                    echo $this->EditPost($_GET['post'],NULL,false,NULL,true,NULL,NULL,false,NULL,NULL);
                     exit;
                 }
             }
             if(isset($_GET['mark_delete']) && isset($_GET['target'])){
-                $this->EditPost($_GET['target'],NULL,$_GET['mark_delete']=='true',NULL,false,NULL,NULL,false,NULL);
+                $this->EditPost($_GET['target'],NULL,$_GET['mark_delete']=='true',NULL,false,NULL,NULL,false,NULL,NULL);
                 if(isset($_GET['post'])) $redirect='?post='.$_GET['target']; else $redirect=$this->GetRedirect();
                 return 0;
             }
             if(isset($_GET['set_mark']) && isset($_GET['target'])){
-                $this->EditPost($_GET['target'],NULL,NULL,NULL,NULL,$_GET['set_mark'],NULL,false,NULL);
+                $this->EditPost($_GET['target'],NULL,NULL,NULL,NULL,$_GET['set_mark'],NULL,false,NULL,NULL);
                 if(isset($_GET['post'])) $redirect='?post='.$_GET['target']; else $redirect=$this->GetRedirect();
                 return 0;
             }
@@ -2040,14 +2121,29 @@ blockquote{border-left:2px solid black;}
                 $reply_to = (isset($_POST['post_reply_to'])&&$_POST['post_reply_to']!="")?$_POST['post_reply_to']:NULL;
                 $edit_id = (isset($_POST['post_edit_target'])&&$_POST['post_edit_target']!="")?$_POST['post_edit_target']:NULL;
                 $push_history = (isset($edit_id) && isset($_POST['post_record_edit']));
-                if(($edited = $this->EditPost($edit_id, $c, NULL, $reply_to,NULL,NULL,NULL,$push_history,NULL))!=NULL){
+                if(($edited = $this->EditPost($edit_id, $c, NULL, $reply_to,NULL,NULL,NULL,$push_history,NULL,NULL))!=NULL){
                     $redirect='?post='.$edited['id']; return 0;
                 };
             }
             if(isset($_POST['post_rename_confirm']) && isset($_POST['post_rename_name']) && isset($_GET['rename_post'])){
-                if(($edited =$this->EditPost($_GET['rename_post'],NULL,NULL,NULL,NULL,NULL,$_POST['post_rename_name'],false,NULL))!=NULL){
+                if(($edited =$this->EditPost($_GET['rename_post'],NULL,NULL,NULL,NULL,NULL,$_POST['post_rename_name'],false,NULL,NULL))!=NULL){
                     $redirect='?post='.$edited['id']; return 0;
                 };
+            }
+            if(isset($_POST['post_mastodon_confirm']) && isset($_POST['post_mastodon_url']) && isset($_GET['mastodon_post'])){
+                if(($edited =$this->EditPost(
+                    $_GET['mastodon_post'],NULL,NULL,NULL,NULL,NULL,$_POST['post_rename_name'],false,NULL,$_POST['post_mastodon_url']))!=NULL){
+                    $redirect='?post='.$edited['id']; return 0;
+                };
+            }
+            if(isset($_GET['mastodon_send_post']) && preg_match('/([0-9]{14})/u',$_GET['mastodon_send_post'],$m)){
+                $this->ReadImages(); $this->ReadPosts(); $post = &$this->GetPost($m[1]); $err=$this->T("未知错误");
+                if(isset($post)){ 
+                    if($mastodon_url = $this->MastodonSendPost($post, $err)){
+                        $this->NeedWritePosts = 1; $this->WritePosts(); // for mastodon url
+                        echo "SUCCESS ".$mastodon_url;
+                    }else{ echo $err; } 
+                } exit;
             }
             if(isset($_GET['merge_threads'])&&$_GET['merge_threads']!=""){
                 if(preg_match('/([0-9]{14})\s+([0-9]{14})/u',$_GET['merge_threads'],$m)){
@@ -2158,7 +2254,7 @@ blockquote{border-left:2px solid black;}
         return 0;
     }
     
-    function PostProcessHTML($html,&$added_images=null,$do_product_info=false, &$product_info=null){
+    function PostProcessHTML($html,&$added_images=null,$do_product_info=false, &$product_info=null, &$orig_src_list=null){
         if(!$this->LoggedIn){
             $html = preg_replace("/(<a[^>]*href=[\'\"])(.*?)([\'\"][^>]*)>(\#.*?<\/a>)/u","",$html);
         }
@@ -2169,11 +2265,10 @@ blockquote{border-left:2px solid black;}
         $html = preg_replace("/<p>\s*\@.*?<\/p>/mu","",$html);
         $html = preg_replace("/<p>\s*\{\s*INTERESTING\s+(.*?)\}\s*<\/p>/imu","",$html);
         $html = preg_replace("/\{\s*REVERSED\s*\}/imu","",$html);
-        $images = [];
-        $images_noclick = [];
+        $images = []; $images_noclick = []; $images_orig_src_list = [];
         $html = preg_replace_callback(
                     "/(<p>\s*)?(<img([^>]*)src=[\'\"])(images\/([0-9]{14,}\.(jpg|png|jpeg|gif)))([\'\"][^>]*)\/>(\s*<\/p>)?/u",
-                    function($m) use (&$images,&$images_noclick) {
+                    function($m) use (&$images,&$images_noclick,&$images_orig_src_list) {
                         $orig_src = $src = $m[5]; $keep = false; $original = false;
                         if (preg_match('/alt=[\'\"].*keep_inline.*[\'\"]/u',$m[3]) ||
                             preg_match('/alt=[\'\"].*keep_inline.*[\'\"]/u',$m[7])) { $keep=true; }
@@ -2181,7 +2276,7 @@ blockquote{border-left:2px solid black;}
                                      preg_match('/alt=[\'\"].*original.*[\'\"]/u',$m[7])) { $original=true; }
                         if(($im = &$this->FindImage($m[5]))!=NULL && isset($im['thumb'])){ 
                             $src = $im['thumb']; $orig_src=$im['file'];
-                        }
+                        }if($im == NULL){ $im = &$this->NULL_IMAGE_DUMMY; }
                         if($this->InExperimentalMode){
                             $click = "<div class='imd'><a href='".$im['file']."' class='original_img' target='_blank'>".
                                         $m[2].$orig_src.$m[7]."></a></div>";
@@ -2192,7 +2287,7 @@ blockquote{border-left:2px solid black;}
                                 (isset($im['product'])?" data-product='".$im['product']."'":"").
                                 (isset($im['parent'])?" data-parent='".$im['parent']."'":"").
                                 ($original?" class='original_img'":"")."></a></div>";
-                            $images_noclick[]=$m[2].$src.$m[7].">";
+                            $images_noclick[]=$m[2].$src.$m[7].">"; $images_orig_src_list[]=$orig_src;
                             $ret = "";
                             if($keep) { $ret = $click; }
                             else { $images[] = $click; }
@@ -2211,9 +2306,8 @@ blockquote{border-left:2px solid black;}
                 $html.="<div class='p_thumb' style='flex-grow:10000;box-shadow:none;height:0;'></div></div>";
             }
         }
-        if(sizeof($images_noclick)){
-            $added_images = $images_noclick;
-        }
+        if(sizeof($images_noclick)){ $added_images = $images_noclick; }
+        if(sizeof($images_orig_src_list)) { $orig_src_list = $images_orig_src_list; }
         if($do_product_info){
             $html = preg_replace_callback("/\{PRICE\s+([^]]+?)\}/u",
                     function($m) use (&$product_info) { $product_info['price']=$m[1];return ""; },$html);
@@ -2237,7 +2331,8 @@ blockquote{border-left:2px solid black;}
             $info=[];
             $post['html'] = $this->PostProcessHTML($this->PDE->text($this->InsertReplacementSymbols($post['content'])),
                                                    $post['images'],
-                                                   isset($post['product']), $info);
+                                                   isset($post['product']), $info,
+                                                   $post['original_images']);
             if(isset($post['product'])) $post['product']=$info;
         }
     }
@@ -2407,7 +2502,7 @@ blockquote{border-left:2px solid black;}
                     <a id='menu_refer_copy'><?=$this->T('复制编号')?></a><?php if($this->PageType!='search'){ ?> 
                     | <a id='menu_refer'><?=$this->T('引用')?></a><?php } ?><br class='hidden_on_desktop' />
                 </li>
-                <li><a id='menu_mark' href='javascript:ToggleRenameDetails()'><?=$this->T('改名')?></a> |
+                <li><a id='menu_rename' href='javascript:ToggleRenameDetails()'><?=$this->T('改名')?></a> |
                     <a id='menu_mark' href='javascript:ToggleMarkDetails()'><?=$this->T('标记')?></a></li>
                 <li id='mark_details' style='display:none;'><b>
                     <a id='mark_set_clear' href='javascript:SetMark(-1);'>_</a>
@@ -2425,9 +2520,16 @@ blockquote{border-left:2px solid black;}
                     <input type='text' id='post_rename_name' name='post_rename_name' form="post_rename_form" style='width:9em;'>
                     <input class='button' type='submit' form='post_rename_form'
                         name='post_rename_confirm' id='post_rename_confirm' value='<?=$this->T('确认')?>'>
-                </li>
-                <hr />
-                <li><a id='menu_delete' class='smaller'></a></li><?php } ?>
+                </li><hr /> <?php if(isset($this->MastodonToken)){ ?>
+                <li><a id='menu_mastodon_view' class='button' style='display:none;' target='_blank'><?=$this->T('转到')?></a>
+                    <a id='menu_mastodon' href='javascript:ToggleMastodonDetails()'><?=$this->T('长毛象')?></a></li>
+                <li id='mastodon_details' style='display:none;text-align:left;' class='smaller'>
+                    <a id='menu_mastodon_send' class='button' target='_blank'><?=$this->T('发送')?></a>
+                    <form action="" method="post" style='display:none;' id='post_mastodon_form'></form>
+                    <input type='text' id='post_mastodon_url' name='post_mastodon_url' form="post_mastodon_form" style='width:9em;'>
+                    <input class='button' type='submit' form='post_mastodon_form'
+                        name='post_mastodon_confirm' id='post_mastodon_confirm' value='<?=$this->T('修改')?>'></li> <?php } ?>
+                <hr /><li><a id='menu_delete' class='smaller'><?=$this->T('删除')?></a></li><?php } ?>
             <?php }else{ ?>
                 <li><a id='menu_history'><?=$this->T('历史')?></a></li>
             <?php } ?>
@@ -2629,7 +2731,8 @@ blockquote{border-left:2px solid black;}
         ?>
         <?=$title?"<li class='print_title'><h1>".$title."</h1></li>":""?>
         <li class='post<?=isset($extra_class_string)?' '.$extra_class_string:''?><?=$side?" post_box":""?>'
-            <?=(!$side)?"data-post-id='".$post['id']."'":""?> <?=$is_deleted?"data-mark-delete='true'":""?>>
+            <?=(!$side)?"data-post-id='".$post['id']."'":""?> <?=$is_deleted?"data-mark-delete='true'":""?>
+            <?=(!$side&&isset($post['mastodon_url']))?"data-mastodon_url='".$post['mastodon_url']."'":""?> >
             <?php if($mark_value>=0 && !$show_link && $mark_value!='P'){?>
                 <div class='smaller <?=$is_deleted?"gray":""?>'><?=$mark_value?> <?=$this->T('标记')?></div>
             <?php } ?>
@@ -3362,11 +3465,6 @@ blockquote{border-left:2px solid black;}
                 document.onpaste="";
                 for(i=0;i<_fd_list.length;i++){
                     let xhr = new XMLHttpRequest();
-                    //xmlHTTP.upload.addEventListener("loadstart", loadStartFunction, false);
-                    //xmlHTTP.upload.addEventListener("progress", progressFunction, false);
-                    //xmlHTTP.addEventListener("load", transferCompleteFunction, false);
-                    //xmlHTTP.addEventListener("error", uploadFailed, false);
-                    //xmlHTTP.addEventListener("abort", uploadCanceled, false);
                     var li = list.querySelector('[data-number="'+_fd_list[i][0].toString()+'"]')
                     xhr.open("POST", "?compress="+_fd_list[i][2].toString(), true);
                     function wrap(li, i){
@@ -3766,8 +3864,18 @@ blockquote{border-left:2px solid black;}
                     <tr><td><?=$this->T('SelfAuth 路径')?></td>
                         <td><input type="text" form="settings_form" id='settings_selfauth_path' name='settings_selfauth_path'
                         value='<?=$this->SelfAuthPath?>'/></td></tr>
+                    <tr><td><?=$this->T('启用评论')?></td>
                         <td><input type="checkbox" id="settings_enable_comments" name="settings_enable_comments"
                         form="settings_form" <?=$this->CommentEnabled?"checked":""?>/></td></tr>
+                    <tr><td><?=$this->T('长毛象实例')?></td>
+                        <td><input type="text" form="settings_form" id='settings_mastodon_url' name='settings_mastodon_url'
+                        value='<?=$this->MastodonURL?>'/></td></tr>
+                    <tr><td><?=$this->T('长毛象令牌')?></td>
+                        <td><input type="text" form="settings_form" id='settings_mastodon_token' name='settings_mastodon_token'
+                        value='<?=$this->MastodonToken?>'/></td></tr>
+                    <tr><td><?=$this->T('长毛象反链')?></td>
+                        <td><input type="text" form="settings_form" id='settings_mastodon_back_url' name='settings_mastodon_back_url'
+                        value='<?=$this->MastodonBackURL?>'/></td></tr>
                     <tr><td><?=$this->T('附加操作')?></td><td><a class='gray' href='index.php?extras=true'><?=$this->T('进入')?></a></td></tr>
                         
                     <tr><td class='smaller gray'>&nbsp;</td></tr>
@@ -4011,9 +4119,15 @@ blockquote{border-left:2px solid black;}
                 trans.href='https://translate.google.com/translate?sl=auto&tl=en-US&u='+encodeURIComponent(document.location.href);
             }
             <?php if($this->LoggedIn){ ?>
+                var Scenter = document.querySelector('#div_center');
+                var Sposts = Scenter.querySelectorAll('.post');
+                <?php if(isset($this->MastodonToken)){ ?>
+                    function MarkPostDoneMastodon(id,mastodon_url){
+                        for(var i=0;i<Sposts.length;i++){
+                            if(Sposts[i].dataset.postId==id){ Sposts[i].dataset.mastodon_url= mastodon_url; break;} }
+                    }
+                <?php } ?>
                 <?php if($this->PageType=='post' && !isset($this->WayBack)) { ?>
-                    var Scenter = document.querySelector('#div_center');
-                    var Sposts = Scenter.querySelectorAll('.post');
                     var Smerge_post_dialog = Scenter.querySelector('#merge_post_dialog');
                     var Smerge_post = Scenter.querySelector('#merge_post');
                     var Smerge_post_count = Smerge_post_dialog.querySelector('#merge_post_count');
@@ -4070,6 +4184,7 @@ blockquote{border-left:2px solid black;}
                 }
                 dmark = document.querySelector("#mark_details");
                 drename = document.querySelector("#rename_details");
+                dmastodon = document.querySelector("#mastodon_details");
                 drename_form = document.querySelector("#post_rename_form");
                 drename_input = document.querySelector("#post_rename_name");
                 var rp = document.querySelector('#post_reply_to');
@@ -4150,12 +4265,16 @@ blockquote{border-left:2px solid black;}
                         menu.parentNode.dataset.postId+"&set_mark="+mark;
                 }
                 function ToggleMarkDetails(){
-                    if(dmark.style.display=='block') dmark.style.display='none';
-                    else dmark.style.display='block';
+                    dmark.style.display=(dmark.style.display=='block')?'none':'block';
+                    drename.style.display=dmastodon.style.display='none'; 
                 }
                 function ToggleRenameDetails(){
-                    if(drename.style.display=='block') drename.style.display='none';
-                    else drename.style.display='block';
+                    drename.style.display=(drename.style.display=='block')?'none':'block';
+                    dmark.style.display=dmastodon.style.display='none';
+                }
+                function ToggleMastodonDetails(){
+                    dmastodon.style.display=(dmastodon.style.display=='block')?'none':'block';
+                    dmark.style.display=drename.style.display='none';
                 }
             <?php } ?>
             function ShowPostMenu(post){
@@ -4187,7 +4306,38 @@ blockquote{border-left:2px solid black;}
                     menu.querySelector('#mark_details').dataset.id=id;
                     drename_input.value=id;
                     drename_form.action="<?=$this->GetRedirect()?>"+"&rename_post="+id;
-                <?php } ?>
+                    <?php if(isset($this->MastodonToken)){ ?>
+                        dmastodon_form = document.querySelector("#post_mastodon_form");
+                        dmastodon_form.action='?mastodon_post='+id;
+                        function MastodonSend(id){
+                            mastodon_send.innerHTML="<?=$this->T('稍等')?>";
+                            var xhr = new XMLHttpRequest();
+                            function wrapidxhr(_id) { return function() {
+                                if (this.readyState == 4 && this.status == 200) {
+                                    var response = xhr.responseText;
+                                    let content="";
+                                    if(res = response.match(/SUCCESS (\S+)/u)){
+                                        content="<?=$this->T('成功发送到长毛象')?>";
+                                    }else{content="<b><?=$this->T('出现问题')?></b><br /><span class='smaller'>"+response+"</span>";}
+                                    mastodon_send.innerHTML=content; mastodon_send.href=res[1];
+                                    MarkPostDoneMastodon(_id, res[1]);
+                                } }
+                            };
+                            xhr.onreadystatechange = wrapidxhr(id);
+                            xhr.open("GET", "index.php?mastodon_send_post="+id, true); xhr.send();
+                        }
+                        menu_mastodon = menu.querySelector("#menu_mastodon");
+                        mastodon_send = menu.querySelector("#menu_mastodon_send");
+                        mastodon_view = menu.querySelector("#menu_mastodon_view");
+                        mastodon_url = menu.querySelector("#post_mastodon_url");
+                        if(p.dataset.mastodon_url){mastodon_view.style.display='inline';mastodon_view.href=p.dataset.mastodon_url;
+                            mastodon_send.innerHTML='<?=$this->T("重新发送")?>'; mastodon_url.value=p.dataset.mastodon_url; }
+                        else{mastodon_view.style.display='none';mastodon_view.href=""; mastodon_send.innerHTML="<?=$this->T('发送')?>";
+                            mastodon_url.value="";}
+                        mastodon_send.onclick=function(){
+                            this.onclick=function(){};
+                            MastodonSend(id); };
+                <?php } } ?>
                 
                 title = document.title;
                 copy = document.getElementById('share_copy');

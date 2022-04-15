@@ -179,4 +179,17 @@
 - 远程 | Remote
 - 回到当前日期 | Back to current time
 - SelfAuth 路径 | SelfAuth Path
+- 该话题最新帖子在前 | This thread show latest posts first
+- 长毛象 | Mastodon
+- 转到 | View on
+- 重新发送 | Send Again
+- 未知错误 | Unknown Error
+- 长毛象实例 | Mastodon Instance
+- 长毛象令牌 | Mastodon Token
+- 成功发送到长毛象 | Successfully sent
+- 出现问题 | Errors occured
+- 长毛象反链 | Mastodon Back URL
+- 来自 | From
+
+
 
