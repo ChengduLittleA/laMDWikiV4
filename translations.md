@@ -188,8 +188,9 @@
 - 长毛象令牌 | Mastodon Token
 - 成功发送到长毛象 | Successfully sent
 - 出现问题 | Errors occured
-- 长毛象反链 | Mastodon Back URL
+- 本站地址 | Host URL
 - 来自 | From
+- 偏好语言 | Preferred Language
 
 
 

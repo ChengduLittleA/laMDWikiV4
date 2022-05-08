@@ -36,7 +36,8 @@ class LA{
     protected $CommentEnabled;
     protected $MastodonToken;
     protected $MastodonURL;
-    protected $MastodonBackURL;
+    protected $MastodonPreferredLang;
+    protected $HostURL;
     
     
     protected $Redirect;
@@ -69,6 +70,11 @@ class LA{
     protected $Markers;
     
     protected $ExtraScripts;
+    
+    protected $APubID;
+    protected $APubActor;
+    protected $APubPublicKey;
+    protected $APubPrivateKey;
     
     protected $TIME_STRING;
     
@@ -229,7 +235,9 @@ class LA{
         fwrite($conf,'- ExpFooter = '.$this->ExpFooter.PHP_EOL);
         fwrite($conf,'- MastodonToken = '.$this->MastodonToken.PHP_EOL);
         fwrite($conf,'- MastodonURL = '.$this->MastodonURL.PHP_EOL);
-        fwrite($conf,'- MastodonBackURL = '.$this->MastodonBackURL.PHP_EOL);
+        fwrite($conf,'- MastodonPreferredLang = '.$this->MastodonPreferredLang.PHP_EOL);
+        fwrite($conf,'- HostURL = '.$this->HostURL.PHP_EOL);
+        fwrite($conf,'- APubID = '.$this->APubID.PHP_EOL);
         fflush($conf);fclose($conf);
         $conf = fopen('la_redirect.md','w');
         fwrite($conf,$this->DisplayRedirectConfig());fflush($conf);fclose($conf);
@@ -322,6 +330,9 @@ class LA{
     function MastodonSendPost(&$post, &$errmsg=NULL){
         if(isset($post['mark_value']) && $post['mark_value']==7){ return NULL; }
         
+        $this->LanguageAppendix = 'zh';
+        if(in_array($this->MastodonPreferredLang,['en','zh'])){ $this->LanguageAppendix = $this->MastodonPreferredLang; }
+        
         $this->ConvertPost($post);
         $media_ids = NULL;
         $mastodon_post_url = NULL;
@@ -336,8 +347,8 @@ class LA{
         }
         
         $text = strip_tags(preg_replace('/<\/(p|blockquote|h[0-9])>/u',"\n\n",$post['html']));
-        if(isset($this->MastodonBackURL) && $this->MastodonBackURL!=""){
-            $text.=("\n\n".$this->T('来自').' '.$this->MastodonBackURL.'?post='.$post['id']);
+        if(isset($this->HostURL) && $this->HostURL!=""){
+            $text.=("\n\n".$this->T('来自').' '.$this->HostURL.'?post='.$post['id']);
         }
         
         $vis = (isset($post['mark_value']) && $post['mark_value']==6)?"private":"public";
@@ -466,6 +477,7 @@ header>div{overflow:auto;white-space:nowrap;}
 .header_nav{display:inline;}
 header a,.left a,.footer a,.clean_a,.clean_a a{text-decoration:none;}
 header a:hover,.button:hover{color:%gray% !important;}
+.toc_button{position:absolute;top:0.5em;right:0;text-shadow: 0px 0px 10px %white%;background-color:%white%88;}
 .footer{background-color:%white%;z-index:10;position:relative;}
 .invert_a,.invert_a a{color:%gray%;text-decoration:none;}
 .invert_a:hover,.invert_a a:hover{color:%black% !important;}
@@ -512,7 +524,7 @@ position:sticky;overflow:auto;padding-right:0.2em;padding-bottom:4rem;}
 .center_wide{display:inline-block;vertical-align:top;width:75%;padding-left:0.3em;overflow:visible;padding-bottom:4rem;}
 .center_full{display:inline-block;vertical-align:top;width:100%;overflow:visible;padding-bottom:4rem;}
 .center_wide .p_thumb{height:10rem;}
-.sticky_title{position:sticky;top:1.35em;z-index:1;box-shadow:6em 3.5em 0.75em -3em inset %white%;pointer-events:none;}
+.sticky_title{position:sticky;top:calc(1.6rem + 2px);z-index:1;box-shadow:6em 3.5em 0.75em -3em inset %white%;pointer-events:none;}
 .center_exp{display:block;width:80%;margin:0 auto;overflow:visible;padding-bottom:1em;}
 .table_top{position:relative;left:calc(-50% - 0.45em);width:calc(200% + 0.6em);background:%white%;z-index:1;
 box-shadow:0px 0px 2em 1em %white%;margin-top:2em;margin-bottom:2em;}
@@ -744,6 +756,7 @@ height:unset;padding:0;padding-top:calc(100vh - 8.5rem);background:none;}
 .post .p_thumb img{max-height:3rem;}
 .page,.page_gallery{padding:0.2em;padding-top:0;}
 header{padding-top:0.3em;}
+.toc_button{top:0.3em;}
 .small_footer{padding-bottom:0.3em;}
 .footer_additional{display:block;width:100%;}
 .album_hint{display:block;font-size:1rem;}
@@ -1879,6 +1892,7 @@ blockquote{border-left:2px solid black;}
                         $rep = preg_replace('/\R([+]{3,})\R/',PHP_EOL.'@$1'.PHP_EOL,$rep);
                         $rep = preg_replace('/\[-/','[@-',$rep);
                         $rep = preg_replace('/\{/','{@',$rep);
+                        $rep = preg_replace('/(en|zh|any)\|(en|zh|any)/','$1@|$2',$rep);
                         return $rep;
                     },
                     $replacement);
@@ -1905,6 +1919,7 @@ blockquote{border-left:2px solid black;}
                         $rep = preg_replace('/\R@([+]{3,})\R/',PHP_EOL.'$1'.PHP_EOL,$rep);
                         $rep = preg_replace('/\[@-/','[-',$rep);
                         $rep = preg_replace('/\{@/','{',$rep);
+                        $rep = preg_replace('/(en|zh|any)@\|(en|zh|any)/','$1|$2',$rep);
                         return $rep;
                     },
                     $replacement);
@@ -1965,6 +1980,75 @@ blockquote{border-left:2px solid black;}
         if($this->NeedWritePosts){ $this->CachePostLinks(); $this->WritePosts(); }
         if($this->NeedWriteImages){ $this->WriteImages(); }
         if($this->NeedWriteArchive){ $this->WriteArchive(); }
+    }
+    
+    function APubEnsureWebfinger($name, $host){
+        if(!is_dir('.well-known')) mkdir('.well-known');
+        if(!is_dir('.well-known/webfinger')) mkdir('.well-known/webfinger');
+        $f = fopen('.well-known/webfinger/index.php',"w");
+        $without_protocol = parse_url($host, PHP_URL_HOST);
+        $finger = ["subject"=>"acct:".$name.'@'.$without_protocol,
+                   "links"=>[["rel"=>"self", "type"=>"application/activity+json", "href"=>$host."?apub_actor=1"]]];
+        fwrite($f, "<?php header('Content-Type: application/json'); echo '".json_encode($finger, JSON_UNESCAPED_SLASHES)."'; ?>"); fclose($f);
+        
+        if(!file_exists('.well-known/apub_public_key.pem') || !file_exists('.well-known/apub_private_key.php')){
+            $res = openssl_pkey_new();
+            $this->APubPublicKey = openssl_pkey_get_details($res)['key'];
+            openssl_pkey_export($res, $this->APubPrivateKey);
+            $f = fopen('.well-known/apub_public_key.pem',"w");
+            fwrite($f, $this->APubPublicKey); fclose($f);
+            $f = fopen('.well-known/apub_private_key.php',"w");
+            fwrite($f, "<?php exit; ?>".PHP_EOL.PHP_EOL.$this->APubPrivateKey); fclose($f);
+        }
+    }
+    
+    function APubEnsureInfo(){
+        if(!isset($this->APubID) || !isset($this->HostURL)) return;
+        if(!file_exists('.well-known/apub_public_key.pem')){$this->APubEnsureWebfinger($this->APubID, $this->HostURL);}
+        $pk = file_get_contents('.well-known/apub_public_key.pem'); //$pk = preg_replace('/\n/u','\\n',$pk);
+        $actor = ["@context"=>["https://www.w3.org/ns/activitystreams","https://w3id.org/security/v1"],
+                  "id"=> $this->HostURL."?apub_actor=1",
+                  "type"=> "Person",
+                  "name"=> $this->DisplayName,
+                  "url"=> $this->HostURL,
+                  "summary"=> "Lazy... No summary",
+                  "preferredUsername"=> $this->APubID,
+                  "inbox"=> $this->HostURL."?apub_inbox=1",
+                  "outbox"=> $this->HostURL."?apub_outbox=1",
+                  "publicKey"=> ["id"=> $this->HostURL."?apub_actor=1#main-key",
+                                 "owner"=> $this->HostURL."?apub_actor=1",
+                                 "publicKeyPem"=>$pk]];
+        $this->APubActor = json_encode($actor, JSON_UNESCAPED_SLASHES);
+    }
+    
+    function APubMakeOutbox(){
+        $this->ReadPosts();$this->ReadImages();
+        $obj = ["@context"=>"https://www.w3.org/ns/activitystreams",
+                "id"=>$this->HostURL."?apub_outbox=1",
+                "type"=>"OrderedCollection"];
+        $items=[]; $i=0;
+        foreach(array_reverse($this->Posts) as &$p){
+            $this->ConvertPost($p);
+            $text = strip_tags(preg_replace('/<\/(p|blockquote|h[0-9])>/u',"\n\n",$p['html']));
+            $time = DateTime::createFromFormat('YmdHis', $p['id'], new DateTimeZone('+0800'));
+            $ob = ["@context"=>"https://www.w3.org/ns/activitystreams",
+                   "type"=> "Create",
+                   "id"=> $this->HostURL."?post=".$p['id']."?apub_object=1",
+                   "published"=> $time->format('Y-m-d\TH:i:s\Z'),
+                   //"to"=> ["https://chatty.example/ben/"],
+                   "actor"=> $this->HostURL."?apub_actor=1",
+                   "to"=> ["https://www.w3.org/ns/activitystreams#Public"],
+                   "object"=> ["type"=> "Note",
+                               "id"=> $this->HostURL."?post=".$p['id'],
+                               "published"=> $time->format('Y-m-d\TH:i:s\Z'),
+                               "attributedTo"=> $this->HostURL."?apub_actor=1",
+                               "to"=> ["https://www.w3.org/ns/activitystreams#Public"],
+                               "content"=> $text]];
+            $items[] = $ob;
+            $i++; if($i>20) break;
+        }
+        $obj['orderedItems'] = $items; $obj["totalItems"] = sizeof($items);
+        return json_encode($obj, JSON_UNESCAPED_SLASHES);
     }
     
     function ProcessRequest(&$message=NULL, &$redirect=NULL){
@@ -2048,6 +2132,14 @@ blockquote{border-left:2px solid black;}
             setcookie('la_experimental','confirmed'); $_COOKIE['la_experimental'] = $_GET['confirmed'];
             $redirect='index.php'.(isset($_GET['post'])?'?post='.$_GET['post']:"");return 0;
         }
+        if(isset($_GET['apub_actor'])){
+            $this->APubEnsureInfo(); header('Content-Type: application/json'); header('Cache-Control no-store, no-cache, must-revalidate');
+            echo $this->APubActor; exit;
+        }
+        if(isset($_GET['apub_outbox'])){
+            $this->APubEnsureInfo(); header('Content-Type: application/json'); header('Cache-Control no-store, no-cache, must-revalidate');
+            echo $this->APubMakeOutbox(); exit;
+        }
         if($this->LoggedIn){
             $this->DoUpload();
             
@@ -2072,7 +2164,12 @@ blockquote{border-left:2px solid black;}
                 if(isset($_POST['settings_exp_footer'])) $this->ExpFooter=$_POST['settings_exp_footer'];
                 if(isset($_POST['settings_mastodon_token'])) $this->MastodonToken=$_POST['settings_mastodon_token'];
                 if(isset($_POST['settings_mastodon_url'])) $this->MastodonURL=$_POST['settings_mastodon_url'];
-                if(isset($_POST['settings_mastodon_back_url'])) $this->MastodonBackURL=$_POST['settings_mastodon_back_url'];
+                if(isset($_POST['settings_mastodon_lang'])) $this->MastodonPreferredLang=$_POST['settings_mastodon_lang'];
+                if(isset($_POST['settings_host_url'])) $this->HostURL=$_POST['settings_host_url'];
+                if(isset($_POST['settings_apub_id']) && isset($this->HostURL)) { 
+                    $this->APubID=$_POST['settings_apub_id'];
+                    $this->APubEnsureWebfinger($this->APubID,$this->HostURL);
+                }
                 if(isset($_POST['settings_old_password'])&&password_verify($_POST['settings_old_password'], $this->Password)){
                     if(isset($_POST['settings_id'])) $this->Admin=$_POST['settings_id'];
                     if(isset($_POST['settings_new_password']) && isset($_POST['settings_new_password_redo']) && 
@@ -2329,10 +2426,10 @@ blockquote{border-left:2px solid black;}
     function ConvertPost(&$post){
         if(!isset($post['html'])){
             $info=[];
-            $post['html'] = $this->PostProcessHTML($this->PDE->text($this->InsertReplacementSymbols($post['content'])),
+            $post['html'] = $this->TranslatePostParts($this->PostProcessHTML($this->ChoosePartsByLanguage($this->PDE->text($this->InsertReplacementSymbols($post['content'])),true),
                                                    $post['images'],
                                                    isset($post['product']), $info,
-                                                   $post['original_images']);
+                                                   $post['original_images']));
             if(isset($post['product'])) $post['product']=$info;
         }
     }
@@ -2553,9 +2650,22 @@ blockquote{border-left:2px solid black;}
     <?php
     }
     
+    function ChoosePartsByLanguage($content,$use_p=false){
+        $split = preg_split('/'.($use_p?'<p>\s*':'').'((en|zh|any)\|(en|zh|any))'.($use_p?'<\/p>\s*':'').'/u',$content, -1,
+            PREG_SPLIT_NO_EMPTY|PREG_SPLIT_DELIM_CAPTURE);
+        $lang = $this->LanguageAppendix; $last_lang='0'; $reduced="";
+        if($split) for($i=0;$i<sizeof($split);$i+=4){
+            $this_lang = '0'; if($i+2>=sizeof($split)){ $this_lang = $last_lang; }else{ $this_lang = $split[$i+2]; }
+            if($this_lang==$lang || $this_lang=='any'){ $reduced.=$split[$i]; }
+            if($i+3<sizeof($split)){ $last_lang = $split[$i+3]; }
+        }
+        if(!$reduced)$reduced = $content;
+        return $reduced;
+    }
     function TranslatePostParts($html){
         $html = preg_replace_callback('/>([^><]+?)</u', function($ma){
-                return ">".$this->T($ma[1])."<";
+                $reduced = $this->ChoosePartsByLanguage($ma[1], false);
+                return ">".$this->T($reduced)."<";
             }, $html);
         return $html;
     }
@@ -2566,7 +2676,7 @@ blockquote{border-left:2px solid black;}
             href='javascript:toggle_mobile_show(document.getElementById("mobile_nav"))'><?=$this->T($this->ShortTitle)?>...</a></b> 
         <div class='header_nav'>
         <?php if($this->PageType=='post'){ ?>
-            <div style='float:right;' class='hidden_on_print'>
+            <div class='toc_button hidden_on_print'>
                 <?php if(!$interesting && isset($p) && isset($p['refs']) && isset($p['refs'][0])){ ?>
                     <span class='hidden_on_desktop'><a id='button_ref' href='javascript:ToggleLeftSide();'>
                         <?=$this->T('链接')?>(<?=sizeof($p['refs'])?>)</a></span>
@@ -2594,7 +2704,7 @@ blockquote{border-left:2px solid black;}
                 <?php if($this->LoggedIn){ ?>
                     | <span class='gray invert_a'><a href='index.php?comments=al最近l'>@</a></span><?php } ?></li>
             <?php $this->SpecialNavigation;if(isset($this->SpecialNavigation) && ($p = &$this->GetPost($this->SpecialNavigation))!=NULL){
-                echo $this->TranslatePostParts($this->GenerateSinglePost($p, false, false, false, false,$this->NULL_POST));
+                echo $this->GenerateSinglePost($p, false, false, false, false,$this->NULL_POST);
             } ?>
             <li><a href='?search=' onclick='ShowWaitingBar()'><?=$this->T('搜索')?></a></li>
             <?php if($this->LanguageAppendix=='zh'){ ?>
@@ -2619,7 +2729,7 @@ blockquote{border-left:2px solid black;}
         <ul class='hidden_on_mobile' id='mobile_nav' style='text-align:center;'>
         <li class='hidden_on_desktop block_on_mobile'><a href='index.php'><?=$this->T('索引')?></a></li>
         <?php $this->ExpNavigation;if(isset($this->ExpNavigation) && ($p = &$this->GetPost($this->ExpNavigation))!=NULL){
-            echo $this->TranslatePostParts($this->GenerateSinglePost($p, false, false, false, false,$this->NULL_POST));
+            echo $this->GenerateSinglePost($p, false, false, false, false,$this->NULL_POST);
         } ?>
         <?php if($this->LanguageAppendix=='zh'){ ?>
             <li class='invert_a smaller'><a href='<?=$this->GetRedirect().'&set_language=en'?>'><b>汉语</b>/English</a></li>
@@ -2638,8 +2748,8 @@ blockquote{border-left:2px solid black;}
                 $s="<div class='smaller block post ref_compact gray'>".
                     "<a href='?post=".$m[1]."' class='post_access invert_a smaller' onclick='ShowWaitingBar()'>→</a>".
                     "<div class='post_ref'><div class='smaller'>".$m[2]."</div>".
-                    (($rp!==NULL && $this->CanShowPost($rp))?$this->TranslatePostParts(
-                                $this->GenerateSinglePost($rp,false,false,false,true,$this->NULL_POST,true)):$this->T("未找到该引用。")).
+                    (($rp!==NULL && $this->CanShowPost($rp))?
+                        $this->GenerateSinglePost($rp,false,false,false,true,$this->NULL_POST,true):$this->T("未找到该引用。")).
                     "</div></div>";
                 return $s;
             },
@@ -2649,8 +2759,8 @@ blockquote{border-left:2px solid black;}
             function($m){
                 $rp = &$this->GetPost($m[1], false, true);
                 $s="<div class='product_ref block post ref_compact'><a href='?post=".$m[1]."' class='clean_a' onclick='ShowWaitingBar()'>".
-                    (($rp!==NULL && $this->CanShowPost($rp))?$this->TranslatePostParts(
-                                $this->GenerateSinglePost($rp,true,false,false,true,$this->NULL_POST,true)):$this->T("未找到该引用。")).
+                    (($rp!==NULL && $this->CanShowPost($rp))?
+                    $this->GenerateSinglePost($rp,true,false,false,true,$this->NULL_POST,true):$this->T("未找到该引用。")).
                     "</a></div>";
                 return $s;
             },
@@ -2713,8 +2823,7 @@ blockquote{border-left:2px solid black;}
     function MakeSinglePostExp(&$post){ 
         $big_table = ""; ?>
         <li class='post post_dummy'>
-            <?=$this->TranslatePostParts(
-               $this->GenerateSinglePost($post, false, false, true, false, $big_table, false)); ?>
+            <?=$this->GenerateSinglePost($post, false, false, true, false, $big_table, false); ?>
         </li>
         <?php if($big_table!=$this->NULL_POST) echo "</ul></li><div class='table_top'>".$big_table.'</div>';?>
     <?php
@@ -2756,9 +2865,8 @@ blockquote{border-left:2px solid black;}
                     <?php } if($is_product&&!$generate_anchor){
                         echo "<p class='smaller gray'>".$this->T('商品')."</p>";
                         echo "<div class='product_ref clean_a'><a href='?post={$post['id']}'>";} ?>
-                    <?=$this->TranslatePostParts(
-                           $this->GenerateSinglePost($post, $strip_tags, $generate_anchor, true,
-                                                     $generate_thumb,$big_table,($show_thread_link||$side||$force_hide_long))); ?>
+                    <?=$this->GenerateSinglePost($post, $strip_tags, $generate_anchor, true,
+                                                     $generate_thumb,$big_table,($show_thread_link||$side||$force_hide_long)); ?>
                     <?php if($is_product&&!$generate_anchor){echo "</a></div>";} ?>
             </div>
             <?=$side?"</a>":""?> <?php
@@ -2775,8 +2883,7 @@ blockquote{border-left:2px solid black;}
                         <div class='post_access invert_a hover_dark smaller'><?=isset($post['tid']['first']['mark_value'])?
                                 $this->Markers[$post['tid']['first']['mark_value']]:"→"?></div></a>
                     <div class='post_width'><div class='smaller'><?=$this->T('回复给主题帖：')?></div>
-                        <?=$this->TranslatePostParts(
-                                $this->GenerateSinglePost($post['tid']['first'], false, false, false, true,$this->NULL_POST,true));?>
+                        <?=$this->GenerateSinglePost($post['tid']['first'], false, false, false, true,$this->NULL_POST,true);?>
                     </div>
                 </div>
             <?php }
@@ -2829,7 +2936,7 @@ blockquote{border-left:2px solid black;}
                 if(!isset($p['comment_to'])) continue;
                 if($i < $this->CommentsPerPage * $this->CurrentOffset) {$i++; continue;}
                 
-                $ht = $this->TranslatePostParts($this->GenerateSinglePost($p, false, false, false, false, $t, false));
+                $ht = $this->GenerateSinglePost($p, false, false, false, false, $t, false);
                 $name = isset($p['link'])?("<a href='".$p['link']."'>".$p['name']."↗</a>"):$p['name'];
                 $post_to = $this->GetPost($p['comment_to']); $post_title = $this->GetPostTitle($post_to);
                 if(!$post_to) $post_title = "?";
@@ -3085,7 +3192,7 @@ blockquote{border-left:2px solid black;}
         <br /><h2><?=$this->T('评论')?> (<?=$comment_count;?>)</h2><div class='spacer'></div>
             <?php if($comment_count) { echo "<ul>";
                     foreach($to_post['comments'] as $p){
-                        $ht = $this->TranslatePostParts($this->GenerateSinglePost($p, false, false, false, false, $t, false));
+                        $ht = $this->GenerateSinglePost($p, false, false, false, false, $t, false);
                         $name = isset($p['link'])?("<a href='".$p['link']."'>".$p['name']."↗</a>"):$p['name'];
                         $mail = $this->LoggedIn?("<span class='gray clean_a hidden_on_print'>&nbsp;".
                                                  "<a href='mailto:".$p['email']."'>@</a>&nbsp;</span>"):"";
@@ -3165,7 +3272,7 @@ blockquote{border-left:2px solid black;}
             <h2 class='hidden_on_print'><?=$this->T('有趣')?>
                 <a class='gray clean_a' href='?post=<?=$th['first']['id']?>'>→</a></h2>
             <ul><li class='post post_width_big' data-post-id='<?=$th['first']['id']?>'>
-                <div class='post_menu_button _menu_hook' onclick='ShowPostMenu(this.parentNode);'>+</div><?=$this->TranslatePostParts($ht)?>
+                <div class='post_menu_button _menu_hook' onclick='ShowPostMenu(this.parentNode);'>+</div><?=$ht?>
                 <?php if(isset($th['first']['refs'][0])){ ?><p class='smaller'><?=$this->T('引用')?>: </p><ul class='smaller'>
                     <?php foreach($th['first']['refs'] as $ref){
                         $po = $this->GetPost($ref);
@@ -3199,7 +3306,7 @@ blockquote{border-left:2px solid black;}
                         <?php if($ref_count){ ?>
                             <div class='post_access ref_count'><?=$ref_count?></div>
                         <?php } ?></a>
-                    <?=$this->TranslatePostParts($p['html']);?>
+                    <?=$p['html'];?>
                     <a class='_menu_hook clean_a post_menu_button' onclick='ShowPostMenu(this.parentNode.parentNode);'>+</a></td></tr>
                     <?php if($is_current && $ref_count>0){ ?><tr class='post_current_row'><td><p>&nbsp;</p><ul class='smaller'>
                         <?php foreach($p['refs'] as $ref){
@@ -3813,7 +3920,8 @@ blockquote{border-left:2px solid black;}
                 <h2><?=$this->T('目录')?></h2><ul>
                 <?php
                     foreach($this->Anchors as $a){?>
-                        <li class='toc_entry_<?=$a[0]>5?5:$a[0]?>'><a href='#<?=$a[1]?>'><?=$this->T($a[2])?></a></li>
+                        <li class='toc_entry_<?=$a[0]>5?5:$a[0]?>'><a href='#<?=$a[1]?>'>
+                            <?=$this->T($this->ChoosePartsByLanguage($a[2]))?></a></li>
                     <?php }
                 ?></ul>
             <?php }else{ ?>
@@ -3867,16 +3975,28 @@ blockquote{border-left:2px solid black;}
                     <tr><td><?=$this->T('启用评论')?></td>
                         <td><input type="checkbox" id="settings_enable_comments" name="settings_enable_comments"
                         form="settings_form" <?=$this->CommentEnabled?"checked":""?>/></td></tr>
+                    <tr><td><?=$this->T('附加操作')?></td><td><a class='gray' href='index.php?extras=true'><?=$this->T('进入')?></a></td></tr>
+                        
+                    <tr><td class='smaller gray'>&nbsp;</td></tr>
+                    <tr><td class='smaller gray'><?=$this->T('长毛象')?></td></tr>
                     <tr><td><?=$this->T('长毛象实例')?></td>
                         <td><input type="text" form="settings_form" id='settings_mastodon_url' name='settings_mastodon_url'
                         value='<?=$this->MastodonURL?>'/></td></tr>
                     <tr><td><?=$this->T('长毛象令牌')?></td>
                         <td><input type="text" form="settings_form" id='settings_mastodon_token' name='settings_mastodon_token'
                         value='<?=$this->MastodonToken?>'/></td></tr>
-                    <tr><td><?=$this->T('长毛象反链')?></td>
-                        <td><input type="text" form="settings_form" id='settings_mastodon_back_url' name='settings_mastodon_back_url'
-                        value='<?=$this->MastodonBackURL?>'/></td></tr>
-                    <tr><td><?=$this->T('附加操作')?></td><td><a class='gray' href='index.php?extras=true'><?=$this->T('进入')?></a></td></tr>
+                    <tr><td><?=$this->T('偏好语言')?></td>
+                        <td><input type="text" form="settings_form" id='settings_mastodon_lang' name='settings_mastodon_lang'
+                        value='<?=$this->MastodonPreferredLang?>'/></td></tr>
+                    <tr><td><?=$this->T('本站地址')?></td>
+                        <td><input type="text" form="settings_form" id='settings_host_url' name='settings_host_url'
+                        value='<?=$this->HostURL?>'/></td></tr>
+                    
+                    <tr><td class='smaller gray'>&nbsp;</td></tr>
+                    <tr><td class='smaller gray'><?=$this->T('Activity Pub')?></td></tr>
+                    <tr><td><?=$this->T('用户名')?></td>
+                        <td><input type="text" form="settings_form" id='settings_apub_id' name='settings_apub_id'
+                        value='<?=$this->APubID?>'/></td></tr>
                         
                     <tr><td class='smaller gray'>&nbsp;</td></tr>
                     <tr><td class='smaller gray'><?=$this->T('实验访问')?></td></tr>
@@ -3991,7 +4111,7 @@ blockquote{border-left:2px solid black;}
             <div style='white-space:nowrap;'>
                 <div class='footer_additional'>
                 <?php if(isset($this->ExpFooter) && ($p = &$this->GetPost($this->ExpFooter,true))!=NULL){
-                    echo $this->TranslatePostParts($this->GenerateSinglePost($p, false, false, false, false,$this->NULL_POST,false));
+                    echo $this->GenerateSinglePost($p, false, false, false, false,$this->NULL_POST,false);
                 } ?>
                 </div>
             </div>
@@ -4082,12 +4202,12 @@ blockquote{border-left:2px solid black;}
             <div style='white-space:nowrap;'>
                 <div class='footer_additional'>
                 <?php if(isset($this->SpecialFooter) && ($p = &$this->GetPost($this->SpecialFooter))!=NULL){
-                    echo $this->TranslatePostParts($this->GenerateSinglePost($p, false, false, false, false,$this->NULL_POST,false));
+                    echo $this->GenerateSinglePost($p, false, false, false, false,$this->NULL_POST,false);
                 } ?>
                 </div>
                 <div class='footer_additional'>
                 <?php if(isset($this->SpecialFooter2) && ($p = &$this->GetPost($this->SpecialFooter2))!=NULL){
-                    echo $this->TranslatePostParts($this->GenerateSinglePost($p, false, false, false, false,$this->NULL_POST,false));
+                    echo $this->GenerateSinglePost($p, false, false, false, false,$this->NULL_POST,false);
                 } ?>
                 </div>
             </div>
