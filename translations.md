@@ -191,6 +191,8 @@
 - 本站地址 | Host URL
 - 来自 | From
 - 偏好语言 | Preferred Language
-
+- 随机 | Random
+- 这里访问 | Here Access
+- 看全图 | View Full
 
 

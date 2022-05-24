@@ -26,11 +26,17 @@ class LA{
     protected $SpecialPinned;
     protected $DefaultGallery;
     protected $SelfAuthPath;
+    protected $HereHost;
+    protected $HereTitle;
+    protected $HereShortTitle;
+    protected $HereAlbum;
+    protected $HereNavigation;
+    protected $HereFooter;
     protected $ExpHost;
+    protected $ExpAlbum;
     protected $ExpTitle;
     protected $ExpShortTitle;
     protected $ExpCaution;
-    protected $ExpIndex;
     protected $ExpNavigation;
     protected $ExpFooter;
     protected $CommentEnabled;
@@ -50,6 +56,7 @@ class LA{
     
     protected $LoggedIn;
     protected $LoginTokens;
+    protected $InHereMode;
     protected $InExperimentalMode;
     protected $LanguageAppendix;
     protected $UseRemoteFont;
@@ -90,14 +97,24 @@ class LA{
     protected $NeedWriteImages;
     protected $NeedWriteArchive;
     
+    protected $HereDisplayTitle;
+    protected $VisitedHere;
+    protected $HereNumber;
+    protected $HereMainImage;
+    
     public $PageType;
     public $CurrentPostID;
+    public $HereID;
     public $ActualPostID;
     public $TagID;
     
     function ReadableTime($id){
         $dt = DateTime::createFromFormat('YmdHis', $id);
         return $dt->format('Y/m/d H:i:s');
+    }
+    function StandardTime($id){
+        $dt = DateTime::createFromFormat('YmdHis', $id);
+        return $dt->format('Y-m-d\TH:i:s');
     }
     function FullURL(){
         return (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ?
@@ -112,7 +129,8 @@ class LA{
         }
         return $str;
     }
-    function SwitchLanguageAndFont(){        
+    function SwitchLanguageAndFont(){
+        $this->LanguageAppendix = 'zh';   
         if(isset($_COOKIE['la_language'])){
             $this->LanguageAppendix = $_COOKIE['la_language'];
         }else{
@@ -226,11 +244,17 @@ class LA{
         fwrite($conf,'- DefaultGallery = '.$this->DefaultGallery.PHP_EOL);
         fwrite($conf,'- SelfAuthPath = '.$this->SelfAuthPath.PHP_EOL);
         fwrite($conf,'- CommentEnabled = '.($this->CommentEnabled?"True":"False").PHP_EOL);
+        fwrite($conf,'- HereHost = '.$this->HereHost.PHP_EOL);
+        fwrite($conf,'- HereTitle = '.$this->HereTitle.PHP_EOL);
+        fwrite($conf,'- HereShortTitle = '.$this->HereShortTitle.PHP_EOL);
+        fwrite($conf,'- HereAlbum = '.$this->HereAlbum.PHP_EOL);
+        fwrite($conf,'- HereNavigation = '.$this->HereNavigation.PHP_EOL);
+        fwrite($conf,'- HereFooter = '.$this->HereFooter.PHP_EOL);
         fwrite($conf,'- ExpHost = '.$this->ExpHost.PHP_EOL);
         fwrite($conf,'- ExpTitle = '.$this->ExpTitle.PHP_EOL);
         fwrite($conf,'- ExpShortTitle = '.$this->ExpShortTitle.PHP_EOL);
         fwrite($conf,'- ExpCaution = '.$this->ExpCaution.PHP_EOL);
-        fwrite($conf,'- ExpIndex = '.$this->ExpIndex.PHP_EOL);
+        fwrite($conf,'- ExpAlbum = '.$this->ExpAlbum.PHP_EOL);
         fwrite($conf,'- ExpNavigation = '.$this->ExpNavigation.PHP_EOL);
         fwrite($conf,'- ExpFooter = '.$this->ExpFooter.PHP_EOL);
         fwrite($conf,'- MastodonToken = '.$this->MastodonToken.PHP_EOL);
@@ -377,6 +401,7 @@ class LA{
         $this->PDE->SetInterlinkPath('/');
         $this->Posts = [];
         $this->Threads = [];
+        $this->VisitedHere = [];
         
         $this->NULL_IMAGE_DUMMY = [];
         $this->NULL_IMAGE_DUMMY['name']=$this->NULL_IMAGE_DUMMY['file']=$this->NULL_IMAGE_DUMMY['thumb']="";
@@ -454,6 +479,26 @@ class LA{
                                        .(isset($_GET['settings'])?"?settings=true":""));
         }
     }
+    function SetHereMainImage($im_this){
+        if(isset($im_this) && isset($im_this['parent'])){ $this->HereMainImage = &$this->FindImage($im_this['parent'],true);}
+    }
+    function RecordVisitedHere($image_or_post_name, $image_title){
+        $visited_here = $this->InExperimentalMode?"visited_experimental":"visited_here";
+        if(!isset($_SESSION[$visited_here])){ $_SESSION[$visited_here] = []; }
+        if(!(isset($_SESSION[$visited_here][0]) && in_array($image_or_post_name,$_SESSION[$visited_here]))){
+            $_SESSION[$visited_here][] = $image_or_post_name;
+        }
+        if(isset($image_title)){ $this->HereDisplayTitle=$image_title; }
+        $this->HereNumber = array_search($image_or_post_name,$_SESSION[$visited_here])+1;
+        $_SESSION['here_number'] = $this->HereNumber;
+        $this->VisitedHere = $_SESSION[$visited_here];
+    }
+    function HereLinkFromNumber($number){
+        $number -= 1; if($number<0){ $number=0; }
+        if($number>=sizeof($this->VisitedHere)){ $number = sizeof($this->VisitedHere)-1; }
+        if(preg_match('/(jpg|jpeg|png|gif)/u',$this->VisitedHere[$number])){ return "?here=images/".$this->VisitedHere[$number]; }
+        else{ return "?post=".$this->VisitedHere[$number]; }
+    }
     
     function WriteStyles(){
         $this->style="
@@ -464,7 +509,7 @@ blockquote{border-left:2px solid %black%;padding-left:0.3em;}
 *{box-sizing:border-box;padding:0;margin:0;font-weight:normal;}
 b,strong,th{font-weight:bold;}
 select{font-size:inherit;}
-.page,.page_gallery{padding:1em;padding-top:0;}
+.page,.page_gallery{padding:1em;padding-top:0;padding-bottom:0;}
 .hidden_on_desktop,.hidden_on_wide{display:none;}
 .hidden_on_desktop_force{display:none !important;}
 ::file-selector-button{background:none;border:none;}
@@ -477,15 +522,15 @@ header>div{overflow:auto;white-space:nowrap;}
 .header_nav{display:inline;}
 header a,.left a,.footer a,.clean_a,.clean_a a{text-decoration:none;}
 header a:hover,.button:hover{color:%gray% !important;}
+.exp_h_f{padding-top:0.3em !important;padding-bottom:0.3em !important;line-height:1.5em !important;height:2.1em !important;}
 .toc_button{position:absolute;top:0.5em;right:0;text-shadow: 0px 0px 10px %white%;background-color:%white%88;}
 .footer{background-color:%white%;z-index:10;position:relative;}
 .invert_a,.invert_a a{color:%gray%;text-decoration:none;}
 .invert_a:hover,.invert_a a:hover{color:%black% !important;}
 .gray,.gray a{color:%gray%;}
 hr{border:1px solid %gray%;}
-header ul{display:inline-block;}
-header li{display:inline-block;}
-header li::before{content:' - '}
+header ul,.small_footer ul,.small_footer span,header li,.small_footer li{display:inline-block;}
+header li::before,.small_footer li::before{content:' - '}
 header h1,header h2,header h3,header h4,header h5,header p{display:inline;font-size:1rem;}
 .main{position:relative;word-spacing:-1em;}
 .main *{word-spacing:initial;}
@@ -615,6 +660,8 @@ h1,h2,h3,h4,h5{scroll-margin:2.5em;}
 .big_image_box{position:fixed;top:0;bottom:0;left:0;width:75%;z-index:95;text-align:center;pointer-events:none;}
 .big_image_box *{pointer-events:auto;}
 .big_image_box img{position:absolute;margin:auto;top:0;left:0;right:0;bottom:0;cursor:unset;}
+.here_image_box{position:relative;width:100%;text-align:center;height:calc(100vh - 4.5em);}
+.here_image_box img{position:absolute;margin:auto;top:0;left:0;right:0;bottom:0;cursor:unset;}
 .big_side_box{position:fixed;top:0;bottom:0;right:0;width:25%;overflow:auto;z-index:98;color:%black%;padding:1rem;
 background:linear-gradient(to right, rgba(0,0,0,0), rgb(1, 1, 1));transition:background-size .2s linear;background-size: 300% 100%;}
 .big_side_box:hover{background-size: 100% 100%;}
@@ -701,6 +748,11 @@ animation:anim_loading 1s linear infinite;}
 .wayback_link{display:inline;}
 .imd{object-fit:cover;width:100%;}
 .center_exp .imd{width:60%;}
+#here_buttons{display:contents;}
+.here_buttons_inner{position:absolute;margin:auto;top:0;left:0;right:0;bottom:0;max-height:100%;max-width:100%;}
+.here_btn{position:absolute;z-index:110;transform:translate(-50%,-50%);
+width:2em;height:2em;display:block;border:1px solid %black%;background-color:rgba(0,0,0,0.5);}
+.round_btn{box-shadow: 0px 0px 0px 1px inset %black%;display:inline-block;padding-left:0.4em;padding-right:0.4em;border-radius:0.5em;}
 
 @media screen and (max-width:1000px) and (min-width:666px){
 .left{width:35%;}
@@ -710,7 +762,6 @@ animation:anim_loading 1s linear infinite;}
 .post_width{width:calc(100% - 1.5rem);padding-left:0.2em;}
 .post_width_big{left:0;width:100%;}
 .hidden_on_wide{display:unset;}
-.hidden_on_narrow{display:none;}
 .pop_right{width:30%;}
 .pop_right_big{width:40%;}
 @keyframes pop_slide_in{0%{right:-30%;}100%{right:0%;}}
@@ -723,6 +774,7 @@ animation:anim_loading 1s linear infinite;}
 .table_top{left:calc(-50% - 1.7em);width:calc(154% + 0.5em);}
 .post_dummy > *{width:80%;max-width:55rem;}
 .center_exp .imd{width:80%;}
+.here_btn{width:1.5em;height:1.5em;}
 }
 
 @media screen and (max-width:666px){
@@ -730,6 +782,7 @@ html{font-size:16px;}
 .hidden_on_mobile{display:none !important;}
 .block_on_mobile{display:block !important;}
 .hidden_on_desktop{display:unset;}
+.hidden_on_wide{display:unset;}
 header ul{display:block;}
 header li{display:block;}
 header li::before{content:''}
@@ -784,6 +837,9 @@ table img{max-width:30vw !important;}
 .center_exp{display:block;width:100%;margin:0 auto;padding-bottom:1em;}
 .center_exp .post{overflow:auto;}
 .center_exp .imd{width:100%;}
+.here_btn{width:1.2em;height:1.2em;}
+.exp_h_f{height:unset !important;}
+.exp_f{margin-bottom:1em;}
 }
 
 @media print{
@@ -858,11 +914,42 @@ blockquote{border-left:2px solid black;}
         return preg_replace('/\./u','[dot]',preg_replace('/\@/u','[at]',$this->EMail));
     }
     
-    function &FindImage($name){
+    function &FindImage($name, $loose=false){ if(!isset($name) || !$name){ return $this->NULL_IMAGE; }
         if(isset($this->Images[0]))foreach($this->Images as &$im){
-            if($im['name']==$name) return $im;
+            if($loose) { if(preg_match('/'.preg_quote($name).'/u',$im['name'])) return $im; }
+            else { if($im['name']==$name) return $im; }
         }
         return $this->NULL_IMAGE;
+    }
+    
+    function &GiveImageInHere($rand=false){
+        $this->ReadImages();
+        $album = $this->PageType=='here'?$this->HereAlbum:$this->ExpAlbum;
+        if(!isset($album) || !$album){
+            if(isset($this->Images[0])) return $this->Images[0]; else return $this->NULL_IMAGE; }
+        $imlist=[];
+        if(isset($this->Images[0])){
+            foreach($this->Images as &$im){
+                if(isset($im['galleries'][0]) && in_array($album,$im['galleries'])){
+                    if(!$rand) return $im; else { if($this->CanShowImage($im)) $imlist[] = $im; }
+                }
+            }
+        }
+        if(!$rand || !isset($imlist[0])) return $this->NULL_IMAGE;
+        $r = random_int(0, sizeof($imlist)-1);
+        return $imlist[$r];
+    }
+    
+    function ImageTitle($im){
+        $imtitle = (isset($im)&&isset($im['title']))?$im['title']:NULL;
+        if(isset($im['parent'])&&($imp = &$this->FindImage($im['parent'],true))&&isset($imp['title'])){ $imtitle=$imp['title']; }
+        
+        return $imtitle;
+    }
+    
+    function ImageHasHere(&$im, $here_name){
+        if(!isset($im['here'])||!isset($im['here'][0])) return false;
+        foreach($im['here'] as $h) { if($h[0] == $here_name) return true; } return false;
     }
     
     function ReadImages($clear_non_exist = false){
@@ -888,11 +975,12 @@ blockquote{border-left:2px solid black;}
                 $item['galleries']=[];
                 foreach($ga as $g){ if(!in_array($g[0], $item['galleries'])) $item['galleries'][] = $g[0]; }
             }
-            if(preg_match('/PRODUCT\s+([^;]*);/u',$m[2],$product)){
-                $item['product']=$product[1];
-            }
-            if(preg_match('/PARENT\s+([^;]*);/u',$m[2],$parent)){
-                $item['parent']=$parent[1];
+            if(preg_match('/PRODUCT\s+([^;]*);/u',$m[2],$product)){ $item['product']=$product[1]; }
+            if(preg_match('/PARENT\s+([^;]*);/u',$m[2],$parent)){ $item['parent']=$parent[1]; }
+            if(preg_match('/TITLE\s+([^;]*);/u',$m[2],$title)){ $item['title']=$title[1]; }
+            if(preg_match('/HERE\s+([^;]*);/u',$m[2],$heres) && preg_match_all('/(\S+)-(\S+)-(\S+)/u',$heres[1],$here, PREG_SET_ORDER)){
+                $item['here']=[];
+                foreach($here as $h){ if(!$this->ImageHasHere($item, $h[1])) $item['here'][] = [$h[1],$h[2],$h[3]]; }
             }
             $this->Images[] = $item;
         }
@@ -951,6 +1039,10 @@ blockquote{border-left:2px solid black;}
             if(isset($im['galleries']) && isset($im['galleries'][0])){ fwrite($f, 'GAL '.implode(" ",$im['galleries'])."; "); }
             if(isset($im['product']) && $im['product']!=''){ fwrite($f, 'PRODUCT '.$im['product']."; "); }
             if(isset($im['parent']) && $im['parent']!=''){ fwrite($f, 'PARENT '.$im['parent']."; "); }
+            if(isset($im['title']) && $im['title']!=''){ fwrite($f, 'TITLE '.$im['title']."; "); }
+            if(isset($im['here']) && $im['here']!=''){ fwrite($f, 'HERE ');
+                foreach($im['here'] as $here){ fwrite($f, implode('-',$here).' '); } fwrite($f, '; ');
+            }
             fwrite($f, PHP_EOL);
         }
         fflush($f);
@@ -1674,7 +1766,7 @@ blockquote{border-left:2px solid black;}
             //if(!isset($post['archive']) && $this->DoneReadArchive && isset($post['version'])){ unset($post['version']); }
         }else return;
         if(isset($this->Images) && isset($this->Images[0])) foreach ($this->Images as &$im){
-            unset($im['refs']);
+            unset($im['refs']); unset($im['here']); unset($im['title']);
         }
         foreach ($this->Posts as &$post){
             if(preg_match_all('/<a[^>]*href=[\'\"]\?post=([0-9]{14})[\'\"][^>]*>.*?<\/a>/u',$post['html'],$matches,PREG_SET_ORDER)){
@@ -1699,10 +1791,28 @@ blockquote{border-left:2px solid black;}
                     if(!isset($post['hasi']))$post['hasi']=[]; if(!in_array($m[2],$post['hasi']))$post['hasi'][]=$m[2];
                 }
             }
+            if(preg_match("/(\!\[.*?\]\(\s*images\/([0-9]{14,}\.(jpg|jpeg|png|gif))\))(\R*(\R(-|\*).+){1,})/u",$post['content'],$matches)){
+                $use_img_name = $matches[2];
+                if(($im = &$this->FindImage($use_img_name))!=NULL){
+                    if(preg_match_all("/(-|\*)\s+here\s*:\s*([0-9]{1,3})\s*,\s*([0-9]{1,3})\s+images\/([0-9]{14,}\.(jpg|jpeg|png|gif))/u",$matches[4],$mah,PREG_SET_ORDER)){
+                        foreach($mah as $ma){
+                            if(!isset($im['here']))$im['here']=[]; if(!$this->ImageHasHere($item, $ma[4])){
+                                $here = [$ma[4], $ma[2], $ma[3]]; $im['here'][] = $here; }
+                        }
+                    }
+                }
+            }
         }foreach($this->Posts as &$post){
             if(isset($post['hasp']) && isset($post['hasp'][0])) foreach($post['hasp'] as $t){ if(!preg_match("/[0-9]{14}/u",$t)) continue;
                 $pt=&$this->GetPost($t,false,true); if(isset($pt) && isset($pt['hastag']) && isset($pt['hastag'][0]) && in_array($t,$pt['hastag'])){
                     if(!isset($pt['refs']))$pt['refs']=[]; $pt['refs'][]=$post['id']; }
+            }
+        }
+        if(isset($this->Images) && isset($this->Images[0])) foreach ($this->Images as &$im){
+            $min_id = '99999999999999';
+            if(isset($im['refs']) && isset($im['refs'][0])) foreach ($im['refs'] as &$ref){
+                $r = &$this->GetPost($ref,true); if(isset($r)) $title = $this->GetPostTitle($r,true,false);
+                if($title && $ref<$min_id) { $im['title'] = preg_replace('/;/u',' ',trim($title)); $min_id=$r['id']; }
             }
         }
     }
@@ -1881,7 +1991,7 @@ blockquote{border-left:2px solid black;}
         return $p_success;
     }
     
-    function InsertReplacementSymbols($MarkdownContent){
+    function InsertReplacementSymbols($MarkdownContent, &$post_for_it_is_here){
         $replacement = preg_replace('/<!--[\s\S]*-->/U',"",$MarkdownContent);
         $replacement = preg_replace_callback("/(```|`)([^`]*)(?1)/U",
                     function($matches){
@@ -1921,8 +2031,12 @@ blockquote{border-left:2px solid black;}
                         $rep = preg_replace('/\{@/','{',$rep);
                         $rep = preg_replace('/(en|zh|any)@\|(en|zh|any)/','$1|$2',$rep);
                         return $rep;
-                    },
-                    $replacement);
+                    }, $replacement);
+        $replacement = preg_replace_callback("/(\!\[.*?\]\(\s*images\/([0-9]{14,}\.(jpg|jpeg|png|gif))\))(\R*(\R.+){1,})/u",
+                    function($matches) use (&$post_for_it_is_here){
+                        $rep = preg_replace("/(-|\*)\s+here\s*:\s*([0-9]{1,3})\s*,\s*([0-9]{1,3})\s+images\/([0-9]{14,}\.(jpg|jpeg|png|gif))/u","", $matches[4]);
+                        return $matches[1].$rep;
+                    }, $replacement);
         return $replacement;
     }
     
@@ -1972,6 +2086,8 @@ blockquote{border-left:2px solid black;}
             else if(isset($_GET['version'])) $str.='&version='.$_GET['version'];
         if(isset($args['search'])) $str.='&search='.$args['search'];
             else if(isset($_GET['search'])) $str.='&search='.$_GET['search'];
+        if(isset($args['here'])) $str.='&here='.$args['here'];
+            else if(isset($_GET['here'])) $str.='&here='.$_GET['here'];
         return $str;
     }
     
@@ -2051,6 +2167,86 @@ blockquote{border-left:2px solid black;}
         return json_encode($obj, JSON_UNESCAPED_SLASHES);
     }
     
+    function MakeRSS(){
+        $this->ReadPosts();$this->ReadImages();
+        $author = "<author><name>".$this->DisplayName."</name><email>".$this->EMail."</email><uri>".$this->HostURL."</uri></author>";
+        $all_content="<?xml version='1.0' encoding='UTF-8'?><feed xmlns='http://www.w3.org/2005/Atom'>".
+        "<title>".$this->T($this->Title)."</title>".
+        "<link href='".$this->HostURL."/?rss' rel='self'/>".
+        "<link href='".$this->HostURL."' />".$author;
+        $i=0;
+        if(isset($this->UsePosts[0])) foreach(array_reverse($this->UsePosts) as &$p){
+            if($i>100) break;
+            if(!$this->CanShowPost($p) || $this->SkipProduct($p)) continue;
+            if(isset($p['tid'])){ /* Should always be set. */
+                $th = &$p['tid']; if($p['tid']['count']==0) continue; }
+            
+            if(in_array($p['id'],
+                [$this->SpecialPinned,$this->SpecialFooter,$this->SpecialFooter2,$this->SpecialNavigation])) continue;
+            if(isset($p['tid'])){ if(isset($p['tid']['displayed'])) continue; $p['tid']['displayed'] = True; }
+            
+            
+            $is_thread = isset($p['tid']['count'])&&($p['tid']['count']>1);
+            $is_reversed=false;
+            $content="<entry>"; $title = NULL; 
+            if($is_thread){
+                $use_arr = $th['arr']; $is_reversed=$this->IsReversedThread($th); $hinted=false; if($is_reversed){
+                $use_arr=array_reverse($th['arr']); $fp=array_pop($use_arr); array_unshift($use_arr,$fp); }
+                foreach($use_arr as &$po){
+                    $this->ConvertPost($po);
+                    if(!isset($title)){$title = $this->GetPostTitle($po, false, false);
+                        $content.="<id>tag:".$this->HostURL."-".$po['id']."</id>";
+                        $content.="<title>".$title."</title><link>".$this->HostURL."/?post=".$po['id']."</link>";
+                        $content.="<published>".$this->StandardTime($po['id'])."</published>";
+                        $content.="<updated>".$this->StandardTime(isset($p['tid']['last']['version'])?
+                            $p['tid']['last']['version']:$p['tid']['last']['id'])."</updated>".$author;
+                        $content.="<content type='html'>"; }
+                    $content.= htmlspecialchars($po['html']);
+                    //if(isset($po['images'])&&isset($po['images'][0])) foreach($po['images'] as $im){ $content.=htmlspecialchars($im); }
+                }
+                $content.=$this->ReadableTime($p['tid']['first']['id'])." - ".
+                    $this->ReadableTime(isset($p['tid']['last']['version'])?
+                        $p['tid']['last']['version']:$p['tid']['last']['id']);
+                $content.="</content>";
+            }else{
+                $this->ConvertPost($p);
+                if(!isset($title)){$title = $this->GetPostTitle($p, false, false);
+                    $content.="<id>tag:".$this->HostURL."-".$p['id']."</id>";
+                    $content.="<title type='text'>".$title."</title><link>".$this->HostURL."/?post=".$p['id']."</link>"; 
+                    $content.="<published>".$this->StandardTime($p['id'])."</published>";
+                    $content.="<updated>".$this->StandardTime(isset($p['tid']['last']['version'])?
+                        $p['tid']['last']['version']:$p['tid']['last']['id'])."</updated>".$author;}
+                $content.= "<content type='html'>".htmlspecialchars($p['html']);
+                //if(isset($p['images'])&&isset($p['images'][0])) foreach($p['images'] as $im){ $content.=htmlspecialchars($im); }
+                $content.=$this->ReadableTime($p['id'])." - ".
+                    $this->ReadableTime(isset($p['version'])?$p['version']:$p['id']);
+                $content.="</content>";
+            } 
+            $i++;
+            $content.="</entry>";
+            $all_content.=$content;
+        }
+        $all_content.="</feed>";
+        header( "Content-type: text/xml");
+        echo $all_content;
+    }
+    
+    function MakeHereButtons($im, $insert_here){
+        if(isset($im['here'])&&isset($im['here'][0])){
+            $size=getimagesize($im['file']); $aspect=$size[0]/$size[1];
+            echo ($insert_here?"<here>":"")."<div class='here_buttons_inner' style='aspect-ratio:".$aspect.";'>";
+            foreach($im['here'] as $here){
+                if($insert_here){
+                    echo "<a href='?show_image=".$here[0]."' class='here_btn' style='left:".$here[1]."%;top:".$here[2]."%;'".
+                        "onclick='event.preventDefault();event.stopPropagation();ShowBigImage(\"".$here[0]."\",1);'></a>";
+                }else{
+                    echo "<a href='?here=images/".$here[0]."' class='here_btn' style='left:".$here[1]."%;top:".$here[2]."%;'></a>";
+                }
+            }
+            echo "</div>".($insert_here?"</here>":"");
+        }
+    }
+    
     function ProcessRequest(&$message=NULL, &$redirect=NULL){
         if(isset($_GET['gallery']) && $_GET['gallery']=='default'){
             $redirect = "index.php?gallery=".(isset($this->DefaultGallery)&&$this->DefaultGallery!=''?$this->DefaultGallery:"main");
@@ -2059,6 +2255,10 @@ blockquote{border-left:2px solid black;}
         if(isset($_GET['set_language'])){
             setcookie('la_language',$_GET['set_language'],time()+3600*24*7); $_COOKIE['la_language'] = $_GET['set_language'];
             $redirect=$this->GetRedirect(); return 0;
+        }
+        if(isset($_GET['rss'])){
+            if(in_array($_GET['rss'],['en','zh'])){$this->LanguageAppendix=$_GET['rss'];}
+            $this->MakeRSS(); exit;
         }
         if(isset($_GET['toggle_font'])){ $use_font='local';
             if(!isset($_COOKIE['la_font']) || $_COOKIE['la_font']!='remote') $use_font='remote';
@@ -2081,13 +2281,9 @@ blockquote{border-left:2px solid black;}
             }
             $redirect=$this->GetRedirect(); return 0;
         }
-        if(isset($_GET['post'])){
-            $this->CurrentPostID = $_GET['post'];
-            $this->TagID = $this->CurrentPostID;
-        }
-        if(isset($_GET['offset'])){
-            $this->CurrentOffset = $_GET['offset'];
-        }
+        if(isset($_GET['post'])){ $this->CurrentPostID = $_GET['post']; $this->TagID = $this->CurrentPostID; }
+        if(isset($_GET['here'])){ $this->HereID = $_GET['here']; }
+        if(isset($_GET['offset'])){ $this->CurrentOffset = $_GET['offset']; }
         if(isset($_GET['part'])){
             if($_GET['part'] == 'hot') $this->ExtraScripts.="ShowLeftSide();";
             else if ($_GET['part'] == 'recent') $this->ExtraScripts.="ShowCenterSide();";
@@ -2095,9 +2291,11 @@ blockquote{border-left:2px solid black;}
         if(isset($_GET['post'])){
             $this->ExtraScripts.="window.addEventListener('load', (event) => {ScrollToPost('".$_GET['post']."');});";
         }
-        if(isset($_POST['search_content'])){
-            $redirect='index.php?search='.$_POST['search_content'];return 0;
+        if(isset($_GET['random_here'])){
+            $this->DoIdentiyExperimental(); $this->DetectPageType();
+            $im = &$this->GiveImageInHere(true); if(isset($im)){ $redirect='?here=images/'.$im['name']; return 0; }
         }
+        if(isset($_POST['search_content'])){ $redirect='index.php?search='.$_POST['search_content'];return 0; }
         if(isset($_GET['image_info']) || isset($_GET['show_image'])){
             $m=isset($_GET['image_info'])?$_GET['image_info']:$_GET['show_image'];
             $direct_return = !isset($_GET['show_image']);
@@ -2115,7 +2313,8 @@ blockquote{border-left:2px solid black;}
                 $this->MakeSinglePost($p, false, true, "post_preview", true, false, false, false, true);"</li>";
             }
             if($direct_return){
-                echo "</ul></insert>";
+                echo "</ul></insert>"; 
+                $this->MakeHereButtons($im, true);
             }else{
                 $str = ob_get_clean();
                 $this->MakePageBegin();
@@ -2155,11 +2354,17 @@ blockquote{border-left:2px solid black;}
                 if(isset($_POST['settings_default_gallery'])) $this->DefaultGallery=$_POST['settings_default_gallery'];
                 if(isset($_POST['settings_selfauth_path'])) $this->SelfAuthPath=$_POST['settings_selfauth_path'];
                 if(isset($_POST['settings_enable_comments'])) $this->CommentEnabled=True; else $this->CommentEnabled=False;
+                if(isset($_POST['settings_here_host'])) $this->HereHost=$_POST['settings_here_host'];
+                if(isset($_POST['settings_here_title'])) $this->HereTitle=$_POST['settings_here_title'];
+                if(isset($_POST['settings_here_short_title'])) $this->HereShortTitle=$_POST['settings_here_short_title'];
+                if(isset($_POST['settings_here_album'])) $this->HereAlbum=$_POST['settings_here_album'];
+                if(isset($_POST['settings_here_navigation'])) $this->HereNavigation=$_POST['settings_here_navigation'];
+                if(isset($_POST['settings_here_footer'])) $this->HereFooter=$_POST['settings_here_footer'];
                 if(isset($_POST['settings_exp_host'])) $this->ExpHost=$_POST['settings_exp_host'];
                 if(isset($_POST['settings_exp_title'])) $this->ExpTitle=$_POST['settings_exp_title'];
                 if(isset($_POST['settings_exp_short_title'])) $this->ExpShortTitle=$_POST['settings_exp_short_title'];
                 if(isset($_POST['settings_exp_caution'])) $this->ExpCaution=$_POST['settings_exp_caution'];
-                if(isset($_POST['settings_exp_index'])) $this->ExpIndex=$_POST['settings_exp_index'];
+                if(isset($_POST['settings_exp_album'])) $this->ExpAlbum=$_POST['settings_exp_album'];
                 if(isset($_POST['settings_exp_navigation'])) $this->ExpNavigation=$_POST['settings_exp_navigation'];
                 if(isset($_POST['settings_exp_footer'])) $this->ExpFooter=$_POST['settings_exp_footer'];
                 if(isset($_POST['settings_mastodon_token'])) $this->MastodonToken=$_POST['settings_mastodon_token'];
@@ -2374,8 +2579,8 @@ blockquote{border-left:2px solid black;}
                         if(($im = &$this->FindImage($m[5]))!=NULL && isset($im['thumb'])){ 
                             $src = $im['thumb']; $orig_src=$im['file'];
                         }if($im == NULL){ $im = &$this->NULL_IMAGE_DUMMY; }
-                        if($this->InExperimentalMode){
-                            $click = "<div class='imd'><a href='".$im['file']."' class='original_img' target='_blank'>".
+                        if($this->InHereMode){
+                            $click = "<div class='imd'>"."<a href='?here=".$im['file']."' class='original_img'>".
                                         $m[2].$orig_src.$m[7]."></a></div>";
                             return $click;
                         }else{ $click =
@@ -2426,28 +2631,31 @@ blockquote{border-left:2px solid black;}
     function ConvertPost(&$post){
         if(!isset($post['html'])){
             $info=[];
-            $post['html'] = $this->TranslatePostParts($this->PostProcessHTML($this->ChoosePartsByLanguage($this->PDE->text($this->InsertReplacementSymbols($post['content'])),true),
+            $post['html'] = $this->TranslatePostParts($this->PostProcessHTML($this->ChoosePartsByLanguage($this->PDE->text($this->InsertReplacementSymbols($post['content'], $post)),true),
                                                    $post['images'],
                                                    isset($post['product']), $info,
                                                    $post['original_images']));
             if(isset($post['product'])) $post['product']=$info;
         }
     }
-    function GetPostTitle(&$post, $h1_only=false){
+    function GetPostTitle(&$post, $h1_only=false, $add_unamed=true){
         if(!isset($post['title'])){
             if($h1_only){
                 if(preg_match('/^#\s+(.*?)$/mu',$post['content'],$m)){return $m[1];}
                 return NULL;
             }
             if(preg_match('/^#{1,6}\s+(.*?)$/mu',$post['content'],$m)){$post['title']=$m[1];}
-            else{ $post['title'] = $this->T('未命名'); if(preg_match('/(.*)$/mu',$post['content'],$m))
-                                                            {$post['title'].=' ('.strip_tags($this->PDE->text($m[1])).')';} }
+            else{ $post['title'] = $add_unamed?$this->T('未命名'):""; 
+                if(preg_match('/(.*)$/mu',$post['content'],$m)){
+                    $post['title'].=($add_unamed?' (':'').strip_tags($this->PDE->text($m[1])).($add_unamed?')':''); } 
+            }
         }
-        return $post['title'];
+        return $this->ChoosePartsByLanguage($post['title']);
     }
     
     function DetectPageType(){
-        if($this->InExperimentalMode) $this->PageType='experimental';
+        if ($this->InExperimentalMode) $this->PageType='experimental';
+        else if($this->InHereMode) $this->PageType='here';
         else if(isset($_GET['history'])) $this->PageType='history';
         else if(isset($_GET['extras'])) $this->PageType='extras';
         else if(isset($_GET['settings'])) $this->PageType='settings';
@@ -2457,6 +2665,10 @@ blockquote{border-left:2px solid black;}
         else if(isset($this->CurrentPostID)) $this->PageType = "post";
         else if(isset($_GET['comments'])) $this->PageType='comments';
         else $this->PageType = "main";
+        
+        $visited_here = $this->InExperimentalMode?"visited_experimental":"visited_here";
+        if(!isset($_SESSION[$visited_here])){ $_SESSION[$visited_here] = []; }
+        $this->VisitedHere = $_SESSION[$visited_here];
     }
     
     function MakePageBegin(){ ?>
@@ -2464,12 +2676,14 @@ blockquote{border-left:2px solid black;}
         <head>
         <meta charset='utf-8'>
         <meta content="width=device-width, initial-scale=1" name="viewport">
-        <title><?=$this->InExperimentalMode?$this->T($this->ExpTitle):$this->T($this->Title)?></title>
+        <title><?=$this->InExperimentalMode?$this->T($this->ExpTitle):
+            ($this->InHereMode?$this->T($this->HereTitle):$this->T($this->Title))?></title>
         <?php if($this->UseRemoteFont){ ?><style>
 @font-face{font-family: "Noto Serif CJK SC";src:url("fonts/NotoSerifSC-Regular.otf") format("opentype");font-weight:normal;}
 @font-face{font-family: "Noto Serif CJK SC";src:url("fonts/NotoSerifSC-Bold.otf") format("opentype");font-weight:bold;}
 </style><?php } ?>
         <link href='styles/main.css' rel='stylesheet' type="text/css">
+        <link rel="alternate" type="application/rss+xml" title="<?=$this->T($this->Title);?>" href="?rss=<?=$this->LanguageAppendix;?>" />
         <?php if(isset($this->SelfAuthPath)&&$this->SelfAuthPath!=""){ ?>
             <link rel="authorization_endpoint" href="<?=$this->SelfAuthPath?>" /><?php } ?>
         </head>
@@ -2487,7 +2701,7 @@ blockquote{border-left:2px solid black;}
                 wait = document.querySelector("#waiting_bar");
                 wait.style.display='none';
             }
-        <?php if(!$this->InExperimentalMode){ ?>
+        <?php if(!$this->InHereMode){ ?>
             function la_auto_grow(element){
                 s=window.scrollY;element.style.height="30px";element.style.height=(element.scrollHeight)+"px";window.scroll(0, s);
             }
@@ -2550,13 +2764,13 @@ blockquote{border-left:2px solid black;}
             }
         <?php } ?>
         </script>
-        <header><div>
-        <?php if($this->InExperimentalMode){
+        <header<?=$this->InHereMode?' class="exp_h_f"':''?>><div>
+        <?php if($this->InHereMode){
             $this->MakeExpNavButtons($p);
         }else{
             $this->MakeNavButtons($p);
+            echo "<hr />";
         } ?>
-        <hr />
         <?php if(isset($this->WayBack)){
             $time=(isset($_COOKIE['la_wayback']) && preg_match('/[0-9]{14}/u',$_COOKIE['la_wayback']))?$_COOKIE['la_wayback']:date('YmdHis');
             $year=substr($time,0,4);$month=substr($time,4,2);$day=substr($time,6,2);
@@ -2585,7 +2799,7 @@ blockquote{border-left:2px solid black;}
         </div></header>
         <div id='waiting_bar' style='display:none;'></div>
         <script>ShowWaitingBar();window.addEventListener('load',(event) =>{HideWaitingBar();}); </script>
-    <?php if(!$this->InExperimentalMode){ ?>
+    <?php if(!$this->InHereMode){ ?>
         <div id='post_menu' style='display:none;' class='pop_menu clean_a'>
             <ul>
             <li><span id='_time_hook' class='smaller'>时间</span>&nbsp;&nbsp;<a href='javascript:HidePopMenu();'>×</a></li>
@@ -2702,7 +2916,7 @@ blockquote{border-left:2px solid black;}
             <?php } ?>
                 <a href='index.php?gallery=default' onclick='ShowWaitingBar()'><?=$this->T('画廊')?></a>
                 <?php if($this->LoggedIn){ ?>
-                    | <span class='gray invert_a'><a href='index.php?comments=al最近l'>@</a></span><?php } ?></li>
+                    | <span class='gray invert_a'><a href='index.php?comments=all'>@</a></span><?php } ?></li>
             <?php $this->SpecialNavigation;if(isset($this->SpecialNavigation) && ($p = &$this->GetPost($this->SpecialNavigation))!=NULL){
                 echo $this->GenerateSinglePost($p, false, false, false, false,$this->NULL_POST);
             } ?>
@@ -2722,20 +2936,29 @@ blockquote{border-left:2px solid black;}
     <?php
     }
     
-    function MakeExpNavButtons(&$p){?>
-        <b><a href='index.php' class='hidden_on_mobile'><?=$this->T($this->ExpTitle)?></a></b>
-        <b><a class='hidden_on_desktop'
-            href='javascript:toggle_mobile_show(document.getElementById("mobile_nav"))'><?=$this->T($this->ExpShortTitle)?>...</a></b>
-        <ul class='hidden_on_mobile' id='mobile_nav' style='text-align:center;'>
+    function MakeExpNavButtons(&$p){ ?>
+        <a href='index.php' class='hidden_on_mobile'>
+            <b><?=$this->InExperimentalMode?$this->T($this->ExpTitle):$this->T($this->HereTitle)?></b></a>
+        <a class='hidden_on_desktop'
+            href='javascript:toggle_mobile_show(document.getElementById("mobile_nav"))'><b>
+                <?=$this->InExperimentalMode?$this->T($this->ExpShortTitle):$this->T($this->HereShortTitle)?>...</b></a>
+        <a <?=$this->HereNumber==1?"class='gray'":("href=".$this->HereLinkFromNumber($this->HereNumber-1))?>>←</a>
+        <span><?=$this->HereNumber.'/'.sizeof($this->VisitedHere);?></span>
+        <span class='round_btn'><a href='<?=$this->HereLinkFromNumber($this->HereNumber+1);?>'>→</a> <a href='?random_here=1'><?=$this->T("随机")?></a></span>
+        <b><?=$this->T($this->ChoosePartsByLanguage($this->HereDisplayTitle));?></b>
+        <?=isset($this->HereMainImage)?("<a class='invert_a' href='?here=images/".$this->HereMainImage['name']."'>".$this->T("看全图")."</a>"):"";?>
+        <ul class='hidden_on_mobile gray invert_a' id='mobile_nav' style='text-align:center;'>
         <li class='hidden_on_desktop block_on_mobile'><a href='index.php'><?=$this->T('索引')?></a></li>
-        <?php $this->ExpNavigation;if(isset($this->ExpNavigation) && ($p = &$this->GetPost($this->ExpNavigation))!=NULL){
+        <?php if($this->InExperimentalMode && isset($this->ExpNavigation) && ($p = &$this->GetPost($this->ExpNavigation))!=NULL){
+            echo $this->GenerateSinglePost($p, false, false, false, false,$this->NULL_POST);
+        }else if($this->InHereMode && isset($this->HereNavigation) && ($p = &$this->GetPost($this->HereNavigation))!=NULL){
             echo $this->GenerateSinglePost($p, false, false, false, false,$this->NULL_POST);
         } ?>
         <?php if($this->LanguageAppendix=='zh'){ ?>
-            <li class='invert_a smaller'><a href='<?=$this->GetRedirect().'&set_language=en'?>'><b>汉语</b>/English</a></li>
+            <li class='smaller'><a href='<?=$this->GetRedirect().'&set_language=en'?>'><b>汉语</b>/English</a></li>
         <?php }else { ?>
-            <li class='invert_a smaller'><a href='<?=$this->GetRedirect().'&set_language=zh'?>'>汉语/<b>English</b></a></li>
-            <span class='text_highlight'><a id='translate_button' target='_blank'>&nbsp;Google Translate&nbsp;</a></span></li>
+            <li class='smaller'><a href='<?=$this->GetRedirect().'&set_language=zh'?>'>汉语/<b>English</b></a></li>
+            <li class='smaller'><a id='translate_button' target='_blank'>&nbsp;Google Translate&nbsp;</a></li>
         <?php } ?>
         </ul>
     <?php
@@ -3281,7 +3504,7 @@ blockquote{border-left:2px solid black;}
                         echo "<li><a href='?post=".$po['id']."'>".$this->GetPostTitle($po)."</a></li>";
                     } ?>
                 </ul><?php } ?>
-                <?php if($this->LoggedIn && (!$this->InExperimentalMode)){ ?>
+                <?php if($this->LoggedIn && (!$this->InHereMode)){ ?>
                     <div class='post_width_big hidden_on_print'><br />
                         <?php $this->MakePostingFields($th['last']['id'], true);?><br />
                     </div>
@@ -3383,7 +3606,7 @@ blockquote{border-left:2px solid black;}
                             <li class='gray smaller bold' style='text-align:center;'>
                                 <p>&nbsp;</p><hr><?=$this->T('该话题最新帖子在前')?><hr><p>&nbsp;</p></li>
                         <?php $hinted = true; 
-                        if($this->LoggedIn && (!$this->InExperimentalMode)){ ?>
+                        if($this->LoggedIn && (!$this->InHereMode)){ ?>
                             <div class='post_width_big hidden_on_print'>
                                 <?php $this->MakePostingFields($is_thread?$th['last']['id']:$post['id'], true);?></div><br />
                         <?php } }
@@ -3399,7 +3622,7 @@ blockquote{border-left:2px solid black;}
                     <br class='hidden_on_desktop' /><?=$this->ReadableTime(isset($post['tid']['last']['version'])?
                         $post['tid']['last']['version']:$post['tid']['last']['id']);?>
                 </div>
-                <?php if(!$is_reversed && ($this->LoggedIn && (!$this->InExperimentalMode))){ ?>
+                <?php if(!$is_reversed && ($this->LoggedIn && (!$this->InHereMode))){ ?>
                     <div class='post_width_big hidden_on_print'>
                         <br /><?php $this->MakePostingFields($is_thread?$th['last']['id']:$post['id'], true);?>
                     </div>
@@ -3432,14 +3655,23 @@ blockquote{border-left:2px solid black;}
                     }
                 }else{
                     $this->MakeSinglePostExp($post);
-                    if($post['id']!=$this->ExpIndex){ ?><script>
+                    ?><!--<script>
                     document.title+=" | <?=addslashes(preg_replace('/\r|\n/u', ' ', mb_substr(strip_tags($post['html']),0,1000)))?>";
-                    </script><?php }
+                    </script>--><?php
                 } ?>
             </ul>
         </div>
     <?php
     }
+    function MakeHereSection(&$im){ $image_okay = (isset($im) && $im!=$this->NULL_IMAGE); ?>
+        <div class='here_image_box clean_a'>
+            <div style='display:flex;align-items:center;height:100%;justify-content:center;width:100%;'>
+                <?=$image_okay?$this->T('请稍候'):$this->T('未找到图像')?></div>
+            <?php if($image_okay){ ?>
+                <img id='big_image' onload="HideWaitingBar();" src="<?=$im['file'];?>" />
+            <?php } $this->MakeHereButtons($im, false); ?>
+        </div>
+    <?php }
     
     function MakeSideGalleryCode(){?>
         <div>
@@ -3697,11 +3929,11 @@ blockquote{border-left:2px solid black;}
     }
     
     function CanShowGallery(&$g){
-        if(!$this->LoggedIn && isset($g['experimental']) && $g['experimental']) return false;
+        if((!$this->LoggedIn&&!$this->InExperimentalMode) && isset($g['experimental']) && $g['experimental']) return false;
         return true;
     }
     function CanShowImage(&$im){
-        if(!$this->LoggedIn && isset($im['galleries']) && isset($im['galleries'][0])) foreach($im['galleries'] as $ga){
+        if((!$this->LoggedIn&&!$this->InExperimentalMode) && isset($im['galleries']) && isset($im['galleries'][0])) foreach($im['galleries'] as $ga){
             if(($g=$this->GetGallery($ga)) && isset($g['experimental']) && $g['experimental']) return false;
         }
         if(isset($this->WayBack) && substr($im['name'],0,14)>$this->WayBack) return false;
@@ -3999,8 +4231,30 @@ blockquote{border-left:2px solid black;}
                         value='<?=$this->APubID?>'/></td></tr>
                         
                     <tr><td class='smaller gray'>&nbsp;</td></tr>
+                    <tr><td class='smaller gray'><?=$this->T('这里访问')?></td></tr>
+                    <tr><td><?=$this->T('主机')?></td>
+                        <td><input type="text" form="settings_form" id='settings_here_host' name='settings_here_host'
+                        value='<?=$this->HereHost?>'/></td></tr>
+                    <tr><td><?=$this->T('网站标题')?></td>
+                        <td><input type="text" form="settings_form" id='settings_here_title' name='settings_here_title'
+                            value='<?=$this->HereTitle?>'/></td></tr>
+                    <tr><td><?=$this->T('短标题')?></td>
+                        <td><input type="text" form="settings_form" id='settings_here_short_title' name='settings_here_short_title'
+                            value='<?=$this->HereShortTitle?>'/></td></tr>
+                    <tr><td><?=$this->T('相册')?></td>
+                        <td><input type="text" form="settings_form" id='settings_here_album' name='settings_here_album'
+                        value='<?=$this->HereAlbum?>'/></td></tr>
+                    <tr><td><?=$this->T('导航栏')?>
+                        <?=isset($this->HereNavigation)?"<a href='?post=".$this->HereNavigation."'>→</a>":""?></td>
+                        <td><input type="text" form="settings_form" id='settings_here_navigation' name='settings_here_navigation'
+                        value='<?=$this->HereNavigation?>'/></td></tr>
+                    <tr><td><?=$this->T('脚注')?><?=isset($this->HereFooter)?"<a href='?post=".$this->HereFooter."'>→</a>":""?></td>
+                        <td><input type="text" form="settings_form" id='settings_here_footer' name='settings_here_footer'
+                        value='<?=$this->HereFooter?>'/></td></tr>
+                        
+                    <tr><td class='smaller gray'>&nbsp;</td></tr>
                     <tr><td class='smaller gray'><?=$this->T('实验访问')?></td></tr>
-                    <tr><td><?=$this->T('主机')?><?=isset($this->ExpHost)?"<a href='?post=".$this->ExpHost."'>→</a>":""?></td>
+                    <tr><td><?=$this->T('主机')?></td>
                         <td><input type="text" form="settings_form" id='settings_exp_host' name='settings_exp_host'
                         value='<?=$this->ExpHost?>'/></td></tr>
                     <tr><td><?=$this->T('网站标题')?></td>
@@ -4012,9 +4266,9 @@ blockquote{border-left:2px solid black;}
                     <tr><td><?=$this->T('首次提示')?><?=isset($this->ExpCaution)?"<a href='?post=".$this->ExpCaution."'>→</a>":""?></td>
                         <td><input type="text" form="settings_form" id='settings_exp_caution' name='settings_exp_caution'
                         value='<?=$this->ExpCaution?>'/></td></tr>
-                    <tr><td><?=$this->T('索引')?><?=isset($this->ExpIndex)?"<a href='?post=".$this->ExpIndex."'>→</a>":""?></td>
-                        <td><input type="text" form="settings_form" id='settings_exp_index' name='settings_exp_index'
-                        value='<?=$this->ExpIndex?>'/></td></tr>
+                    <tr><td><?=$this->T('相册')?></td>
+                        <td><input type="text" form="settings_form" id='settings_exp_album' name='settings_exp_album'
+                        value='<?=$this->ExpAlbum?>'/></td></tr>
                     <tr><td><?=$this->T('导航栏')?>
                         <?=isset($this->ExpNavigation)?"<a href='?post=".$this->ExpNavigation."'>→</a>":""?></td>
                         <td><input type="text" form="settings_form" id='settings_exp_navigation' name='settings_exp_navigation'
@@ -4093,7 +4347,7 @@ blockquote{border-left:2px solid black;}
     }
     
     function MakeMainBegin(){?>
-        <div class='main' <?php if(!$this->InExperimentalMode){ ?>
+        <div class='main' <?php if($this->LoggedIn && (!$this->InHereMode)){ ?>
             ondrop="_dropHandler(event);" ondragover="_dragOverHandler(event);"<?php } ?>>
     <?php
     }
@@ -4103,17 +4357,14 @@ blockquote{border-left:2px solid black;}
     }
     
     function MakeExpFooter(){?>
-        <div class='small_footer'>
-            <hr />
-            <b><?=$this->T($this->ExpTitle)?></b>&nbsp;©<?=$this->T($this->DisplayName)?>
-        </div>
-        <div class='footer'>
-            <div style='white-space:nowrap;'>
-                <div class='footer_additional'>
-                <?php if(isset($this->ExpFooter) && ($p = &$this->GetPost($this->ExpFooter,true))!=NULL){
-                    echo $this->GenerateSinglePost($p, false, false, false, false,$this->NULL_POST,false);
-                } ?>
-                </div>
+        <div class='small_footer exp_h_f exp_f'><div>
+            <b><?=$this->InExperimentalMode?$this->T($this->ExpTitle):$this->T($this->HereTitle)?></b>&nbsp;©<?=$this->T($this->DisplayName)?>
+            <div class='wayback_link gray clean_a invert_a hidden_on_print'><br class="hidden_on_desktop" />
+            <?php if($this->InExperimentalMode && isset($this->ExpFooter) && ($p = &$this->GetPost($this->ExpFooter,true))!=NULL){
+                echo $this->GenerateSinglePost($p, false, false, false, false,$this->NULL_POST,false);
+            }else if($this->InHereMode && isset($this->HereFooter) && ($p = &$this->GetPost($this->HereFooter,true))!=NULL){
+                echo $this->GenerateSinglePost($p, false, false, false, false,$this->NULL_POST,false);
+            }?></div>
             </div>
         </div>
         </div><!-- page -->
@@ -4141,6 +4392,7 @@ blockquote{border-left:2px solid black;}
                     <div class='lr_buttons'>←</div></a></div>
                 <div ><a id='next_image' class='image_nav_next img_btn_hidden' onclick="event.stopPropagation();">
                     <div class='lr_buttons'>→</div></a></div>
+                <div id='here_buttons'></div>
             </div><?php } ?>
                 <div class='side_box_mobile_inner'>
                     <?php if(!$static){ ?>
@@ -4196,6 +4448,8 @@ blockquote{border-left:2px solid black;}
             <?php }else{ ?><a href='<?=$this->GetRedirect()?>&set_wayback=false'><?=$this->T('回到当前日期')?></a><?php } ?>
             <br class='hidden_on_desktop' /> - <a href='<?=$this->GetRedirect()?>&toggle_font=true'>
                 <?=$this->T('切换字体')?>: <?=$this->T($this->UseRemoteFont?"远程":"本地");?></a>
+            <br class='hidden_on_desktop' />
+                - <a rel="alternate" type="application/rss+xml" href="?rss=<?=$this->LanguageAppendix;?>" />RSS/Atom<sup><?=$this->LanguageAppendix;?></sup></a>
             </div>
         </div></div>
         <div class='footer'>
@@ -4544,14 +4798,14 @@ blockquote{border-left:2px solid black;}
                 <?php } ?>
                 
                 this_image = FindImage(imgsrc);
-                if(this_image.dataset.prevsrc){
+                if(this_image&&this_image.dataset.prevsrc){
                     new_image = FindImage(this_image.dataset.prevsrc);
                     new_prev = new_image?new_image.dataset.prevsrc:null;
                     im = document.querySelector('#prev_image');
                     if(new_prev) {im.href='javascript:ShowBigImage("'+this_image.dataset.prevsrc+'",'+do_push+')';im.style.opacity='';}
                     else {im.style.opacity='0';im.removeAttribute("href");}
                 }
-                if(this_image.dataset.nextsrc){
+                if(this_image&&this_image.dataset.nextsrc){
                     new_image = FindImage(this_image.dataset.nextsrc);
                     new_next = new_image?new_image.dataset.nextsrc:null;
                     im = document.querySelector('#next_image');
@@ -4569,10 +4823,10 @@ blockquote{border-left:2px solid black;}
                     product_form.action = window.location.href;
                     edit_form.action = window.location.href;
                     edit_new_name.value = imgsrc.split('.')[0];
-                    if(this_image.dataset.product){ product_link.value = this_image.dataset.product; }else{ product_link.value = ""; }
-                    if(this_image.dataset.parent){ edit_parent.value = this_image.dataset.parent; }else{ edit_parent.value = ""; }
+                    if(this_image&&this_image.dataset.product){ product_link.value = this_image.dataset.product; }else{ product_link.value = ""; }
+                    if(this_image&&this_image.dataset.parent){ edit_parent.value = this_image.dataset.parent; }else{ edit_parent.value = ""; }
                 <?php } ?>
-                if(this_image.dataset.product){
+                if(this_image&&this_image.dataset.product){
                     purchase.style.display='';
                     href = this_image.dataset.product;
                     if(this_image.dataset.product.match('^[0-9]{14}$')){
@@ -4595,8 +4849,8 @@ blockquote{border-left:2px solid black;}
                 });
                 
                 o = document.querySelector('#big_image_overlay');
-                info = document.querySelector('#big_image_info');
-                info.innerHTML="<?=$this->T('正在查询……')?>";
+                info = document.querySelector('#big_image_info');info.innerHTML="<?=$this->T('正在查询……')?>";
+                here = document.querySelector('#here_buttons');here.innerHTML='';
                 o.style.display="block";
                 ShowBackdrop(0.8);
                 var xhr = new XMLHttpRequest();
@@ -4609,10 +4863,14 @@ blockquote{border-left:2px solid black;}
                             content="<span class='small'><?=$this->T('该图片出现在')?> "+res[1]+" <?=$this->T('个帖子中')?></span>"+content;
                         }else{content="<span class='smaller gray'><?=$this->T('该图片未被引用')?></span>"+content;}
                         if(res = response.match(/<insert>([\s\S]*)<\/insert>/u)){
-                            content+="<div class='clean_a'>"+res[1]+"</div>";
-                        }
-
+                            content+="<div class='clean_a'>"+res[1]+"</div>"; }
                         info.innerHTML=content;
+                        if(res = response.match(/<here>([\s\S]*)<\/here>/u)){
+                            here.innerHTML=res[1]; window.here_b=document.getElementsByClassName('here_btn');
+                            if(window.here_b)for(b=0;b<window.here_b.length;b++) {
+                                window.here_b[b].addEventListener('mousemove',DontHideImgBtn);
+                                window.here_b[b].addEventListener('mouseover',DontHideImgBtn);}
+                        }
                     }
                 };
                 xhr.open("GET", "index.php?image_info="+imgsrc+"", true);
@@ -4635,13 +4893,14 @@ blockquote{border-left:2px solid black;}
             var hide_timeout;
             function DontHideImgBtn(e){ clearTimeout(hide_timeout); e.stopPropagation(); }
             function DelayHideImgBtn(e){
-                lbtn.classList.remove('img_btn_hidden');
-                rbtn.classList.remove('img_btn_hidden');
+                lbtn.classList.remove('img_btn_hidden'); rbtn.classList.remove('img_btn_hidden');
                 inq.classList.remove('img_btn_hidden');
+                if(window.here_b)for(b=0;b<window.here_b.length;b++){window.here_b[b].classList.remove('img_btn_hidden');}
                 clearTimeout(hide_timeout);
-                hide_timeout = setTimeout(function(e1,e2,e3){e1.classList.add('img_btn_hidden');
-                    e2.classList.add('img_btn_hidden');
-                    e3.classList.add('img_btn_hidden');}, 1000, lbtn, rbtn, inq);
+                hide_timeout = setTimeout(function(e1,e2,e3,e4){e1.classList.add('img_btn_hidden');
+                    e2.classList.add('img_btn_hidden');e3.classList.add('img_btn_hidden');
+                    if(window.here_b)for(b=0;b<window.here_b.length;b++){
+                        window.here_b[b].classList.add('img_btn_hidden');}}, 1000, lbtn, rbtn, inq);
             }
             lbtn.addEventListener('mousemove',DontHideImgBtn);lbtn.addEventListener('mouseover',DontHideImgBtn);
             rbtn.addEventListener('mousemove',DontHideImgBtn);rbtn.addEventListener('mouseover',DontHideImgBtn);
@@ -4727,16 +4986,15 @@ blockquote{border-left:2px solid black;}
     }
     
     function DoIdentiyExperimental(){
-        if(!isset($this->ExpHost) || $this->ExpHost=="") return;
-        if(preg_match('/'.preg_quote($this->ExpHost).'/u', $_SERVER['HTTP_HOST'])){
-            $this->InExperimentalMode=True;
+        if(isset($this->ExpHost) && $this->ExpHost && preg_match('/'.preg_quote($this->ExpHost).'/u', $_SERVER['HTTP_HOST'])){
+            $this->InExperimentalMode=True; $this->InHereMode=True;
         }
-        if(!$this->CurrentPostID && $this->InExperimentalMode){
-            $this->CurrentPostID = $this->ExpIndex;
+        if(isset($this->HereHost) && $this->HereHost && preg_match('/'.preg_quote($this->HereHost).'/u', $_SERVER['HTTP_HOST'])){
+            $this->InHereMode=True;
         }
     }
     function DoExperimentalTopLink($p){
-        if($this->InExperimentalMode && $p){
+        if($this->InHereMode && $p){
             if(isset($p['tid']) && $p['tid']['first']!=$p){
                 header('Location: ?post='.$p['tid']['first']['id']); exit();
             }
@@ -4766,12 +5024,13 @@ $la->DoSiteRedirect();
 
 $la->DoLogin();
 
+$la->SwitchLanguageAndFont();
+
 $err = $la->ProcessRequest($message, $redirect);
 $la->WriteAsNecessary();
 
 $la->DoIdentiyExperimental();
 
-$la->SwitchLanguageAndFont();
 $la->SwitchWayBackMode();
 
 if($err){
@@ -4793,6 +5052,11 @@ if(isset($la->WayBack)){
     $la->ReadArchive();
 }
 
+$im = NULL;
+if(preg_match('/images\/(.*)/u',$la->HereID,$imname) && ($im = &$la->FindImage($imname[1]))){
+    if(!$la->CanShowImage($im)) { $im=NULL; }
+}
+
 $p = &$la->GetPost($la->CurrentPostID);
 if(!isset($p)){
     $p = &$la->GetMergedPost($la->CurrentPostID);
@@ -4803,17 +5067,38 @@ else{ $la->DoExperimentalTopLink($p); }
 
 if(isset($p)){ $la->ActualPostID = $p['id']; }
 
+if($la->PageType=='here' ||$la->PageType=='experimental'){
+    if($im){
+        $la->SetHereMainImage($im);
+        $la->RecordVisitedHere($im['name'],$im?$la->ImageTitle($im):NULL);
+    }else if($p){
+        $la->RecordVisitedHere($p['id'],NULL);
+    }else {
+        $im = &$la->GiveImageInHere(false);
+        if($im){
+            $la->SetHereMainImage($im);
+            $la->RecordVisitedHere($im['name'],$la->ImageTitle($im));
+        }
+    }
+}
+
 $la->MakeHeader($p);
 $la->MakeMainBegin();
 
-if($la->PageType=='experimental'){
-    if(!$la->MakeExperimentalConfirm()){
-        if($p){
+if($la->PageType=='here' ||$la->PageType=='experimental'){
+    if(($la->PageType=='experimental' && (!$la->MakeExperimentalConfirm())) || $la->PageType=='here'){
+        if($im){
+            $la->MakeHereSection($im);
+        }else if($p){
             $la->MakePostSectionExp($p);
             $la->MakeLinkedPostsExp($p);
-        }else{
-            echo "<h2>".$la->T('未找到这个帖子')."</h2><p>".$_SERVER['REQUEST_URI'].
-                "</p><p><a href='index.php'>".$la->T('返回首页')."</a></p><br />";
+        }else {
+            if($im){
+                $la->MakeHereSection($im);
+            }else{
+                echo "<h2>".$la->T('未找到这个帖子')."</h2><p>".$_SERVER['REQUEST_URI'].
+                    "</p><p><a href='index.php'>".$la->T('返回首页')."</a></p><br />";
+            }
         }
     }
     $la->MakeMainEnd();
