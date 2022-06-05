@@ -64,7 +64,7 @@ class LA{
     protected $Posts;
     protected $Threads; // [ keys: first last displayed count]
     protected $WaybackThreads;
-    protected $Images;
+    public $Images;
     protected $Galleries;
     protected $Anchors;
     
@@ -85,10 +85,10 @@ class LA{
     
     protected $TIME_STRING;
     
-    protected $NULL_POST;
-    protected $NULL_IMAGE;
-    protected $NULL_IMAGE_DUMMY;
-    protected $NULL_Gallery;
+    public $NULL_POST;
+    public $NULL_IMAGE;
+    public $NULL_IMAGE_DUMMY;
+    public $NULL_Gallery;
     
     protected $DoneReadPosts;
     protected $DoneReadImages;
@@ -293,6 +293,7 @@ class LA{
             $str = $m[1];
             $this->$str = $m[2];
         }
+        $this->CommentEnabled = $this->CommentEnabled=="True";
     }
     
     function ReadConfig(){
@@ -915,7 +916,7 @@ blockquote{border-left:2px solid black;}
     }
     
     function &FindImage($name, $loose=false){ if(!isset($name) || !$name){ return $this->NULL_IMAGE; }
-        if(isset($this->Images[0]))foreach($this->Images as &$im){
+        if(isset($this->Images[0])) foreach($this->Images as &$im){
             if($loose) { if(preg_match('/'.preg_quote($name).'/u',$im['name'])) return $im; }
             else { if($im['name']==$name) return $im; }
         }
@@ -923,21 +924,29 @@ blockquote{border-left:2px solid black;}
     }
     
     function &GiveImageInHere($rand=false){
-        $this->ReadImages();
+        $this->ReadImages(); $this->DetectPageType();
         $album = $this->PageType=='here'?$this->HereAlbum:$this->ExpAlbum;
         if(!isset($album) || !$album){
             if(isset($this->Images[0])) return $this->Images[0]; else return $this->NULL_IMAGE; }
-        $imlist=[];
+        $imlist=[]; $imlist_fallback=[];
         if(isset($this->Images[0])){
             foreach($this->Images as &$im){
                 if(isset($im['galleries'][0]) && in_array($album,$im['galleries'])){
-                    if(!$rand) return $im; else { if($this->CanShowImage($im)) $imlist[] = $im; }
+                    if(!$rand) return $im; else if($this->CanShowImage($im)){
+                        $imlist_fallback[] = $im;
+                        if(!in_array($im['name'],$this->VisitedHere)) $imlist[] = $im;
+                    }
                 }
             }
         }
-        if(!$rand || !isset($imlist[0])) return $this->NULL_IMAGE;
-        $r = random_int(0, sizeof($imlist)-1);
-        return $imlist[$r];
+        if(!$rand || !isset($imlist_fallback[0])) return $this->NULL_IMAGE;
+        if(sizeof($imlist)){
+            $r = random_int(0, sizeof($imlist)-1);
+            return $imlist[$r];
+        }else{
+            $r = random_int(0, sizeof($imlist_fallback)-1);
+            return $imlist_fallback[$r];
+        }
     }
     
     function ImageTitle($im){
@@ -2944,7 +2953,9 @@ blockquote{border-left:2px solid black;}
                 <?=$this->InExperimentalMode?$this->T($this->ExpShortTitle):$this->T($this->HereShortTitle)?>...</b></a>
         <a <?=$this->HereNumber==1?"class='gray'":("href=".$this->HereLinkFromNumber($this->HereNumber-1))?>>←</a>
         <span><?=$this->HereNumber.'/'.sizeof($this->VisitedHere);?></span>
-        <span class='round_btn'><a href='<?=$this->HereLinkFromNumber($this->HereNumber+1);?>'>→</a> <a href='?random_here=1'><?=$this->T("随机")?></a></span>
+        <span class='round_btn'>
+            <a href='<?=$this->HereNumber==sizeof($this->VisitedHere)?"?random_here=1":$this->HereLinkFromNumber($this->HereNumber+1);?>'>→</a>
+            <a href='?random_here=1'><?=$this->T("随机")?></a></span>
         <b><?=$this->T($this->ChoosePartsByLanguage($this->HereDisplayTitle));?></b>
         <?=isset($this->HereMainImage)?("<a class='invert_a' href='?here=images/".$this->HereMainImage['name']."'>".$this->T("看全图")."</a>"):"";?>
         <ul class='hidden_on_mobile gray invert_a' id='mobile_nav' style='text-align:center;'>
@@ -5054,7 +5065,7 @@ if(isset($la->WayBack)){
 
 $im = NULL;
 if(preg_match('/images\/(.*)/u',$la->HereID,$imname) && ($im = &$la->FindImage($imname[1]))){
-    if(!$la->CanShowImage($im)) { $im=NULL; }
+    if(!$la->CanShowImage($im)) { $im=&$la->NULL_IMAGE; }
 }
 
 $p = &$la->GetPost($la->CurrentPostID);
@@ -5084,6 +5095,8 @@ if($la->PageType=='here' ||$la->PageType=='experimental'){
 
 $la->MakeHeader($p);
 $la->MakeMainBegin();
+
+
 
 if($la->PageType=='here' ||$la->PageType=='experimental'){
     if(($la->PageType=='experimental' && (!$la->MakeExperimentalConfirm())) || $la->PageType=='here'){
