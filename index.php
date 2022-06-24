@@ -113,7 +113,7 @@ class LA{
     }
     function StandardTime($id){
         $dt = DateTime::createFromFormat('YmdHis', $id);
-        return $dt->format('Y-m-d\TH:i:s');
+        return $dt->format('Y-m-d\TH:i:sP');
     }
     function FullURL(){
         return (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ?
@@ -2186,13 +2186,19 @@ blockquote{border-left:2px solid black;}
     
     function MakeRSS(){
         $this->ReadPosts();$this->ReadImages();
+        $posts = []; if(isset($this->UsePosts[0])){
+            $posts = array_reverse($this->UsePosts);
+            $last_updated = $this->StandardTime($posts[0]['id']);
+        }else{ $last_updated= $this->StandardTime("20000101000000"); }
         $author = "<author><name>".$this->DisplayName."</name><email>".$this->EMail."</email><uri>".$this->HostURL."</uri></author>";
         $all_content="<?xml version='1.0' encoding='UTF-8'?><feed xmlns='http://www.w3.org/2005/Atom'>".
+        "<id>".$this->HostURL."/?rss</id>".
+        "<updated>".$last_updated."</updated>".
         "<title>".$this->T($this->Title)."</title>".
         "<link href='".$this->HostURL."/?rss' rel='self'/>".
         "<link href='".$this->HostURL."' />".$author;
         $i=0;
-        if(isset($this->UsePosts[0])) foreach(array_reverse($this->UsePosts) as &$p){
+        if(isset($posts[0])) foreach($posts as &$p){
             if($i>100) break;
             if(!$this->CanShowPost($p) || $this->SkipProduct($p)) continue;
             if(isset($p['tid'])){ /* Should always be set. */
@@ -2212,11 +2218,11 @@ blockquote{border-left:2px solid black;}
                 foreach($use_arr as &$po){
                     $this->ConvertPost($po);
                     if(!isset($title)){$title = $this->GetPostTitle($po, false, false);
-                        $content.="<id>tag:".$this->HostURL."-".$po['id']."</id>";
-                        $content.="<title>".$title."</title><link>".$this->HostURL."/?post=".$po['id']."</link>";
+                        $content.="<id>".$this->HostURL."?post=".$po['id']."</id>";
+                        $content.="<title>".$title."</title><link rel='alternate' href='".$this->HostURL."/?post=".$po['id']."' />";
                         $content.="<published>".$this->StandardTime($po['id'])."</published>";
-                        $content.="<updated>".$this->StandardTime(isset($p['tid']['last']['version'])?
-                            $p['tid']['last']['version']:$p['tid']['last']['id'])."</updated>".$author;
+                        $content.="<updated>".$this->StandardTime(isset($po['tid']['last']['version'])?
+                            $po['tid']['last']['version']:$po['tid']['last']['id'])."</updated>".$author;
                         $content.="<content type='html'>"; }
                     $content.= htmlspecialchars($po['html']);
                     //if(isset($po['images'])&&isset($po['images'][0])) foreach($po['images'] as $im){ $content.=htmlspecialchars($im); }
@@ -2228,8 +2234,8 @@ blockquote{border-left:2px solid black;}
             }else{
                 $this->ConvertPost($p);
                 if(!isset($title)){$title = $this->GetPostTitle($p, false, false);
-                    $content.="<id>tag:".$this->HostURL."-".$p['id']."</id>";
-                    $content.="<title type='text'>".$title."</title><link>".$this->HostURL."/?post=".$p['id']."</link>"; 
+                    $content.="<id>".$this->HostURL."?post=".$p['id']."</id>";
+                    $content.="<title>".$title."</title><link rel='alternate' href='".$this->HostURL."/?post=".$p['id']."' />";
                     $content.="<published>".$this->StandardTime($p['id'])."</published>";
                     $content.="<updated>".$this->StandardTime(isset($p['tid']['last']['version'])?
                         $p['tid']['last']['version']:$p['tid']['last']['id'])."</updated>".$author;}
