@@ -45,7 +45,6 @@ class LA{
     protected $MastodonPreferredLang;
     protected $HostURL;
     
-    
     protected $Redirect;
     protected $Translations;
     protected $CustomTranslationContent;
@@ -560,7 +559,7 @@ display:flex;top:0.2em;object-fit:cover;max-width:calc(100% - 1.4em) !important;
 .interesting_tbody img{object-fit:cover;width:100%;}
 .interesting_tbody .p_row{display:flex;position:absolute;left:1.4em;top:0.25em;z-index:-1;flex-wrap:nowrap;max-width:calc(100% - 1.4em);}
 .interesting_tbody .p_thumb{height:1em;}
-.interesting_tbody .p_thumb img{max-height:10rem !important;max-width:20rem !important;}
+.interesting_tbody .p_thumb img,.interesting_tbody .p_thumb video{max-height:10rem !important;max-width:20rem !important;}
 tr:hover .post_menu_button{opacity:1;}
 .post_current_row{background-color:%graybkg%;mix-blend-mode:screen;text-shadow:0px 0px 0.1em %white%;}
 .align_right{text-align:right;}
@@ -643,7 +642,8 @@ h1,h2,h3,h4,h5{scroll-margin:2.5em;}
 .left ul h1,.left ul h2,.left ul h3,.left ul h4,.left ul h5,.left ul p{font-size:1em;}
 .deleted_post{color:%gray%;text-decoration:line-through;}
 #file_list{margin-top:0.5em;}
-.file_thumb img{max-height:100%;max-width:100%;object-fit:cover;min-width:100%;min-height:100%;}
+.file_thumb img,.file_thumb video{max-height:100%;max-width:100%;object-fit:cover;min-width:100%;min-height:100%;}
+.file_thumb video{border:2px dashed %black%;}
 #file_list li{margin-bottom:0.3em;}
 .ref_thumb{white-space:nowrap;overflow:hidden;}
 .ref_thumb .file_thumb{width:3em;height:3em;}
@@ -652,31 +652,34 @@ h1,h2,h3,h4,h5{scroll-margin:2.5em;}
 .p_row{display:flex;flex-wrap:wrap;width:100%;}
 .p_thumb{display:flex;flex-grow:1;height:6rem;margin-right:0.25rem;margin-bottom:0.25rem;overflow:hidden;position:relative;}
 .p_thumb_narrow{width:1rem;}
-.p_thumb img{object-fit:cover;max-height:100%;min-width:100%;}.p_thumb a{display:contents;}
+.p_thumb img,.p_thumb video{object-fit:cover;max-height:100%;min-width:100%;}.p_thumb a{display:contents;}
 .ref_count,.p_thumb .post_menu_button{text-shadow: 0px 0px 10px rgb(0, 0, 0);}
 .p_thumb:hover .post_menu_button{display:block;}
 .p_thumb_selected{color:%black% !important;}
 .p_thumb_selected{display:block;}
-.post .p_thumb img{max-height:6rem;}
+.post .p_thumb img,.post .p_thumb video{max-height:6rem;}
+.p_thumb video{border:2px dashed %black%;}
 .big_image_box{position:fixed;top:0;bottom:0;left:0;width:75%;z-index:95;text-align:center;pointer-events:none;}
 .big_image_box *{pointer-events:auto;}
-.big_image_box img{position:absolute;margin:auto;top:0;left:0;right:0;bottom:0;cursor:unset;}
+.big_image_box img,.big_image_box video{position:absolute;margin:auto;top:0;left:0;right:0;bottom:0;cursor:unset;}
 .here_image_box{position:relative;width:100%;text-align:center;height:calc(100vh - 4.5em);}
-.here_image_box img{position:absolute;margin:auto;top:0;left:0;right:0;bottom:0;cursor:unset;}
-.big_side_box{position:fixed;top:0;bottom:0;right:0;width:25%;overflow:auto;z-index:98;color:%black%;padding:1rem;
+.here_image_box img,.here_image_box video{position:absolute;margin:auto;top:0;left:0;right:0;bottom:0;cursor:unset;}
+.big_side_box{position:fixed;top:0;bottom:0;right:0;width:25%;overflow:auto;z-index:98;color:%black%;padding:1rem;pointer-events:none;
 background:linear-gradient(to right, rgba(0,0,0,0), rgb(1, 1, 1));transition:background-size .2s linear;background-size: 300% 100%;}
 .big_side_box:hover{background-size: 100% 100%;}
 .big_side_box a,.big_side_box hr,#dropping_background{color:%black%;}
 .big_side_box a:hover{color:%gray%;}
+.big_side_box *{pointer-events:auto;}
+.image_nav{pointer-events:none;}
 #dropping_background{background-color:rgba(0,0,0,0.4);position:fixed;top:0;right:0;bottom:0;left:0;z-index:100;text-align:center;
 box-shadow:0px 0px 500px black inset;display:flex;align-items:center;}
-img{cursor:pointer;max-height:100%;max-width:100%;vertical-align:middle;}
-.post img{max-height:min(70vh, 20rem);max-width:min(100%, 20rem);}
-.post > a > img{display:block;margin:0.3em auto;}
+img,video{cursor:pointer;max-height:100%;max-width:100%;vertical-align:middle;}
+.post img,.post video{max-height:min(70vh, 20rem);max-width:min(100%, 20rem);}
+.post > a > img,.post > a > video{display:block;margin:0.3em auto;}
 .post .original_img{max-width:100%;display:inline-block;vertical-align:middle;
 margin-left:auto;margin-right:auto;max-width:100%;max-height:90vh;}
 .center_exp .post .original_img{display:block;}
-.original_img img{max-height:90vh;max-width:100%;}
+.original_img img,.original_img video{max-height:90vh;max-width:100%;}
 .p_row .original_img{margin-bottom:0;}
 .post_ref .original_img{margin:unset;max-width:unset;max-height:min(70vh, 20rem);max-width:min(100%, 20rem);}
 .b ul{font-size:1.4em;}
@@ -690,7 +693,7 @@ p{min-height:0.8em;}
 .top_post_hint{margin-left:1.5em;font-weight:bold;}
 .white{color:%white%;}
 .full_box{border:1px solid %black% !important;padding:0.3rem;overflow:auto;}
-.image_nav_prev,.image_nav_next{z-index:100;position:absolute;line-height:0;height:100%;width:20%;display:flex;align-items:center;
+.image_nav_prev,.image_nav_next{z-index:100;position:absolute;line-height:0;height:50%;width:20%;top:25%;display:flex;align-items:center;
 transition:background-size .2s ease;padding:0.5em;text-shadow:0px 0px 5px black;user-select:none;pointer-events:auto;}
 .image_nav_prev{left:0;justify-content:left;background:linear-gradient(to left, rgba(0,0,0,0), rgba(0,0,0,0.2));
 background-repeat:no-repeat;background-size:0% 100%;}
@@ -714,7 +717,7 @@ animation:anim_loading 1s linear infinite;}
 @keyframes anim_loading{0%{transform:translate(-100%,0);} 100%{transform:translate(100%,0);}}
 .product_ref{width:32%;padding:0.2em!important;display:inline-block;text-align:center;vertical-align:top;margin-bottom:0.8em;}
 .product_thumb{max-height:11em;max-width:11em;display:inline-flex;margin-bottom:0.2em;background-color:%graybkg%;}
-.product_thumb img{box-shadow:none;object-fit:contain;max-height:unset;max-width:unset;width:100%;margin:0 auto !important;}
+.product_thumb img,{box-shadow:none;object-fit:contain;max-height:unset;max-width:unset;width:100%;margin:0 auto !important;}
 .product_ref p{margin-bottom:0.2em;text-align:left;}
 .post_preview .product_thumb{max-height:4em;max-width:6em;}
 .purchase_button{background-color:%black%;color:%white%;padding-left:0.5em;padding-right:0.5em;text-decoration:none;font-weight:bold;}
@@ -807,7 +810,7 @@ transition:none;background-size:100% 100%;padding:0.5rem;padding-bottom: 5em;}
 height:unset;padding:0;padding-top:calc(100vh - 8.5rem);background:none;}
 .p_thumb{height:3rem;}
 .center .post{padding-right:0rem;padding-left:0rem;}
-.post .p_thumb img{max-height:3rem;}
+.post .p_thumb img,.post .p_thumb video{max-height:3rem;}
 .page,.page_gallery{padding:0.2em;padding-top:0;}
 header{padding-top:0.3em;}
 .toc_button{top:0.3em;}
@@ -889,7 +892,7 @@ blockquote{border-left:2px solid black;}
 .small_footer{margin-top:1rem;}
 .page_selector{display:none;}
 .p_thumb{height:4rem;margin-bottom:0.25rem;}
-.post .p_thumb img{max-height:4rem;}
+.post .p_thumb img,.post .p_thumb video{max-height:4rem;}
 .sticky_title{box-shadow:none;}
 .center_wide .p_thumb{display:inline-flex;height:5.8rem;width:5.8rem;margin-right:0;}
 .center_wide .p_row{display:block;}
@@ -991,6 +994,9 @@ blockquote{border-left:2px solid black;}
                 $item['here']=[];
                 foreach($here as $h){ if(!$this->ImageHasHere($item, $h[1])) $item['here'][] = [$h[1],$h[2],$h[3]]; }
             }
+            if(preg_match('/\.mp4/u',$item['name'])){
+                $item['video']='video/mp4';
+            }
             $this->Images[] = $item;
         }
         
@@ -998,8 +1004,9 @@ blockquote{border-left:2px solid black;}
         $files = array_merge($files,glob('images/*.jpeg'));
         $files = array_merge($files,glob('images/*.png'));
         $files = array_merge($files,glob('images/*.gif'));
+        $files = array_merge($files,glob('images/*.mp4'));
         if(isset($files[0]))foreach($files as $file) {
-            if(preg_match('/[0-9]{14,}\.(jpg|jpeg|gif|png)/u', $file, $m)) {
+            if(preg_match('/[0-9]{14,}\.(jpg|jpeg|gif|png|mp4)/u', $file, $m)) {
                 $name = trim($m[0]);
                 if(!$this->FindImage($name)){
                     $item = []; $item['name']=$name; $item['file'] = 'images/'.$name;
@@ -1126,6 +1133,7 @@ blockquote{border-left:2px solid black;}
         $img2->setImageCompressionQuality($quality);
         $img2->writeImage($destination);
     }
+    
     function DoUpload(){
         if(!isset($_FILES['upload_file_name'])) return 0;
         if(!is_dir('images/thumb')) mkdir('images/thumb');
@@ -1134,7 +1142,7 @@ blockquote{border-left:2px solid black;}
             return -1;
         }else{
             $ext=pathinfo($_FILES['upload_file_name']['name'],PATHINFO_EXTENSION);
-            if(!in_array($ext,['jpg','jpeg','png','gif'])) return 0;
+            if(!in_array($ext,['jpg','jpeg','png','gif','mp4'])) return 0;
             $fp = fopen('.la_lock',"w");
             while (!flock($fp, LOCK_EX| LOCK_NB)){
                 usleep(10000);
@@ -1150,7 +1158,7 @@ blockquote{border-left:2px solid black;}
             if(!$replace) while(file_exists($final_path)){
                 $final_path = $base.strval($i).'.'.$ext; $final_thumb = $thumb.strval($i).'.'.$ext; $i++;
             }
-            if($ext!='gif'){
+            if($ext!='gif' && $ext!='mp4'){
                 $compress = (isset($_GET['compress'])&&$_GET['compress']);
                 $this->CompressImage($_FILES['upload_file_name']['tmp_name'], $final_path, $final_thumb, 90,
                     $compress?800:1920, $compress?1920:2560);
@@ -2529,7 +2537,7 @@ blockquote{border-left:2px solid black;}
             }
             $do_image_redirect = 0;
             if (isset($_POST['image_button']) && isset($_GET['pic']) &&
-                preg_match('/([0-9]{14,}\.(jpg|png|jpeg|gif))/u',$_GET['pic'],$ma)){
+                preg_match('/([0-9]{14,}\.(jpg|png|jpeg|gif|mp4))/u',$_GET['pic'],$ma)){
                 $this->ReadImages(); $pic = $ma[1]; $picext=$ma[2];
                 if(isset($_POST['image_ops_product_link'])){
                     $this->EditImage($pic, NULL, false, $_POST['image_ops_product_link'], NULL, NULL);
@@ -2578,7 +2586,7 @@ blockquote{border-left:2px solid black;}
         $html = preg_replace("/\{\s*REVERSED\s*\}/imu","",$html);
         $images = []; $images_noclick = []; $images_orig_src_list = [];
         $html = preg_replace_callback(
-                    "/(<p>\s*)?(<img([^>]*)src=[\'\"])(images\/([0-9]{14,}\.(jpg|png|jpeg|gif)))([\'\"][^>]*)\/>(\s*<\/p>)?/u",
+                    "/(<p>\s*)?(<img([^>]*)src=[\'\"])(images\/([0-9]{14,}\.(jpg|png|jpeg|gif|mp4)))([\'\"][^>]*)\/>(\s*<\/p>)?/u",
                     function($m) use (&$images,&$images_noclick,&$images_orig_src_list) {
                         $orig_src = $src = $m[5]; $keep = false; $original = false;
                         if (preg_match('/alt=[\'\"].*keep_inline.*[\'\"]/u',$m[3]) ||
@@ -2588,17 +2596,23 @@ blockquote{border-left:2px solid black;}
                         if(($im = &$this->FindImage($m[5]))!=NULL && isset($im['thumb'])){ 
                             $src = $im['thumb']; $orig_src=$im['file'];
                         }if($im == NULL){ $im = &$this->NULL_IMAGE_DUMMY; }
+                        $media_start = $m[2];
+                        $media_end = $m[7];
+                        if(isset($im['video']) && isset($im['video'])!=''){
+                            $media_start = "<video controls><source src='"; $media_end="' type='".$im['video']."'></video";
+                            $src = $orig_src;
+                        }
                         if($this->InHereMode){
                             $click = "<div class='imd'>"."<a href='?here=".$im['file']."' class='original_img'>".
-                                        $m[2].$orig_src.$m[7]."></a></div>";
+                                        $media_start.$orig_src.$media_end."></a></div>";
                             return $click;
                         }else{ $click =
                              "<div class='imd'><a href='?show_image={$im['name']}' target='_blank' onclick='event.preventDefault();'>".
-                                $m[2].($original?$orig_src:$src).$m[7]." data-imgsrc='".$m[5]."'".
+                                $media_start.($original?$orig_src:$src).$media_end." data-imgsrc='".$m[5]."'".
                                 (isset($im['product'])?" data-product='".$im['product']."'":"").
                                 (isset($im['parent'])?" data-parent='".$im['parent']."'":"").
                                 ($original?" class='original_img'":"")."></a></div>";
-                            $images_noclick[]=$m[2].$src.$m[7].">"; $images_orig_src_list[]=$orig_src;
+                            $images_noclick[]=$media_start.$src.$media_end.">"; $images_orig_src_list[]=$orig_src;
                             $ret = "";
                             if($keep) { $ret = $click; }
                             else { $images[] = $click; }
@@ -3679,7 +3693,11 @@ blockquote{border-left:2px solid black;}
             <div style='display:flex;align-items:center;height:100%;justify-content:center;width:100%;'>
                 <?=$image_okay?$this->T('请稍候'):$this->T('未找到图像')?></div>
             <?php if($image_okay){ ?>
-                <img id='big_image' onload="HideWaitingBar();" src="<?=$im['file'];?>" />
+                <?php if(isset($im['video']) && isset($im['video'])!=""){ ?>
+                    <video controls><source src='<?=$im['file'];?>' type='<?=$im['video']?>'></video>
+                <?php }else{ ?>
+                    <img id='big_image' onload="HideWaitingBar();" src="<?=$im['file'];?>" />
+                <?php } ?>
             <?php } $this->MakeHereButtons($im, false); ?>
         </div>
     <?php }
@@ -3715,8 +3733,11 @@ blockquote{border-left:2px solid black;}
                             if(res = xhr.responseText.matchAll(/\[(.*?),(.*?)\]/gu)){
                                 str = "<ul class='side_thumb'>"
                                 for (const m of res) {
-                                    str+="<li><div class='file_thumb' onclick='InsertImage(\""+m[1]+"\")'>"+
-                                        "<img src='"+m[2]+"' /></div>"
+                                    imgstr = "<img src='"+m[2]+"' />";
+                                    if(m[2].match('\.mp4')){
+                                        imgstr = "<video><source src='"+m[2]+"'></video>";
+                                    }
+                                    str+="<li><div class='file_thumb' onclick='InsertImage(\""+m[1]+"\")'>"+imgstr+"</div>"
                                 }
                                 str += "</ul>"
                                 ind.innerHTML = str;
@@ -3845,6 +3866,7 @@ blockquote{border-left:2px solid black;}
                 else if(blob.name.match(/jpg$/))ext = 'jpg';
                 else if(blob.name.match(/jpeg$/))ext = 'jpeg';
                 else if(blob.name.match(/gif$/))ext = 'gif';
+                else if(blob.name.match(/mp4$/))ext = 'mp4';
                 else  return;
                 var fd = new FormData();
                 blob.name = blob.name=generateUID().toString();
@@ -4066,9 +4088,14 @@ blockquote{border-left:2px solid black;}
                             <div class="post_menu_button _select_hook white" onclick='ToggleSelectImage(this, "<?=$im["name"]?>")'>●</div>
                         <?php } ?>
                         <a href='?show_image=<?=$im['name']?>' target='_blank' onclick='event.preventDefault();'>
+                            <?php if(isset($im['video']) && $im['video']!=""){ ?>
+                                <video data-imgsrc='<?=$im["name"]?>'><source src='<?=$im['file']?>' type='<?=$im['video']?>'></video>
+                            <?php }else{ ?>
                             <img src='<?=$im['thumb']?>' data-imgsrc='<?=$im["name"]?>'
                                 <?=isset($im['product'])?'data-product="'.$im["product"].'"':""?>
-                                <?=isset($im['parent'])?'data-parent="'.$im["parent"].'"':""?>/></a>
+                                <?=isset($im['parent'])?'data-parent="'.$im["parent"].'"':""?>/>
+                            <?php } ?>
+                        </a>
                     </div>
                 <?php } if($opened) { ?>
                 <div class='p_thumb' style='flex-grow:10000;box-shadow:none;height:0;'></div></div><?php } ?>
@@ -4395,6 +4422,7 @@ blockquote{border-left:2px solid black;}
             <div class='big_image_box clean_a' onclick='HideBigImage(1)'>
                 <div style='display:flex;align-items:center;height:100%;justify-content:center;width:100%;'><?=$this->T('请稍候')?></div>
                 <img id='big_image' onload="HideWaitingBar();" <?=isset($static_image)?("src='".$static_image."'"):""?>/>
+                <video id='big_video' onloadstart="HideWaitingBar();" controls><source id='big_video_src' type='video/mp4'></video>
             </div>
             <div class='big_side_box' onclick='HideBigImage(1);'>
             <?php if(!$static){ ?>
@@ -4779,11 +4807,17 @@ blockquote{border-left:2px solid black;}
                 ShowWaitingBar();
                 share = document.querySelector('#big_image_share');
                 img = document.querySelector('#big_image');
+                vid = document.querySelector('#big_video');
+                vidsrc = document.querySelector('#big_video_src');
                 down = document.querySelector('#image_download');
-                img.src = "";
-                img.src = src = "images/"+imgsrc;
+                img.src = ""; vidsrc.src="";
+                if(imgsrc.match(/\.mp4$/)){
+                    vidsrc.src = src = "images/"+imgsrc; img.style.display='none'; vid.load();vid.style.display='block';
+                }else{
+                    img.src = src = "images/"+imgsrc; vid.style.display='none';img.style.display='block';
+                }
                 down.href="images/"+imgsrc;
-                var downname='<?=$this->T($this->Title);?>_<?=$this->T($this->DisplayName);?>_+<?=$this->GiveSafeEMail()?>+_'+
+                var downname='<?=$this->T($this->Title);?>_<?=$this->T($this->DisplayName);?>_<?=$this->GiveSafeEMail()?>_'+
                     basename(down.href);
                 img.alt = downname; down.download=downname;
                 var use_href = "images/"+imgsrc;
@@ -4890,7 +4924,9 @@ blockquote{border-left:2px solid black;}
             function HideBigImage(do_push){
                 o = document.querySelector('#big_image_overlay');
                 img = document.querySelector('#big_image');
-                img.src = "";
+                vid = document.querySelector('#big_video');
+                vidsrc = document.querySelector('#big_video_src');
+                img.src = ""; vidsrc.src="";
                 if(o.style.display!='none'){
                     o.style.display="none";
                     HideBackdrop();
@@ -4917,7 +4953,7 @@ blockquote{border-left:2px solid black;}
             rbtn.addEventListener('mousemove',DontHideImgBtn);rbtn.addEventListener('mouseover',DontHideImgBtn);
             inq.addEventListener('mousemove',DontHideImgBtn);inq.addEventListener('mouseover',DontHideImgBtn);
             overlay.addEventListener('mousemove',DelayHideImgBtn);
-            var images = document.querySelectorAll('img');
+            var images = document.querySelectorAll('img, video');
             var images_filtered=new Array(); var imgadded = new Array();
             var images_remaining=new Array();
             [].forEach.call(images, function(img){
@@ -4976,7 +5012,7 @@ blockquote{border-left:2px solid black;}
                     let sp = new URLSearchParams(event.state)
                     if(sp.has('pic')){
                         src = sp.get('pic')
-                        if(onlyimg = src.match(/[0-9]{14,}.(jpg|png|jpeg|gif)/u)) ShowBigImage(onlyimg[0], 0);
+                        if(onlyimg = src.match(/[0-9]{14,}.(jpg|png|jpeg|gif|mp4)/u)) ShowBigImage(onlyimg[0], 0);
                         else{HideBigImage(0);}
                     }
                 }else{HideBigImage(0);}
@@ -4985,7 +5021,7 @@ blockquote{border-left:2px solid black;}
             let searchParams = new URLSearchParams(window.location.search)
             if(searchParams.has('pic')){
                 src = searchParams.get('pic')
-                if(onlyimg = src.match(/[0-9]{14,}.(jpg|png|jpeg|gif)/u)){
+                if(onlyimg = src.match(/[0-9]{14,}.(jpg|png|jpeg|gif|mp4)/u)){
                     ShowBigImage(onlyimg[0], 1);
                 }
             }
