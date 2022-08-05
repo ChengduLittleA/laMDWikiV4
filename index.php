@@ -523,6 +523,7 @@ header>div{overflow:auto;white-space:nowrap;}
 header a,.left a,.footer a,.clean_a,.clean_a a{text-decoration:none;}
 header a:hover,.button:hover{color:%gray% !important;}
 .exp_h_f{padding-top:0.3em !important;padding-bottom:0.3em !important;line-height:1.5em !important;height:2.1em !important;}
+.exp_f{text-align:center;}
 .toc_button{position:absolute;top:0.5em;right:0;text-shadow: 0px 0px 10px %white%;background-color:%white%88;}
 .footer{background-color:%white%;z-index:10;position:relative;}
 .invert_a,.invert_a a{color:%gray%;text-decoration:none;}
@@ -537,6 +538,7 @@ header h1,header h2,header h3,header h4,header h5,header p{display:inline;font-s
 pre{overflow:auto;max-width:100%;display:block;font-size:0.75em;}
 ul{display:block;}
 li{display:block;}
+.clean_table{border:none;font-size:1em !important;}.clean_table thead{box-shadow:none;}.clean_table td{vertical-align:top;}
 table{width:100%;border-collapse:collapse;border-bottom:2px solid %black%;border-top:3px solid %black%;}
 table input{border:none!important;}
 table img{max-width:10rem !important;}
@@ -583,7 +585,9 @@ select,textarea,input[type=text],input[type=password]{background:none;border:non
 .center_exp .post{padding-left:0;padding-right:0;padding-top:0;padding-bottom:0;border-radius:0;}
 .post_width li,.post_width_big li,.footer_additional li,.footer_additional li,.post_dummy li
 {display:list-item;margin-left:1em;list-style:disc;}
-.post_width li li,.post_width_big li li,.footer_additional li li,.footer_additional li li,.post_dummy li li{list-style:circle;}
+.post_width li li,.post_width_big li li,.footer_additional li li,.footer_additional li li,.post_dummy li li
+{list-style:circle;}
+ol li{list-style:unset !important;}
 .post_width > *,.post_width_big > *,.post_dummy > *,.post_ref > *{margin:0;margin-bottom:0.5rem}
 .post_dummy > *{width:60%;margin:0 auto;margin-bottom:0.5rem}
 .post_dummy > p img{display:block;width:100%;margin:0 auto;}
@@ -695,7 +699,7 @@ p{min-height:0.8em;}
 .full_box{border:1px solid %black% !important;padding:0.3rem;overflow:auto;}
 .image_nav_prev,.image_nav_next{z-index:100;position:absolute;line-height:0;height:50%;width:20%;top:25%;display:flex;align-items:center;
 transition:background-size .2s ease;padding:0.5em;text-shadow:0px 0px 5px black;user-select:none;pointer-events:auto;}
-.image_nav_prev{left:0;justify-content:left;background:linear-gradient(to left, rgba(0,0,0,0), rgba(0,0,0,0.2));
+.image_nav_prev{left:0;justify-content:left;background:linear-gradient(to left, rgba(0,0,0,0), rgba(0,0,0,0.4));
 background-repeat:no-repeat;background-size:0% 100%;}
 .image_nav_prev:hover,.image_nav_next:hover{background-size:100% 100%;}
 .image_nav_next{right:0;justify-content:right;background:linear-gradient(to right, rgba(0,0,0,0), rgba(0,0,0,0.2));
@@ -847,15 +851,18 @@ table img{max-width:30vw !important;}
 }
 
 @media print{
-header::before{box-shadow:none;display:none;}
-.small_footer::before{box-shadow:none;display:none;}
+header b,.small_footer b{font-weight:normal;}
+header{display:table-header-group;} .main{display:table-row-group;} .small_footer{text-align:right;}
+header::before{box-shadow:none;display:none;} header::after{display:block;height:1em;content:' ';}
+.small_footer::before{box-shadow:none;display:block;height:1em;position:relative;}
 body,footer,header,.small_footer,a,.clean_a,.invert_a,.clean_a a,.invert_a a{background:none;color:black;}
 .post *,.post_dummy *{margin-bottom:0em}
 .p_row,.post table,.post_width>img,.post_width_big>img,.post_ref>img,.post_ref>.original_img,
 .post_width>.original_img,.post_width_big>.original_img,.post pre{margin-top:0.5rem;margin-bottom:0.5rem;text-indent:0;}
+pre{white-space:pre-wrap;line-break:anywhere;}
 .post p{line-height:1.3;text-indent:2em;} .product_ref p {text-indent:0;}
 table img{margin:0 !important;}
-.post h1+p,.post h2+p,.post img+p,.post table+p,.post p:first-child{text-indent:0;}
+.post h1+p,.post h2+p,.post img+p,.post video+p,.post .imd+p,.post table+p,.last_wide p:first-of-type{text-indent:0;}
 .post ul,.post ol{margin:1rem;margin-left:1.4rem;margin-right: 0rem;}
 table{border-bottom:2px solid black;border-top:2px solid black;}
 table img{max-width:5em;max-width:8em !important;max-height:8em !important;}
@@ -890,6 +897,7 @@ hr{border:1px solid black;}
 blockquote{border-left:2px solid black;}
 .footer_additional{display:none;}
 .small_footer{margin-top:1rem;}
+.page{display:table;width:100%;}
 .page_selector{display:none;}
 .p_thumb{height:4rem;margin-bottom:0.25rem;}
 .post .p_thumb img,.post .p_thumb video{max-height:4rem;}
@@ -934,8 +942,8 @@ blockquote{border-left:2px solid black;}
         $imlist=[]; $imlist_fallback=[];
         if(isset($this->Images[0])){
             foreach($this->Images as &$im){
-                if(isset($im['galleries'][0]) && in_array($album,$im['galleries'])){
-                    if(!$rand) return $im; else if($this->CanShowImage($im)){
+                if(isset($im['galleries'][0]) && in_array($album,$im['galleries']) && $this->CanShowImage($im)){
+                    if(!$rand) return $im; else {
                         $imlist_fallback[] = $im;
                         if(!in_array($im['name'],$this->VisitedHere)) $imlist[] = $im;
                     }
@@ -1470,14 +1478,22 @@ blockquote{border-left:2px solid black;}
             }
             if(isset($th) && $th){ $th['categories'] = &$first_post['categories']; }
         }
-        if(isset($th) && preg_match('/\{\s*INTERESTING\s+(.*?)\}/imu',$first_post['content'],$m)){
+        if(preg_match('/\{\s*WIDE\s*\}/imu',$first_post['content'],$m)){ $first_post['wide'] = true; }
+        if(preg_match('/\{\s*NO_TIME\s*\}/imu',$first_post['content'],$m)){ $first_post['no_time'] = true; }
+        if(preg_match('/\{\s*HEADER\s+(.*?)\}/imu',$first_post['content'],$m)){ $first_post['header'] = trim($m[1]); }
+        if(preg_match('/\{\s*FOOTER\s+(.*?)\}/imu',$first_post['content'],$m)){ $first_post['footer'] = trim($m[1]); }
+        
+        if(!isset($th)) return;
+        if(isset($first_post['wide'])) $th['wide']=$first_post['wide'];
+        if(isset($first_post['header'])) $th['header']=$first_post['header'];
+        if(isset($first_post['footer'])) $th['footer']=$first_post['footer'];
+        if(isset($first_post['no_time'])) $th['no_time']=$first_post['no_time'];
+        if(preg_match('/\{\s*INTERESTING\s+(.*?)\}/imu',$first_post['content'],$m)){
             $th['interesting'] = []; if(preg_match_all('/(\S+)(\s|$)/u',$m[1],$matches,PREG_SET_ORDER)){
                 foreach($matches as $ma){ $th['interesting'][] = $ma[1]; }
             }
         }
-        if(isset($th) && preg_match('/\{\s*REVERSED\s*\}/imu',$first_post['content'],$m)){
-            $th['reversed'] = true;
-        }
+        if(preg_match('/\{\s*REVERSED\s*\}/imu',$first_post['content'],$m)){ $th['reversed'] = true; }
     }
     function IsInterestingPost(&$p){
         if(isset($p['tid']) && isset($p['tid']['interesting']) && isset($p['tid']['interesting'][0])) return true;
@@ -1800,7 +1816,7 @@ blockquote{border-left:2px solid black;}
                     if(!isset($post['hastag']))$post['hastag']=[]; if(!in_array($m[1],$post['hastag']))$post['hastag'][]=$m[1];
                 }
             }
-            if(preg_match_all('/!\[([^\]]*)\]\(images\/([0-9]{14,}\.(jpg|jpeg|png|gif))\)/u', $post['content'],$matches,PREG_SET_ORDER)){
+            if(preg_match_all('/!\[([^\]]*)\]\(images\/([0-9]{14,}\.(jpg|jpeg|png|gif|mp4))\)/u', $post['content'],$matches,PREG_SET_ORDER)){
                 foreach($matches as $m){  
                     if(($im = &$this->FindImage($m[2]))!=NULL){
                         if(!isset($im['refs']))$im['refs']=[]; if(!in_array($post['id'], $im['refs']))$im['refs'][] = $post['id'];
@@ -1808,10 +1824,12 @@ blockquote{border-left:2px solid black;}
                     if(!isset($post['hasi']))$post['hasi']=[]; if(!in_array($m[2],$post['hasi']))$post['hasi'][]=$m[2];
                 }
             }
-            if(preg_match("/(\!\[.*?\]\(\s*images\/([0-9]{14,}\.(jpg|jpeg|png|gif))\))(\R*(\R(-|\*).+){1,})/u",$post['content'],$matches)){
+            if(preg_match("/(\!\[.*?\]\(\s*images\/([0-9]{14,}\.(jpg|jpeg|png|gif|mp4))\))(\R*(\R(-|\*).+){1,})/u",
+                $post['content'],$matches)){
                 $use_img_name = $matches[2];
                 if(($im = &$this->FindImage($use_img_name))!=NULL){
-                    if(preg_match_all("/(-|\*)\s+here\s*:\s*([0-9]{1,3})\s*,\s*([0-9]{1,3})\s+images\/([0-9]{14,}\.(jpg|jpeg|png|gif))/u",$matches[4],$mah,PREG_SET_ORDER)){
+                    if(preg_match_all("/(-|\*)\s+here\s*:\s*([0-9]{1,3})\s*,\s*([0-9]{1,3})\s+images\/([0-9]{14,}\.(jpg|jpeg|png|gif|mp4))/u",
+                        $matches[4],$mah,PREG_SET_ORDER)){
                         foreach($mah as $ma){
                             if(!isset($im['here']))$im['here']=[]; if(!$this->ImageHasHere($item, $ma[4])){
                                 $here = [$ma[4], $ma[2], $ma[3]]; $im['here'][] = $here; }
@@ -1955,7 +1973,7 @@ blockquote{border-left:2px solid black;}
             if(isset($push_version) && $push_version){
                 $this->PushPostVersion($post,$this->TIME_STRING,$push_version,$version_info);
             }
-            if(isset($content)) $post['real_content'] = $content; $post['content'] = &$post['real_content'];
+            if(isset($content)) {$post['real_content'] = $content; $post['content'] = &$post['real_content'];}
             if(isset($mark_delete)) $post['mark_delete'] = $mark_delete;
             if(isset($mark_value)) $post['mark_value'] = $mark_value;
             if(isset($rename) && preg_match('/^[0-9]{14}$/u',$rename)) $this->RenamePost($post,$rename);
@@ -2315,7 +2333,7 @@ blockquote{border-left:2px solid black;}
             $this->ExtraScripts.="window.addEventListener('load', (event) => {ScrollToPost('".$_GET['post']."');});";
         }
         if(isset($_GET['random_here'])){
-            $this->DoIdentiyExperimental(); $this->DetectPageType();
+            $this->DoIdentifyExperimental(); $this->DetectPageType();
             $im = &$this->GiveImageInHere(true); if(isset($im)){ $redirect='?here=images/'.$im['name']; return 0; }
         }
         if(isset($_POST['search_content'])){ $redirect='index.php?search='.$_POST['search_content'];return 0; }
@@ -2345,7 +2363,9 @@ blockquote{border-left:2px solid black;}
                 if(isset($im['refs'])&&isset($im['refs'][0])){
                     $side.="<span class='small'>".$this->T('该图片出现在')." ".sizeof($im['refs'])." ".$this->T('个帖子中')."</span>";
                 }else{$side.="<span class='smaller gray'>".$this->T('该图片未被引用')."</span>";}
-                $this->MakeImageOverlay($side."<ul>".$str."</ul>",$im['file']);
+                $static_image = isset($im['video'])?NULL:$im['file'];
+                $static_video = isset($im['video'])?$im['file']:NULL;
+                $this->MakeImageOverlay($side."<ul>".$str."</ul>",$static_image,$static_video);
                 $this->MakePageEnd();
             }
             exit;
@@ -2579,7 +2599,7 @@ blockquote{border-left:2px solid black;}
         return 0;
     }
     
-    function PostProcessHTML($html,&$added_images=null,$do_product_info=false, &$product_info=null, &$orig_src_list=null){
+    function PostProcessHTML($html,&$added_images=null,$do_product_info=false, &$product_info=null, &$orig_src_list=null, &$end_wide=null, &$print_wide=null){
         if(!$this->LoggedIn){
             $html = preg_replace("/(<a[^>]*href=[\'\"])(.*?)([\'\"][^>]*)>(\#.*?<\/a>)/u","",$html);
         }
@@ -2588,8 +2608,9 @@ blockquote{border-left:2px solid black;}
         $html = preg_replace("/(<a[^>]*href=[\'\"])((.*?:\/\/).*?)([\'\"][^>]*)(>)(.*?)(<\/a>)/u",
                              "$1$2$4 target='_blank'$5$6<sup>↗</sup>$7",$html);
         $html = preg_replace("/<p>\s*\@.*?<\/p>/mu","",$html);
-        $html = preg_replace("/<p>\s*\{\s*INTERESTING\s+(.*?)\}\s*<\/p>/imu","",$html);
-        $html = preg_replace("/\{\s*REVERSED\s*\}/imu","",$html);
+        $html = preg_replace("/\{\s*(INTERESTING|HEADER|FOOTER)\s+(.*?)\}/imu","",$html);
+        $html = preg_replace("/\{\s*(REVERSED|NO_TIME)\s*\}/imu","",$html);
+        $html = preg_replace("/\{\s*WIDE\s*\}/imu","",$html,-1,$rep_count); if($rep_count){$print_wide=true;}
         $images = []; $images_noclick = []; $images_orig_src_list = [];
         $html = preg_replace_callback(
                     "/(<p>\s*)?(<img([^>]*)src=[\'\"])(images\/([0-9]{14,}\.(jpg|png|jpeg|gif|mp4)))([\'\"][^>]*)\/>(\s*<\/p>)?/u",
@@ -2604,20 +2625,21 @@ blockquote{border-left:2px solid black;}
                         }if($im == NULL){ $im = &$this->NULL_IMAGE_DUMMY; }
                         $media_start = $m[2];
                         $media_end = $m[7];
+                        $dataset = " data-imgsrc='".$m[5]."'".
+                                    (isset($im['product'])?" data-product='".$im['product']."'":"").
+                                    (isset($im['parent'])?" data-parent='".$im['parent']."'":"").
+                                    ($original?" class='original_img'":"");
                         if(isset($im['video']) && isset($im['video'])!=''){
-                            $media_start = "<video controls><source src='"; $media_end="' type='".$im['video']."'></video";
-                            $src = $orig_src;
+                            $media_start = "<video controls".$dataset."><source src='"; $media_end="' type='".$im['video']."'></video";
+                            $src = $orig_src; $dataset="";
                         }
                         if($this->InHereMode){
                             $click = "<div class='imd'>"."<a href='?here=".$im['file']."' class='original_img'>".
                                         $media_start.$orig_src.$media_end."></a></div>";
                             return $click;
-                        }else{ $click =
-                             "<div class='imd'><a href='?show_image={$im['name']}' target='_blank' onclick='event.preventDefault();'>".
-                                $media_start.($original?$orig_src:$src).$media_end." data-imgsrc='".$m[5]."'".
-                                (isset($im['product'])?" data-product='".$im['product']."'":"").
-                                (isset($im['parent'])?" data-parent='".$im['parent']."'":"").
-                                ($original?" class='original_img'":"")."></a></div>";
+                        }else{
+                            $click ="<div class='imd'><a href='?show_image={$im['name']}' target='_blank' onclick='event.preventDefault();'>".
+                                $media_start.($original?$orig_src:$src).$media_end.$dataset."></a></div>";
                             $images_noclick[]=$media_start.$src.$media_end.">"; $images_orig_src_list[]=$orig_src;
                             $ret = "";
                             if($keep) { $ret = $click; }
@@ -2654,6 +2676,7 @@ blockquote{border-left:2px solid black;}
                             "&body=".$this->T('你好！我想购买').$product_info['title'].urlencode(PHP_EOL.PHP_EOL).
                             $this->FullURL().urlencode(PHP_EOL.PHP_EOL)."\">".$m[1]."</a>"; },$html);
         }
+        if(preg_match("/(<\/div>|<\/table>|<\/video>)\s*$/u",$html)){$end_wide=true;}
         return $html;
     }
     
@@ -2663,7 +2686,9 @@ blockquote{border-left:2px solid black;}
             $post['html'] = $this->TranslatePostParts($this->PostProcessHTML($this->ChoosePartsByLanguage($this->PDE->text($this->InsertReplacementSymbols($post['content'], $post)),true),
                                                    $post['images'],
                                                    isset($post['product']), $info,
-                                                   $post['original_images']));
+                                                   $post['original_images'],
+                                                   $post['end_wide'],
+                                                   $post['wide']));
             if(isset($post['product'])) $post['product']=$info;
         }
     }
@@ -2798,6 +2823,7 @@ blockquote{border-left:2px solid black;}
             $this->MakeExpNavButtons($p);
         }else{
             $this->MakeNavButtons($p);
+            if(isset($p['tid']['header'])){ ?><div style='float:right' class='show_on_print'><?=$p['tid']['header'];?></div><?php }
             echo "<hr />";
         } ?>
         <?php if(isset($this->WayBack)){
@@ -2875,7 +2901,7 @@ blockquote{border-left:2px solid black;}
             <?php } ?>
             </ul>
         </div>
-        <div id='backdrop' style='display:none;' class='backdrop' onclick='HideRightSide()'
+        <div id='backdrop' style='display:none;' class='backdrop' onclick='HideRightSide();HideBigImage(1);'
             ondrop="_dropHandler(event);" ondragover="_dragOverHandler(event);"></div>
         <div id='pop_right' class='pop_right' onclick='event.stopPropagation()'>
             <div style='text-align:right;position:sticky;top:0;'><a class='clean_a' href='javascript:HideRightSide();'>
@@ -2903,7 +2929,7 @@ blockquote{border-left:2px solid black;}
             if($i+3<sizeof($split)){ $last_lang = $split[$i+3]; }
         }
         if(!$reduced)$reduced = $content;
-        return $reduced;
+        return trim($reduced);
     }
     function TranslatePostParts($html){
         $html = preg_replace_callback('/>([^><]+?)</u', function($ma){
@@ -2934,22 +2960,24 @@ blockquote{border-left:2px solid black;}
         <?php } ?>
         <ul class='hidden_on_mobile hidden_on_print' id='mobile_nav' style='text-align:center;'>
             <li class='hidden_on_mobile'><a href='?gallery=default' onclick='ShowWaitingBar()'><?=$this->T('画廊')?></a></li>
+            <li class='hidden_on_desktop_force block_on_mobile smaller'>&nbsp;</li>
             <li class='hidden_on_desktop_force block_on_mobile'>
             <?php if($this->PageType!='main'){ ?>
                 <a href='index.php?part=recent' onclick='ShowWaitingBar()'><?=$this->T('最近')?></a> |
-                <a href='index.php?part=hot' onclick='ShowWaitingBar()'><?=$this->T('热门')?></a> |
+                <a href='index.php?part=hot' onclick='ShowWaitingBar()'><?=$this->T('热门')?></a>
             <?php } else { ?>
-            <li class='hidden_on_desktop_force block_on_mobile'>
                 <a href='javascript:ShowCenterSide();toggle_mobile_show(document.getElementById("mobile_nav"));'><?=$this->T('最近')?></a> |
-                <a href='javascript:ShowLeftSide();toggle_mobile_show(document.getElementById("mobile_nav"));'><?=$this->T('热门')?></a> |
+                <a href='javascript:ShowLeftSide();toggle_mobile_show(document.getElementById("mobile_nav"));'><?=$this->T('热门')?></a>
             <?php } ?>
-                <a href='index.php?gallery=default' onclick='ShowWaitingBar()'><?=$this->T('画廊')?></a>
                 <?php if($this->LoggedIn){ ?>
                     | <span class='gray invert_a'><a href='index.php?comments=all'>@</a></span><?php } ?></li>
+            <li class='hidden_on_desktop_force block_on_mobile'>
+                <a href='index.php?gallery=default' onclick='ShowWaitingBar()'><?=$this->T('画廊')?></a></li>
             <?php $this->SpecialNavigation;if(isset($this->SpecialNavigation) && ($p = &$this->GetPost($this->SpecialNavigation))!=NULL){
                 echo $this->GenerateSinglePost($p, false, false, false, false,$this->NULL_POST);
             } ?>
             <li><a href='?search=' onclick='ShowWaitingBar()'><?=$this->T('搜索')?></a></li>
+            <li class='hidden_on_desktop_force block_on_mobile smaller'>&nbsp;</li>
             <?php if($this->LanguageAppendix=='zh'){ ?>
                 <li class='invert_a smaller'>
                     <a href='<?=$this->GetRedirect().'&set_language=en'?>' onclick='ShowWaitingBar()'><b>汉语</b>/English</a></li>
@@ -2964,27 +2992,26 @@ blockquote{border-left:2px solid black;}
         </div>
     <?php
     }
-    
     function MakeExpNavButtons(&$p){ ?>
         <a href='index.php' class='hidden_on_mobile'>
             <b><?=$this->InExperimentalMode?$this->T($this->ExpTitle):$this->T($this->HereTitle)?></b></a>
         <a class='hidden_on_desktop'
-            href='javascript:toggle_mobile_show(document.getElementById("mobile_nav"))'><b>
-                <?=$this->InExperimentalMode?$this->T($this->ExpShortTitle):$this->T($this->HereShortTitle)?>...</b></a>
+            href='javascript:toggle_mobile_show(document.getElementById("mobile_nav"))'><b class='round_btn'>
+                <?=$this->InExperimentalMode?$this->T($this->ExpShortTitle):$this->T($this->HereShortTitle)?></b></a>
         <a <?=$this->HereNumber==1?"class='gray'":("href=".$this->HereLinkFromNumber($this->HereNumber-1))?>>←</a>
         <span><?=$this->HereNumber.'/'.sizeof($this->VisitedHere);?></span>
         <span class='round_btn'>
             <a href='<?=$this->HereNumber==sizeof($this->VisitedHere)?"?random_here=1":$this->HereLinkFromNumber($this->HereNumber+1);?>'>→</a>
-            <a href='?random_here=1'><?=$this->T("随机")?></a></span>
-        <b><?=$this->T($this->ChoosePartsByLanguage($this->HereDisplayTitle));?></b>
-        <?=isset($this->HereMainImage)?("<a class='invert_a' href='?here=images/".$this->HereMainImage['name']."'>".$this->T("看全图")."</a>"):"";?>
-        <ul class='hidden_on_mobile gray invert_a' id='mobile_nav' style='text-align:center;'>
-        <li class='hidden_on_desktop block_on_mobile'><a href='index.php'><?=$this->T('索引')?></a></li>
+            <a href='?random_here=1'><?=$this->T("随机")?></a></span><span class='hidden_on_mobile'></span>
+        <ul class='hidden_on_mobile invert_a gray' id='mobile_nav' style='text-align:center;'>
+        <li class='smaller hidden_on_desktop'>&nbsp;</li>
+        <li class='hidden_on_desktop block_on_mobile'><a href='index.php'><?=$this->T('主页')?></a></li>
         <?php if($this->InExperimentalMode && isset($this->ExpNavigation) && ($p = &$this->GetPost($this->ExpNavigation))!=NULL){
             echo $this->GenerateSinglePost($p, false, false, false, false,$this->NULL_POST);
         }else if($this->InHereMode && isset($this->HereNavigation) && ($p = &$this->GetPost($this->HereNavigation))!=NULL){
             echo $this->GenerateSinglePost($p, false, false, false, false,$this->NULL_POST);
         } ?>
+        <li class='smaller hidden_on_desktop'>&nbsp;</li>
         <?php if($this->LanguageAppendix=='zh'){ ?>
             <li class='smaller'><a href='<?=$this->GetRedirect().'&set_language=en'?>'><b>汉语</b>/English</a></li>
         <?php }else { ?>
@@ -3091,11 +3118,14 @@ blockquote{border-left:2px solid black;}
         $big_table = ($show_thread_link)?$this->NULL_POST:"";
         $is_product = isset($post['mark_value'])&&$post['mark_value']==5;
         $title = $generate_anchor?$this->GetPostTitle($post, true):NULL;
+        $this->ConvertPost($post);// NEEDED FOR WIDE;
+        $is_wide = (isset($post['wide'])&&$post['wide']) || (isset($post['tid']) && isset($post['tid']['wide']) && $post['tid']['wide']);
         ?>
         <?=$title?"<li class='print_title'><h1>".$title."</h1></li>":""?>
         <li class='post<?=isset($extra_class_string)?' '.$extra_class_string:''?><?=$side?" post_box":""?>'
             <?=(!$side)?"data-post-id='".$post['id']."'":""?> <?=$is_deleted?"data-mark-delete='true'":""?>
-            <?=(!$side&&isset($post['mastodon_url']))?"data-mastodon_url='".$post['mastodon_url']."'":""?> >
+            <?=(!$side&&isset($post['mastodon_url']))?"data-mastodon_url='".$post['mastodon_url']."'":""?>
+            <?=$is_wide?" style='column-span:all;'":"";?>>
             <?php if($mark_value>=0 && !$show_link && $mark_value!='P'){?>
                 <div class='smaller <?=$is_deleted?"gray":""?>'><?=$mark_value?> <?=$this->T('标记')?></div>
             <?php } ?>
@@ -3126,7 +3156,7 @@ blockquote{border-left:2px solid black;}
             <?=$side?"</a>":""?> <?php
             if(!$show_thread_link && $big_table!=$this->NULL_POST && !$side){
                 echo "</ul></li><div class='table_top'>".$big_table.'</div>';
-            ?><ul class='print_column'>
+            ?><ul<?=$is_wide?"":" class='print_column'"?>>
                 <li class='post<?=isset($extra_class_string)?' '.$extra_class_string:''?>' <?=$is_deleted?"data-mark-delete='true'":""?>>
             <?php
             }
@@ -3232,7 +3262,7 @@ blockquote{border-left:2px solid black;}
                        $this->CanShowPost($p)){
                         $this->MakeSinglePost($p, true, false, false, false, true, false, false, false, true, false);
                     }
-                    $i = 0;
+                    $i = 0; $last_end_wide = true;
                     if(isset($this->UsePosts[0])) foreach(array_reverse($this->UsePosts) as &$p){
                         if(!$this->CanShowPost($p) || $this->SkipProduct($p)) continue;
                         if(isset($p['tid'])){ /* Should always be set. */
@@ -3253,9 +3283,11 @@ blockquote{border-left:2px solid black;}
                             if(isset($p['tid'])){ if(isset($p['tid']['displayed'])) continue; $p['tid']['displayed'] = True; }
                         }
                         if($i < $this->PostsPerPage * $this->CurrentOffset) {$i++; continue;}
-                        $this->MakeSinglePost($p, true, false, NULL, false, !isset($search_term), false, false, false, false, isset($search_term));
+                        if($last_end_wide){$use_class="last_wide";}else{$use_class="";}
+                        $this->MakeSinglePost($p, true, false, $use_class, false, !isset($search_term), false, false, false, false, isset($search_term));
                         $i++;
                         if($i >= $this->PostsPerPage * (1+$this->CurrentOffset)) {break;}
+                        $last_end_wide = sizeof($p['tid']['arr'])==1 && isset($p['end_wide']) && $p['end_wide'];
                     }?>
             </ul>
             <div class='page_selector clean_a'>
@@ -3523,6 +3555,12 @@ blockquote{border-left:2px solid black;}
         <script>function ClickImage(post_access){im=post_access.querySelector('img');if(im){im.click();}}</script>
         <div class='center_full' id='div_center'>
             <?php $this->MakePostTools(); ?>
+            <?php $cat = NULL; 
+            if(isset($th['categories']) && isset($th['categories'][0])){ $cat = $th['categories']; }
+            if($cat){ ?>
+                <p><b><?=$this->T('分类')?></b> | <?php foreach($cat as $c){ 
+                    echo "<a href='?category=".$c."'>".($c=='none'?$this->T('未分类'):$this->T($c))."</a> "; } ?></p>
+            <?php } ?>
             <h2 class='hidden_on_print'><?=$this->T('有趣')?>
                 <a class='gray clean_a' href='?post=<?=$th['first']['id']?>'>→</a></h2>
             <ul><li class='post post_width_big' data-post-id='<?=$th['first']['id']?>'>
@@ -3600,7 +3638,7 @@ blockquote{border-left:2px solid black;}
                 <div style='display:inline;'><?=$this->T('合并到话题');?></div>
                 <input id="merge_thread_target" type="text" style="width:9em;display:inline" onChange='ThreadMergeInput(this);' onInput='ThreadMergeInput(this);'>
                 <span class='clean_a bold align_right'><a id='merge_thread'>&nbsp;<?=$this->T('执行');?></a></span></div>
-            </div><div class='spacer'></div><?php
+            </div><div class='spacer hidden_on_print'></div><?php
         }
     }
     function MakePostSection(&$post){
@@ -3608,24 +3646,27 @@ blockquote{border-left:2px solid black;}
         if(isset($this->TagID)){ ?><style><?=$this->CssNumberID($this->TagID);?>{display:block;}</style><?php } ?>
         <div class='center' id='div_center'>
             <h2 class='hidden_on_print'>
-            <?php $th=NULL; $is_thread = isset($post['tid']['count'])&&$post['tid']['count']>1; if($is_thread){ $th = $post['tid'];?>
-                <?=$this->T('话题')?> <?php }else{ ?> <?=$this->T('详细')?>
+            <?php $th=NULL; $is_thread = isset($post['tid']['count'])&&$post['tid']['count']>1;
+                $is_wide = (isset($post['wide'])&&$post['wide']) || ($is_thread && isset($post['tid']['wide']) && $post['tid']['wide']);
+                if($is_thread){ $th = $post['tid'];?> <?=$this->T('话题')?> <?php }else{ ?> <?=$this->T('详细')?>
             <?php } ?></h2>
             <?php $cat = NULL; 
             if($is_thread) { if(isset($th['categories']) && isset($th['categories'][0])){ $cat = $th['categories']; } }
             else { if(isset($post['categories']) && isset($post['categories'][0])) { $cat = $post['categories']; } }
             $this->MakePostTools();
             if($cat){ ?>
-                <p><b><?=$this->T('分类')?></b> | <?php foreach($cat as $c){ 
+                <p class='hidden_on_print'><b><?=$this->T('分类')?></b> | <?php foreach($cat as $c){ 
                     echo "<a href='?category=".$c."'>".($c=='none'?$this->T('未分类'):$this->T($c))."</a> "; } ?></p>
             <?php } ?>
-            <ul class='print_column'>
+            <ul<?=$is_wide?"":" class='print_column'"?>>
             <?php $is_reversed=false;
                 if($is_thread){
                     $use_arr = $th['arr']; $is_reversed=$this->IsReversedThread($th); $hinted=false; if($is_reversed){
                         $use_arr=array_reverse($th['arr']); $fp=array_pop($use_arr); array_unshift($use_arr,$fp); }
+                    $last_end_wide = true;
                     foreach($use_arr as &$p){
                         $use_class = ($p == $post)?'focused_post':'';
+                        if($last_end_wide){$use_class.=" last_wide";}
                         $show_link = ($p == $post)?false:true;
                         $make_title = ($p == $post);
                         $this->MakeSinglePost($p,$show_link,false,$use_class,false, false, false, true, false, false);
@@ -3641,14 +3682,15 @@ blockquote{border-left:2px solid black;}
                             <div class='post_width_big hidden_on_print'>
                                 <?php $this->MakePostingFields($is_thread?$th['last']['id']:$post['id'], true);?></div><br />
                         <?php } }
+                        $last_end_wide = isset($p['end_wide']) && $p['end_wide'];
                     }
                 }else{
                     $this->MakeSinglePost($post,false, false, 'focused_post',false, false, false, true, false, false);
                     ?><script>
                     document.title+=" | <?=addslashes(preg_replace('/\r|\n/u', ' ', mb_substr(strip_tags($post['html']),0,1000)))?>";
                     </script><?php
-                } ?>
-                <div class='smaller align_right'>
+                } $class_add=""; if(isset($post['tid']['first']['no_time'])){ $class_add=' hidden_on_print'; } ?>
+                <div class='smaller align_right<?=$class_add;?>'>
                     <span class='gray'><?=$this->ReadableTime($post['tid']['first']['id']);?></span>
                     <br class='hidden_on_desktop' /><?=$this->ReadableTime(isset($post['tid']['last']['version'])?
                         $post['tid']['last']['version']:$post['tid']['last']['id']);?>
@@ -4400,9 +4442,12 @@ blockquote{border-left:2px solid black;}
     <?php
     }
     
-    function MakeExpFooter(){?>
+    function MakeExpFooter(){
+        $exptitle = isset($this->HereDisplayTitle)?('"'.$this->T($this->ChoosePartsByLanguage($this->HereDisplayTitle)).'"'):NULL;
+        if(!isset($exptitle)) $exptitle=$this->InExperimentalMode?$this->T($this->ExpTitle):$this->T($this->HereTitle);?>
         <div class='small_footer exp_h_f exp_f'><div>
-            <b><?=$this->InExperimentalMode?$this->T($this->ExpTitle):$this->T($this->HereTitle)?></b>&nbsp;©<?=$this->T($this->DisplayName)?>
+            <b><?=$exptitle?></b> ©<?=$this->T($this->DisplayName)?>
+            <?=isset($this->HereMainImage)?("<a class='invert_a' href='?here=images/".$this->HereMainImage['name']."'>".$this->T("看全图")."</a>"):""; ?>
             <div class='wayback_link gray clean_a invert_a hidden_on_print'><br class="hidden_on_desktop" />
             <?php if($this->InExperimentalMode && isset($this->ExpFooter) && ($p = &$this->GetPost($this->ExpFooter,true))!=NULL){
                 echo $this->GenerateSinglePost($p, false, false, false, false,$this->NULL_POST,false);
@@ -4422,13 +4467,16 @@ blockquote{border-left:2px solid black;}
     <?php    
     }
     
-    function MakeImageOverlay($side_info=null,$static_image=null){
+    function MakeImageOverlay($side_info=null,$static_image=null,$static_video=null){
         $static=isset($side_info); ?>
         <div id='big_image_overlay' <?=$static?"":"style='display:none'";?>>
             <div class='big_image_box clean_a' onclick='HideBigImage(1)'>
                 <div style='display:flex;align-items:center;height:100%;justify-content:center;width:100%;'><?=$this->T('请稍候')?></div>
-                <img id='big_image' onload="HideWaitingBar();" <?=isset($static_image)?("src='".$static_image."'"):""?>/>
-                <video id='big_video' onloadstart="HideWaitingBar();" controls><source id='big_video_src' type='video/mp4'></video>
+                <?php if(!$static_video){ ?>
+                <img id='big_image' onload="HideWaitingBar();" <?=isset($static_image)?("src='".$static_image."'"):""?>/><?php } ?>
+                <?php if(!$static_image){ ?>
+                <video id='big_video' onloadstart="HideWaitingBar();" controls><source id='big_video_src' type='video/mp4'
+                    <?=isset($static_video)?("src='".$static_video."'"):""?>></video><?php } ?>
             </div>
             <div class='big_side_box' onclick='HideBigImage(1);'>
             <?php if(!$static){ ?>
@@ -4452,6 +4500,7 @@ blockquote{border-left:2px solid black;}
                         <?php } ?><hr class='hidden_on_desktop block_on_mobile' />
                     </div>
                     <div id='big_image_share' class='clean_a' onclick="event.stopPropagation();">
+                        <li class='wayback_close'><a onclick='HideBigImage(1);'><?=$this->T('关闭')?> ×</a></li>
                         <li><a id='big_share_copy'>⎘ <?=$this->T('复制链接')?></a></li>
                         <hr />
                     </div><?php } //static ?>
@@ -4482,9 +4531,10 @@ blockquote{border-left:2px solid black;}
         </body>
         </html>
     <?php }
-    function MakeFooter(){?>
+    function MakeFooter(&$p){?>
         <div class='small_footer'><div>
             <hr />
+            <?php if(isset($p['tid']['footer'])){ ?><div class='show_on_print'><?=$p['tid']['footer'];?></div><?php } ?>
             <b><?=$this->T($this->Title)?></b>
             <span onclick='event.stopPropagation()'
                 ondblclick='javascript:window.location.href="index.php?settings=true"'>©</span><?=$this->T($this->DisplayName)?>
@@ -4496,6 +4546,7 @@ blockquote{border-left:2px solid black;}
             <br class='hidden_on_desktop' />
                 - <a rel="alternate" type="application/rss+xml" href="?rss=<?=$this->LanguageAppendix;?>" />RSS/Atom<sup><?=$this->LanguageAppendix;?></sup></a>
             </div>
+            <div class='smaller show_on_print'><?=$_SERVER['SERVER_NAME']?><br /><?=$this->EMail?></div>
         </div></div>
         <div class='footer'>
             <div style='white-space:nowrap;'>
@@ -5038,7 +5089,7 @@ blockquote{border-left:2px solid black;}
     <?php
     }
     
-    function DoIdentiyExperimental(){
+    function DoIdentifyExperimental(){
         if(isset($this->ExpHost) && $this->ExpHost && preg_match('/'.preg_quote($this->ExpHost).'/u', $_SERVER['HTTP_HOST'])){
             $this->InExperimentalMode=True; $this->InHereMode=True;
         }
@@ -5082,7 +5133,7 @@ $la->SwitchLanguageAndFont();
 $err = $la->ProcessRequest($message, $redirect);
 $la->WriteAsNecessary();
 
-$la->DoIdentiyExperimental();
+$la->DoIdentifyExperimental();
 
 $la->SwitchWayBackMode();
 
@@ -5197,7 +5248,7 @@ if($la->PageType=='here' ||$la->PageType=='experimental'){
         $la->MakeRecentPosts();
     }
     $la->MakeMainEnd();
-    $la->MakeFooter();
+    $la->MakeFooter($p);
 }
 
 ?>
