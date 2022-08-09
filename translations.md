@@ -194,5 +194,6 @@
 - 随机 | Random
 - 这里访问 | Here Access
 - 看全图 | View Full
+- 主页 | Home
 
 

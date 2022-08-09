@@ -181,6 +181,9 @@ class LA{
         fwrite($conf,"RewriteEngine on".PHP_EOL.PHP_EOL);
         if(isset($this->Redirect) && isset($this->Redirect[0])) foreach($this->Redirect as $r){
             if($r['for']=='P'){
+                if(!preg_match('/[0-9]{14}/',$r['target'])){
+                    fwrite($conf,"RewriteRule ^".$r['format'].'$ /index.php?'.$r['target'].' [R=302,L]'.PHP_EOL.PHP_EOL);
+                }
                 fwrite($conf,"RewriteRule ^".$r['format'].'$ /index.php?post='.$r['target'].' [R=302,L]'.PHP_EOL.PHP_EOL);
             }// do site redirect in php.
         }
@@ -197,7 +200,7 @@ class LA{
     
     function BuildRedirectConfig($conf){
         $this->Redirect=[];
-        if(preg_match_all('/P\s+(.*)\:\s*([0-9]{14})\s*;/u',$conf,$ma,PREG_SET_ORDER)){
+        if(preg_match_all('/P\s+(.*)\:\s*([0-9]{14}|.+)\s*;/u',$conf,$ma,PREG_SET_ORDER)){
             foreach($ma as $m){
                 $redirect=[]; $redirect['for'] = 'P'; $redirect['format'] = $m[1]; $redirect['target'] = $m[2];
                 $this->Redirect[]=$redirect;
@@ -686,6 +689,12 @@ margin-left:auto;margin-right:auto;max-width:100%;max-height:90vh;}
 .original_img img,.original_img video{max-height:90vh;max-width:100%;}
 .p_row .original_img{margin-bottom:0;}
 .post_ref .original_img{margin:unset;max-width:unset;max-height:min(70vh, 20rem);max-width:min(100%, 20rem);}
+.imbtn{display:block;contain:content;padding:0.25em;margin-bottom:0.5em;text-decoration:none;text-shadow:0px 0px 5px %white%;}
+.imbtn img{display:block;object-fit:cover;position:absolute;top:0;left:0;bottom:0;right:0;margin:auto;z-index:-1;
+min-width:100% !important;min-height:100% !important;filter:opacity(40%);}
+.imbtn:hover img{filter:opacity(20%) blur(0.1em);} .imbtn:hover{color:%black% !important;}
+header .imbtn{display:inherit;border:none;padding:0em;height:unset;height:unset;margin:0em;contain:unset;}
+header .imbtn:hover{border:none;color:%gray% !important;} header .imbtn img{display:none;}
 .b ul{font-size:1.4em;}
 no_pop{cursor:unset;}
 p{min-height:0.8em;}
@@ -2613,8 +2622,11 @@ blockquote{border-left:2px solid black;}
         $html = preg_replace("/\{\s*WIDE\s*\}/imu","",$html,-1,$rep_count); if($rep_count){$print_wide=true;}
         $images = []; $images_noclick = []; $images_orig_src_list = [];
         $html = preg_replace_callback(
-                    "/(<p>\s*)?(<img([^>]*)src=[\'\"])(images\/([0-9]{14,}\.(jpg|png|jpeg|gif|mp4)))([\'\"][^>]*)\/>(\s*<\/p>)?/u",
+                    "/(<p>\s*|<a\s.*?>\s*)?(<img([^>]*)src=[\'\"])(images\/([0-9]{14,}\.(jpg|png|jpeg|gif|mp4)))([\'\"][^>]*)\/>(\s*<\/p>)?/u",
                     function($m) use (&$images,&$images_noclick,&$images_orig_src_list) {
+                        if(isset($m[1])&&$m[1]&&$m[1][1]=='a'){ $height="";
+                            if(preg_match("/([0-9]{1,2})em/u",$m[0],$hm)){$height=' style="height:'.$hm[1].'em;"';}
+                            return "<a class='imbtn'".$height.substr($m[0],2); }
                         $orig_src = $src = $m[5]; $keep = false; $original = false;
                         if (preg_match('/alt=[\'\"].*keep_inline.*[\'\"]/u',$m[3]) ||
                             preg_match('/alt=[\'\"].*keep_inline.*[\'\"]/u',$m[7])) { $keep=true; }
@@ -2929,12 +2941,12 @@ blockquote{border-left:2px solid black;}
             if($i+3<sizeof($split)){ $last_lang = $split[$i+3]; }
         }
         if(!$reduced)$reduced = $content;
-        return trim($reduced);
+        return $reduced;
     }
     function TranslatePostParts($html){
-        $html = preg_replace_callback('/>([^><]+?)</u', function($ma){
-                $reduced = $this->ChoosePartsByLanguage($ma[1], false);
-                return ">".$this->T($reduced)."<";
+        $html = preg_replace_callback('/>(\s*)([^><]+?)(\s*)</u', function($ma){
+                $reduced = $this->ChoosePartsByLanguage($ma[2], false);
+                return ">".$ma[1].$this->T($reduced).$ma[3]."<";
             }, $html);
         return $html;
     }
@@ -3025,6 +3037,7 @@ blockquote{border-left:2px solid black;}
     function GenerateLinkedPosts($ht){
         $ht = preg_replace_callback('/<p>[\s]*<a[^>]*href=[\'\"]\?post=([0-9]{14})[\'\"][^>]*>(.*)<\/a>[\s]*<\/p>/u',
             function($m){
+                if(preg_match('/^\s*<img/u',$m[2])){ return $m[0]; }
                 $rp = &$this->GetPost($m[1], false, true);
                 $s="<div class='smaller block post ref_compact gray'>".
                     "<a href='?post=".$m[1]."' class='post_access invert_a smaller' onclick='ShowWaitingBar()'>→</a>".
@@ -4443,7 +4456,7 @@ blockquote{border-left:2px solid black;}
     }
     
     function MakeExpFooter(){
-        $exptitle = isset($this->HereDisplayTitle)?('"'.$this->T($this->ChoosePartsByLanguage($this->HereDisplayTitle)).'"'):NULL;
+        $exptitle = isset($this->HereDisplayTitle)?('"'.trim($this->T($this->ChoosePartsByLanguage($this->HereDisplayTitle))).'"'):NULL;
         if(!isset($exptitle)) $exptitle=$this->InExperimentalMode?$this->T($this->ExpTitle):$this->T($this->HereTitle);?>
         <div class='small_footer exp_h_f exp_f'><div>
             <b><?=$exptitle?></b> ©<?=$this->T($this->DisplayName)?>
